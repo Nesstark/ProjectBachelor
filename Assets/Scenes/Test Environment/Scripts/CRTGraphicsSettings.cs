@@ -3,7 +3,7 @@ using UnityEngine.Rendering.Universal;
 
 // Made with Claude Sonnet 4.5
 
-public class GraphicsSettings : MonoBehaviour
+public class CRTGraphicsSettings : MonoBehaviour
 {
     [Header("Renderer Setup")]
     [SerializeField] private UniversalRendererData rendererData; // Your PC_Renderer asset
