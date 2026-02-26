@@ -132,7 +132,7 @@ GameObject:
   - component: {fileID: 137790697}
   - component: {fileID: 137790696}
   m_Layer: 5
-  m_Name: Button
+  m_Name: PlayButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -201,7 +201,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 137790697}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 254143212}
+        m_TargetAssemblyTypeName: SceneLoader, Assembly-CSharp
+        m_MethodName: LoadScene
+        m_Mode: 5
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: Cinemachine
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &137790697
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -240,6 +252,50 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 137790694}
   m_CullTransparentMesh: 1
+--- !u!1 &254143210
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 254143211}
+  - component: {fileID: 254143212}
+  m_Layer: 0
+  m_Name: SceneLoader
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &254143211
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 254143210}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 572.98584, y: 0.00004, z: 299.19632}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &254143212
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 254143210}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e7e749dfbc3eb4618a3ee638cfbe1337, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SceneLoader
 --- !u!1 &377814804
 GameObject:
   m_ObjectHideFlags: 0
@@ -359,7 +415,7 @@ Transform:
   m_GameObject: {fileID: 377814804}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -4.8303284e-10, z: 2.6182513e-11, w: 1}
-  m_LocalPosition: {x: 530, y: 298, z: -10}
+  m_LocalPosition: {x: 459.75, y: 253.25, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -378,7 +434,7 @@ GameObject:
   - component: {fileID: 481262823}
   - component: {fileID: 481262822}
   m_Layer: 5
-  m_Name: Button (2)
+  m_Name: QuitButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -447,7 +503,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 481262823}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 254143212}
+        m_TargetAssemblyTypeName: SceneLoader, Assembly-CSharp
+        m_MethodName: QuitGame
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &481262823
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -790,7 +858,7 @@ Transform:
   m_GameObject: {fileID: 943452406}
   serializedVersion: 2
   m_LocalRotation: {x: 1.2647013e-20, y: -4.8303284e-10, z: 6.1089226e-30, w: 1}
-  m_LocalPosition: {x: 530, y: 298, z: -10}
+  m_LocalPosition: {x: 459.75, y: 253.25, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1149,7 +1217,7 @@ GameObject:
   - component: {fileID: 1422710286}
   - component: {fileID: 1422710285}
   m_Layer: 5
-  m_Name: Button (1)
+  m_Name: SettingsButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1645,3 +1713,4 @@ SceneRoots:
   - {fileID: 377814808}
   - {fileID: 2076600088}
   - {fileID: 922792450}
+  - {fileID: 254143211}
