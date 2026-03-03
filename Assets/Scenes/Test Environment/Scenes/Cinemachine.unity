@@ -655,7 +655,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   moveSpeed: 6
-  dashSpeed: 18
+  dashSpeed: 12
   dashDuration: 0.15
   dashCooldown: 0.6
   spriteRenderer: {fileID: 16621150}
