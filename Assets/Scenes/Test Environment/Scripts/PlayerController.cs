@@ -29,26 +29,22 @@ public class PlayerController : MonoBehaviour
     private static readonly int HashDirZ    = Animator.StringToHash("DirZ");
     private static readonly int HashDash    = Animator.StringToHash("Dash");
 
-    private void Awake()
-    {
+    private void Awake() {
         rb = GetComponent<Rigidbody>();
         lastMoveDir = Vector3.forward;
     }
 
     // Called by Unity's Input System (Player Input component)
-    public void OnMove(InputValue value)
-    {
+    public void OnMove(InputValue value) {
         inputDir = value.Get<Vector2>();
     }
 
-    public void OnDash(InputValue value)
-    {
+    public void OnDash(InputValue value) {
         if (value.isPressed && !isDashing && dashCooldownTimer <= 0f)
             StartDash();
     }
 
-    private void Update()
-    {
+    private void Update() {
         dashTimer -= Time.deltaTime;
         dashCooldownTimer -= Time.deltaTime;
 
@@ -65,8 +61,7 @@ public class PlayerController : MonoBehaviour
         UpdateSpriteFlip();
     }
 
-    private void FixedUpdate()
-    {
+    private void FixedUpdate() {
         if (isDashing)
         {
             rb.linearVelocity = lastMoveDir * dashSpeed;
@@ -82,24 +77,21 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private void StartDash()
-    {
+    private void StartDash() {
         isDashing = true;
         dashTimer = dashDuration;
         dashCooldownTimer = dashCooldown;
         animator?.SetTrigger(HashDash);
     }
 
-    private void UpdateAnimator()
-    {
+    private void UpdateAnimator() {
         if (animator == null) return;
         animator.SetFloat(HashSpeed, moveDir.magnitude);
         animator.SetFloat(HashDirX, lastMoveDir.x);
         animator.SetFloat(HashDirZ, lastMoveDir.z);
     }
 
-    private void UpdateSpriteFlip()
-    {
+    private void UpdateSpriteFlip() {
         if (spriteRenderer == null) return;
         // Flip sprite based on horizontal direction
         if (lastMoveDir.x > 0.1f)
