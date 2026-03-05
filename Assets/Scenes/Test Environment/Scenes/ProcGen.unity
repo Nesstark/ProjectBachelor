@@ -192,7 +192,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 264301778}
-  m_Layer: 10
+  m_Layer: 0
   m_Name: Spawn_02
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -226,7 +226,7 @@ GameObject:
   - component: {fileID: 268810176}
   - component: {fileID: 268810175}
   - component: {fileID: 268810174}
-  m_Layer: 8
+  m_Layer: 0
   m_Name: Wall (7)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -335,7 +335,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 290675259}
-  m_Layer: 10
+  m_Layer: 0
   m_Name: EnemySpawns
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -370,7 +370,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 320599097}
-  m_Layer: 8
+  m_Layer: 0
   m_Name: Walls
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -412,7 +412,7 @@ GameObject:
   - component: {fileID: 353384170}
   - component: {fileID: 353384169}
   - component: {fileID: 353384168}
-  m_Layer: 7
+  m_Layer: 0
   m_Name: Bench(Log)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -524,7 +524,7 @@ GameObject:
   - component: {fileID: 412309900}
   - component: {fileID: 412309899}
   - component: {fileID: 412309898}
-  m_Layer: 8
+  m_Layer: 0
   m_Name: Wall
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -637,7 +637,7 @@ GameObject:
   - component: {fileID: 453767384}
   - component: {fileID: 453767383}
   - component: {fileID: 453767386}
-  m_Layer: 9
+  m_Layer: 0
   m_Name: Cross
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -759,7 +759,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 468510025}
-  m_Layer: 10
+  m_Layer: 0
   m_Name: Spawn_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -790,7 +790,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 483281028}
-  m_Layer: 9
+  m_Layer: 0
   m_Name: DoorClosed
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -823,7 +823,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 483415687}
-  m_Layer: 9
+  m_Layer: 0
   m_Name: DoorwayVisual
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -859,7 +859,7 @@ GameObject:
   - component: {fileID: 486888243}
   - component: {fileID: 486888242}
   - component: {fileID: 486888241}
-  m_Layer: 8
+  m_Layer: 0
   m_Name: Wall (5)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -971,7 +971,7 @@ GameObject:
   - component: {fileID: 492804318}
   - component: {fileID: 492804317}
   - component: {fileID: 492804316}
-  m_Layer: 6
+  m_Layer: 0
   m_Name: Plane (3)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1084,7 +1084,7 @@ GameObject:
   - component: {fileID: 522029658}
   - component: {fileID: 522029657}
   - component: {fileID: 522029656}
-  m_Layer: 8
+  m_Layer: 0
   m_Name: Wall (4)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1597,7 +1597,7 @@ GameObject:
   - component: {fileID: 880994158}
   - component: {fileID: 880994157}
   - component: {fileID: 880994156}
-  m_Layer: 8
+  m_Layer: 0
   m_Name: Wall (3)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1709,7 +1709,7 @@ GameObject:
   - component: {fileID: 958687298}
   - component: {fileID: 958687297}
   - component: {fileID: 958687296}
-  m_Layer: 9
+  m_Layer: 0
   m_Name: Trigger
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1858,7 +1858,7 @@ GameObject:
   - component: {fileID: 1028608617}
   - component: {fileID: 1028608616}
   - component: {fileID: 1028608615}
-  m_Layer: 9
+  m_Layer: 0
   m_Name: Quad
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2002,7 +2002,7 @@ GameObject:
   - component: {fileID: 1095978708}
   - component: {fileID: 1095978707}
   - component: {fileID: 1095978706}
-  m_Layer: 6
+  m_Layer: 0
   m_Name: Plane (4)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2115,7 +2115,7 @@ GameObject:
   - component: {fileID: 1108039882}
   - component: {fileID: 1108039881}
   - component: {fileID: 1108039880}
-  m_Layer: 8
+  m_Layer: 0
   m_Name: Wall (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2224,7 +2224,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1114587450}
-  m_Layer: 9
+  m_Layer: 0
   m_Name: PlayerSpawn
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2258,7 +2258,7 @@ GameObject:
   - component: {fileID: 1203538023}
   - component: {fileID: 1203538022}
   - component: {fileID: 1203538021}
-  m_Layer: 9
+  m_Layer: 0
   m_Name: Plane
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2368,7 +2368,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1313166397}
-  m_Layer: 9
+  m_Layer: 0
   m_Name: DoorSouth
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2407,7 +2407,7 @@ GameObject:
   - component: {fileID: 1317437570}
   - component: {fileID: 1317437569}
   - component: {fileID: 1317437568}
-  m_Layer: 8
+  m_Layer: 0
   m_Name: Wall (2)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2516,7 +2516,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1331834063}
-  m_Layer: 6
+  m_Layer: 0
   m_Name: Floor
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2551,7 +2551,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1392871881}
-  m_Layer: 7
+  m_Layer: 0
   m_Name: Props
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2588,7 +2588,7 @@ GameObject:
   - component: {fileID: 1535100804}
   - component: {fileID: 1535100803}
   - component: {fileID: 1535100802}
-  m_Layer: 7
+  m_Layer: 0
   m_Name: Bench(Log)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2697,7 +2697,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1637345921}
-  m_Layer: 10
+  m_Layer: 0
   m_Name: Spawn_03
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2731,7 +2731,7 @@ GameObject:
   - component: {fileID: 1658689675}
   - component: {fileID: 1658689674}
   - component: {fileID: 1658689673}
-  m_Layer: 8
+  m_Layer: 0
   m_Name: Wall (6)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2840,7 +2840,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1724103827}
-  m_Layer: 10
+  m_Layer: 0
   m_Name: Spawn_04
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2928,6 +2928,11 @@ MonoBehaviour:
   dashSpeed: 12
   dashDuration: 0.15
   dashCooldown: 0.6
+  attackCooldown: 0.4
+  enemyLayer:
+    serializedVersion: 2
+    m_Bits: 0
+  attackOrigin: {fileID: 0}
   spriteRenderer: {fileID: 804400759}
   animator: {fileID: 0}
 --- !u!136 &1778822891
@@ -3008,7 +3013,7 @@ GameObject:
   - component: {fileID: 1861682233}
   - component: {fileID: 1861682232}
   - component: {fileID: 1861682231}
-  m_Layer: 6
+  m_Layer: 0
   m_Name: Plane
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3228,7 +3233,7 @@ GameObject:
   - component: {fileID: 1984500701}
   - component: {fileID: 1984500700}
   - component: {fileID: 1984500699}
-  m_Layer: 9
+  m_Layer: 0
   m_Name: DoorwayCross
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3341,7 +3346,7 @@ GameObject:
   - component: {fileID: 1987682404}
   - component: {fileID: 1987682403}
   - component: {fileID: 1987682402}
-  m_Layer: 6
+  m_Layer: 0
   m_Name: Plane (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3454,7 +3459,7 @@ GameObject:
   - component: {fileID: 2069595001}
   - component: {fileID: 2069595000}
   - component: {fileID: 2069594999}
-  m_Layer: 7
+  m_Layer: 0
   m_Name: Firepit
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3563,7 +3568,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2077874422}
-  m_Layer: 9
+  m_Layer: 0
   m_Name: Doors
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3598,7 +3603,7 @@ GameObject:
   - component: {fileID: 2133649135}
   - component: {fileID: 2133649134}
   - component: {fileID: 2133649133}
-  m_Layer: 9
+  m_Layer: 0
   m_Name: DoorwayCross
   m_TagString: Untagged
   m_Icon: {fileID: 0}
