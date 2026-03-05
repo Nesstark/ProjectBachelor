@@ -11,11 +11,19 @@ TagManager:
   - 
   - Water
   - UI
+<<<<<<< Updated upstream
   - enem
   - 
   - 
   - 
   - 
+=======
+  - Floor
+  - Props
+  - Walls
+  - Doors
+  - Spawners
+>>>>>>> Stashed changes
   - 
   - 
   - 
