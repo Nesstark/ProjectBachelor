@@ -10,20 +10,19 @@ public class RoomManager : MonoBehaviour
     public DungeonGenerator generator;
     public Transform playerTransform;
 
-    [Header("Room Prefab Folders (Resources/ relative paths)")]
-    public string normalFolder   = "Rooms/Normal";
+    [Header("Room Prefab Folders")]
+    public string normalFolder    = "Rooms/Normal";
     public string corridorNSFolder = "Rooms/CorridorNS";
     public string corridorEWFolder = "Rooms/CorridorEW";
-    public string bossFolder     = "Rooms/Boss";
-    public string treasureFolder = "Rooms/Treasure";
-    public string shopFolder     = "Rooms/Shop";
-    public string startFolder    = "Rooms/Start";
+    public string bossFolder      = "Rooms/Boss";
+    public string treasureFolder  = "Rooms/Treasure";
+    public string shopFolder      = "Rooms/Shop";
+    public string startFolder     = "Rooms/Start";
 
     GameObject currentRoomInstance;
     int currentCell = 35;
     bool isTransitioning = false;
 
-    // Husker hvilke prefabs der er brugt per celle (konsistens ved re-visit)
     Dictionary<int, string> cellPrefabMap = new();
 
     void Awake() => Instance = this;
@@ -31,7 +30,7 @@ public class RoomManager : MonoBehaviour
     void Start()
     {
         generator.Generate(1);
-        LoadRoom(35, Direction.South); // ingen "kom fra" retning ved start
+        LoadRoom(35, Direction.South);
     }
 
     public void TryMove(Direction dir)
@@ -71,16 +70,15 @@ public class RoomManager : MonoBehaviour
 
     void LoadRoom(int cell, Direction fromDirection)
     {
-        // Hent eller vælg prefab for denne celle
         if (!cellPrefabMap.ContainsKey(cell))
             cellPrefabMap[cell] = PickPrefab(generator.DungeonMap[cell]);
 
         GameObject prefab = Resources.Load<GameObject>(cellPrefabMap[cell]);
         currentRoomInstance = Instantiate(prefab, Vector3.zero, Quaternion.identity);
 
-        // Sæt aktive døre
         var neighbours = generator.GetNeighbours(cell);
         var rc = currentRoomInstance.GetComponent<RoomController>();
+
         rc.SetDoors(
             north: neighbours.ContainsKey(Direction.North),
             south: neighbours.ContainsKey(Direction.South),
@@ -88,7 +86,6 @@ public class RoomManager : MonoBehaviour
             west:  neighbours.ContainsKey(Direction.West)
         );
 
-        // Placér spilleren ved den rigtige spawn point
         Transform spawn = rc.GetSpawnPoint(fromDirection);
         if (spawn != null && playerTransform != null)
             playerTransform.position = spawn.position;
@@ -98,13 +95,13 @@ public class RoomManager : MonoBehaviour
     {
         string folder = type switch
         {
-            RoomType.Normal     => normalFolder,
-            RoomType.CorridorNS => corridorNSFolder,
-            RoomType.CorridorEW => corridorEWFolder,
-            RoomType.Boss       => bossFolder,
-            RoomType.Treasure   => treasureFolder,
-            RoomType.Shop       => shopFolder,
-            RoomType.Start      => startFolder,
+            RoomType.Normal      => normalFolder,
+            RoomType.CorridorNS  => corridorNSFolder,
+            RoomType.CorridorEW  => corridorEWFolder,
+            RoomType.Boss        => bossFolder,
+            RoomType.Treasure    => treasureFolder,
+            RoomType.Shop        => shopFolder,
+            RoomType.Start       => startFolder,
             _ => normalFolder
         };
 

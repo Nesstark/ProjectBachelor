@@ -51,7 +51,6 @@ public class DungeonGenerator : MonoBehaviour
             }
         }
 
-        // Valider: boss må ikke være nabo til start
         List<int> deadEnds = GetDeadEnds();
         if (deadEnds.Count < 2) return false;
 
@@ -67,12 +66,10 @@ public class DungeonGenerator : MonoBehaviour
         List<int> deadEnds = GetDeadEnds();
         deadEnds.Remove(35);
 
-        // Boss: fjerneste dead end
         int bossCell = deadEnds.OrderByDescending(c => ManhattanDistance(c, 35)).First();
         DungeonMap[bossCell] = RoomType.Boss;
         deadEnds.Remove(bossCell);
 
-        // Treasure og Shop på næste dead ends hvis de findes
         if (deadEnds.Count > 0) { DungeonMap[deadEnds[0]] = RoomType.Treasure; deadEnds.RemoveAt(0); }
         if (deadEnds.Count > 0) { DungeonMap[deadEnds[0]] = RoomType.Shop; deadEnds.RemoveAt(0); }
     }
@@ -116,7 +113,6 @@ public class DungeonGenerator : MonoBehaviour
         return Mathf.Abs(ax - bx) + Mathf.Abs(ay - by);
     }
 
-    // Hjælpemetode til at hente naboer som Direction
     public Dictionary<Direction, int> GetNeighbours(int cell)
     {
         var result = new Dictionary<Direction, int>();
