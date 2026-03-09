@@ -20,9 +20,11 @@ public class RoomManager : MonoBehaviour
     public string startFolder      = "Rooms/Start";
 
     [Header("Level Exit")]
-    public GameObject levelExitPrefab; // træk din grå cube prefab ind her
+    public GameObject levelExitPrefab;
 
     GameObject currentRoomInstance;
+    GameObject currentLevelExit;
+
     public RoomController CurrentRoom { get; private set; }
     public int CurrentCellPublic => currentCell;
     public int CurrentLevel { get; private set; } = 1;
@@ -44,21 +46,30 @@ public class RoomManager : MonoBehaviour
 
     public void LoadNextLevel()
     {
+        Debug.Log("LoadNextLevel kaldt, isTransitioning: " + isTransitioning);
+        if (isTransitioning) return;
+        StartCoroutine(DoLevelUpTransition());
+    }
+
+    IEnumerator DoLevelUpTransition()
+    {
+        Debug.Log("DoLevelUpTransition START");
+        isTransitioning = true;
         CurrentLevel++;
-        Debug.Log($"Starter level {CurrentLevel}!");
 
-        // Reset alt til nyt level
-        cellPrefabMap.Clear();
-        visitedCells.Clear();
-        clearedCells.Clear();
+        yield return StartCoroutine(TransitionManager.Instance.LevelUpTransition(CurrentLevel, () =>
+        {
+            if (currentLevelExit != null) Destroy(currentLevelExit);
+            cellPrefabMap.Clear();
+            visitedCells.Clear();
+            clearedCells.Clear();
+            generator.Generate(CurrentLevel);
+            if (currentRoomInstance != null) Destroy(currentRoomInstance);
+            currentCell = 35;
+            LoadRoom(35, Direction.South);
+        }));
 
-        generator.Generate(CurrentLevel);
-
-        if (currentRoomInstance != null)
-            Destroy(currentRoomInstance);
-
-        currentCell = 35;
-        LoadRoom(35, Direction.South);
+        isTransitioning = false;
     }
 
     public void SpawnLevelExit(Vector3 position)
@@ -68,8 +79,7 @@ public class RoomManager : MonoBehaviour
             Debug.LogError("LevelExit prefab er ikke sat på RoomManager!");
             return;
         }
-        Instantiate(levelExitPrefab, position, Quaternion.identity,
-                    currentRoomInstance.transform);
+        currentLevelExit = Instantiate(levelExitPrefab, position, Quaternion.identity);
     }
 
     public void TryMove(Direction dir)
@@ -104,7 +114,6 @@ public class RoomManager : MonoBehaviour
 
         isTransitioning = false;
     }
-
 
     void LoadRoom(int cell, Direction fromDirection)
     {
