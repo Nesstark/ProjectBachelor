@@ -95,15 +95,16 @@ public class RoomManager : MonoBehaviour
     {
         isTransitioning = true;
 
-        if (currentRoomInstance != null)
-            Destroy(currentRoomInstance);
-
-        currentCell = targetCell;
-        LoadRoom(targetCell, fromDirection);
+        yield return StartCoroutine(TransitionManager.Instance.Transition(() =>
+        {
+            if (currentRoomInstance != null) Destroy(currentRoomInstance);
+            currentCell = targetCell;
+            LoadRoom(targetCell, fromDirection);
+        }));
 
         isTransitioning = false;
-        yield break;
     }
+
 
     void LoadRoom(int cell, Direction fromDirection)
     {
