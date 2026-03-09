@@ -2098,7 +2098,7 @@ GameObject:
   - component: {fileID: 1994541199466729423}
   - component: {fileID: 7596068472817828648}
   - component: {fileID: 2907355876941595895}
-  - component: {fileID: 9190475993334968064}
+  - component: {fileID: 7214516253300801198}
   m_Layer: 0
   m_Name: Trigger_West
   m_TagString: Untagged
@@ -2199,7 +2199,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &9190475993334968064
+--- !u!114 &7214516253300801198
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2208,9 +2208,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 2837365824858287472}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a8ddc9e59403d47bcaa71e0d3b0df4dc, type: 3}
+  m_Script: {fileID: 11500000, guid: 7cfe98c667f78811db4a9d43a03154cc, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DoorTrigger
+  m_EditorClassIdentifier: Assembly-CSharp::RoomTrigger
+  type: 0
   direction: 3
 --- !u!1 &2932302460170425294
 GameObject:
@@ -2336,6 +2337,8 @@ MonoBehaviour:
   - {fileID: 1642584994397729131}
   - {fileID: 1664877913202410437}
   enemyCount: 4
+  isBossRoom: 0
+  levelExitSpawnPoint: {fileID: 0}
 --- !u!1 &3158110174825464041
 GameObject:
   m_ObjectHideFlags: 0
@@ -2747,7 +2750,7 @@ GameObject:
   - component: {fileID: 8489168778548667629}
   - component: {fileID: 6646269731783766150}
   - component: {fileID: 400882670052125049}
-  - component: {fileID: 5778385777876258657}
+  - component: {fileID: 9107933975073574399}
   m_Layer: 0
   m_Name: Trigger_North
   m_TagString: Untagged
@@ -2848,7 +2851,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &5778385777876258657
+--- !u!114 &9107933975073574399
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2857,9 +2860,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 4747820919872851829}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a8ddc9e59403d47bcaa71e0d3b0df4dc, type: 3}
+  m_Script: {fileID: 11500000, guid: 7cfe98c667f78811db4a9d43a03154cc, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DoorTrigger
+  m_EditorClassIdentifier: Assembly-CSharp::RoomTrigger
+  type: 0
   direction: 0
 --- !u!1 &4805048221436362875
 GameObject:
@@ -3189,7 +3193,7 @@ GameObject:
   - component: {fileID: 3875684876159455731}
   - component: {fileID: 271761803157325319}
   - component: {fileID: 8076601885687579751}
-  - component: {fileID: 3370645040985040867}
+  - component: {fileID: 7513102650741950694}
   m_Layer: 0
   m_Name: Trigger_South
   m_TagString: Untagged
@@ -3290,7 +3294,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &3370645040985040867
+--- !u!114 &7513102650741950694
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -3299,9 +3303,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 5884847446429042649}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a8ddc9e59403d47bcaa71e0d3b0df4dc, type: 3}
+  m_Script: {fileID: 11500000, guid: 7cfe98c667f78811db4a9d43a03154cc, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DoorTrigger
+  m_EditorClassIdentifier: Assembly-CSharp::RoomTrigger
+  type: 0
   direction: 1
 --- !u!1 &6026192718022805440
 GameObject:
@@ -4046,7 +4051,7 @@ GameObject:
   - component: {fileID: 5389886221013399067}
   - component: {fileID: 7065038074776707972}
   - component: {fileID: 5514917294868037099}
-  - component: {fileID: 5888043474800338633}
+  - component: {fileID: 1456507888166952389}
   m_Layer: 0
   m_Name: Trigger_East
   m_TagString: Untagged
@@ -4147,7 +4152,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &5888043474800338633
+--- !u!114 &1456507888166952389
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -4156,9 +4161,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 7108308232842258556}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a8ddc9e59403d47bcaa71e0d3b0df4dc, type: 3}
+  m_Script: {fileID: 11500000, guid: 7cfe98c667f78811db4a9d43a03154cc, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DoorTrigger
+  m_EditorClassIdentifier: Assembly-CSharp::RoomTrigger
+  type: 0
   direction: 2
 --- !u!1 &7112610527316109655
 GameObject:
