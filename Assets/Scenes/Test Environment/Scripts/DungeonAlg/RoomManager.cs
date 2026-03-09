@@ -26,6 +26,7 @@ public class RoomManager : MonoBehaviour
     bool isTransitioning = false;
 
     Dictionary<int, string> cellPrefabMap = new();
+    HashSet<int> visitedCells = new();
 
     void Awake() => Instance = this;
 
@@ -101,10 +102,14 @@ public class RoomManager : MonoBehaviour
         );
 
         // Spawn spiller
-        bool isStartRoom = (cell == 35);
-        Transform spawn = isStartRoom && CurrentRoom.startSpawn != null
-            ? CurrentRoom.startSpawn
-            : CurrentRoom.GetSpawnPoint(fromDirection);
+        bool isFirstVisit = !visitedCells.Contains(cell);
+        visitedCells.Add(cell);
+
+        Transform spawn;
+        if (isFirstVisit && cell == 35 && CurrentRoom.startSpawn != null)
+            spawn = CurrentRoom.startSpawn;
+        else
+            spawn = CurrentRoom.GetSpawnPoint(fromDirection);
 
         if (spawn != null && playerTransform != null)
             playerTransform.position = spawn.position;
