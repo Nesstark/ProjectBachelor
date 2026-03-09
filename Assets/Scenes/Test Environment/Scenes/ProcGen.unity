@@ -574,6 +574,7 @@ MonoBehaviour:
   treasureFolder: Rooms/Treasure
   shopFolder: Rooms/Shop
   startFolder: Rooms/Start
+  levelExitPrefab: {fileID: 4735494618048794802, guid: 02cf4207cd33e66c6814e40e1c59d668, type: 3}
 --- !u!114 &1079365122
 MonoBehaviour:
   m_ObjectHideFlags: 0

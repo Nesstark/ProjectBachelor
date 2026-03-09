@@ -16,22 +16,14 @@ public class DebugRoomUnlock : MonoBehaviour
     {
         if (interactAction.WasPressedThisFrame())
         {
-            Debug.Log("DEBUG: Interact trykket");
-
-            if (RoomManager.Instance == null)
-            {
-                Debug.LogError("DEBUG: RoomManager.Instance er null!");
-                return;
-            }
-
-            if (RoomManager.Instance.CurrentRoom == null)
+            if (RoomManager.Instance?.CurrentRoom == null)
             {
                 Debug.LogError("DEBUG: CurrentRoom er null!");
                 return;
             }
 
             RoomManager.Instance.CurrentRoom.UnlockDoors();
-            Debug.Log("DEBUG: UnlockDoors kaldt på CurrentRoom");
+            Debug.Log("DEBUG: Rum unlocked via E");
         }
     }
 }

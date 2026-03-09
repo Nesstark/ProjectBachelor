@@ -19,21 +19,57 @@ public class RoomManager : MonoBehaviour
     public string shopFolder       = "Rooms/Shop";
     public string startFolder      = "Rooms/Start";
 
+    [Header("Level Exit")]
+    public GameObject levelExitPrefab; // træk din grå cube prefab ind her
+
     GameObject currentRoomInstance;
     public RoomController CurrentRoom { get; private set; }
+    public int CurrentCellPublic => currentCell;
+    public int CurrentLevel { get; private set; } = 1;
 
     int currentCell = 35;
     bool isTransitioning = false;
 
     Dictionary<int, string> cellPrefabMap = new();
     HashSet<int> visitedCells = new();
+    HashSet<int> clearedCells = new();
 
     void Awake() => Instance = this;
 
     void Start()
     {
-        generator.Generate(1);
+        generator.Generate(CurrentLevel);
         LoadRoom(35, Direction.South);
+    }
+
+    public void LoadNextLevel()
+    {
+        CurrentLevel++;
+        Debug.Log($"Starter level {CurrentLevel}!");
+
+        // Reset alt til nyt level
+        cellPrefabMap.Clear();
+        visitedCells.Clear();
+        clearedCells.Clear();
+
+        generator.Generate(CurrentLevel);
+
+        if (currentRoomInstance != null)
+            Destroy(currentRoomInstance);
+
+        currentCell = 35;
+        LoadRoom(35, Direction.South);
+    }
+
+    public void SpawnLevelExit(Vector3 position)
+    {
+        if (levelExitPrefab == null)
+        {
+            Debug.LogError("LevelExit prefab er ikke sat på RoomManager!");
+            return;
+        }
+        Instantiate(levelExitPrefab, position, Quaternion.identity,
+                    currentRoomInstance.transform);
     }
 
     public void TryMove(Direction dir)
@@ -101,7 +137,6 @@ public class RoomManager : MonoBehaviour
             west:  neighbours.ContainsKey(Direction.West)
         );
 
-        // Spawn spiller
         bool isFirstVisit = !visitedCells.Contains(cell);
         visitedCells.Add(cell);
 
@@ -112,10 +147,24 @@ public class RoomManager : MonoBehaviour
             spawn = CurrentRoom.GetSpawnPoint(fromDirection);
 
         if (spawn != null && playerTransform != null)
-            playerTransform.position = spawn.position;
+        {
+            Rigidbody rb = playerTransform.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.MovePosition(spawn.position);
+            }
+            else
+            {
+                playerTransform.position = spawn.position;
+            }
+        }
 
         CurrentRoom.StartEncounter();
     }
+
+    public void MarkRoomCleared(int cell) => clearedCells.Add(cell);
+    public bool IsRoomCleared(int cell) => clearedCells.Contains(cell);
 
     string PickPrefab(RoomType type)
     {

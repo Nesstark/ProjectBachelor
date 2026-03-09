@@ -45,9 +45,13 @@ public class RoomController : MonoBehaviour
     public Transform[] enemySpawnPoints;
 
     [Header("Encounter Settings")]
-    public int enemyCount = 0; // sæt til 0 når ingen fjender endnu
+    public int enemyCount = 0;
     int remainingEnemies = 0;
     bool encounterActive = false;
+
+    [Header("Boss Settings")]
+    public bool isBossRoom = false;
+    public Transform levelExitSpawnPoint;
 
     public void SetDoors(bool north, bool south, bool east, bool west)
     {
@@ -63,32 +67,37 @@ public class RoomController : MonoBehaviour
         if (wall != null) wall.SetActive(!hasExit);
         if (!hasExit) return;
 
-        if (closed != null) closed.SetActive(true);
-        if (trigger != null) trigger.enabled = false;
-        SetDoorwayMaterial(crosses, true);
+        if (closed != null) closed.SetActive(false);
+        if (trigger != null) trigger.enabled = true;
+        SetDoorwayMaterial(crosses, false);
     }
 
-    // Kaldes af RoomManager når rummet er loadet
     public void StartEncounter()
+    {
+        if (RoomManager.Instance.IsRoomCleared(RoomManager.Instance.CurrentCellPublic))
+        {
+            UnlockDoors();
+            return;
+        }
+    }
+
+    public void TriggerEncounter()
     {
         if (enemyCount <= 0)
         {
-            // Ingen fjender — lås op med det samme
             UnlockDoors();
             return;
         }
 
+        LockDoors();
         remainingEnemies = enemyCount;
         encounterActive = true;
-        // Her vil I senere spawne fjender fra enemySpawnPoints
-        Debug.Log($"Encounter started: {remainingEnemies} fjender tilbage");
+        Debug.Log($"Encounter triggered: {remainingEnemies} fjender");
     }
 
-    // Kaldes af hver fjende når den dør
     public void OnEnemyDied()
     {
         if (!encounterActive) return;
-
         remainingEnemies--;
         Debug.Log($"Fjende dræbt. {remainingEnemies} tilbage.");
 
@@ -99,13 +108,33 @@ public class RoomController : MonoBehaviour
         }
     }
 
+    public void LockDoors()
+    {
+        LockDoor(doorNorthClosed, doorNorthTrigger, doorNorthCrosses);
+        LockDoor(doorSouthClosed, doorSouthTrigger, doorSouthCrosses);
+        LockDoor(doorEastClosed,  doorEastTrigger,  doorEastCrosses);
+        LockDoor(doorWestClosed,  doorWestTrigger,  doorWestCrosses);
+    }
+
+    void LockDoor(GameObject closed, Collider trigger, MeshRenderer[] crosses)
+    {
+        if (closed != null) closed.SetActive(true);
+        if (trigger != null) trigger.enabled = false;
+        SetDoorwayMaterial(crosses, true);
+    }
+
     public void UnlockDoors()
     {
         UnlockDoor(doorNorthClosed, doorNorthTrigger, doorNorthCrosses);
         UnlockDoor(doorSouthClosed, doorSouthTrigger, doorSouthCrosses);
         UnlockDoor(doorEastClosed,  doorEastTrigger,  doorEastCrosses);
         UnlockDoor(doorWestClosed,  doorWestTrigger,  doorWestCrosses);
-        Debug.Log("Døre låst op!");
+        RoomManager.Instance.MarkRoomCleared(RoomManager.Instance.CurrentCellPublic);
+
+        if (isBossRoom && levelExitSpawnPoint != null)
+            RoomManager.Instance.SpawnLevelExit(levelExitSpawnPoint.position);
+
+        Debug.Log("Rum cleared og døre låst op!");
     }
 
     void UnlockDoor(GameObject closed, Collider trigger, MeshRenderer[] crosses)
