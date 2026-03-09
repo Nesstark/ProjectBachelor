@@ -31,6 +31,7 @@ public class RoomController : MonoBehaviour
     public Transform spawnSouth;
     public Transform spawnEast;
     public Transform spawnWest;
+    public Transform startSpawn;
 
     [Header("Doorway Visuals")]
     public MeshRenderer[] doorNorthCrosses;
@@ -43,6 +44,11 @@ public class RoomController : MonoBehaviour
     [Header("Enemy Spawn Points")]
     public Transform[] enemySpawnPoints;
 
+    [Header("Encounter Settings")]
+    public int enemyCount = 0; // sæt til 0 når ingen fjender endnu
+    int remainingEnemies = 0;
+    bool encounterActive = false;
+
     public void SetDoors(bool north, bool south, bool east, bool west)
     {
         ConfigureDoor(doorNorth, doorNorthClosed, doorNorthTrigger, doorNorthWall, doorNorthCrosses, north);
@@ -53,20 +59,44 @@ public class RoomController : MonoBehaviour
 
     void ConfigureDoor(GameObject door, GameObject closed, Collider trigger, GameObject wall, MeshRenderer[] crosses, bool hasExit)
     {
-        // Hele dør-slottet aktiv/inaktiv baseret på om der er en nabo
         if (door != null) door.SetActive(hasExit);
-
-        // Wall block lukker åbningen hvis ingen exit
         if (wall != null) wall.SetActive(!hasExit);
-
         if (!hasExit) return;
 
-        // Dør starter altid locked — UnlockDoors() kaldes når fjender er besejret
         if (closed != null) closed.SetActive(true);
         if (trigger != null) trigger.enabled = false;
-
-        // Start med lit materiale (låst tilstand)
         SetDoorwayMaterial(crosses, true);
+    }
+
+    // Kaldes af RoomManager når rummet er loadet
+    public void StartEncounter()
+    {
+        if (enemyCount <= 0)
+        {
+            // Ingen fjender — lås op med det samme
+            UnlockDoors();
+            return;
+        }
+
+        remainingEnemies = enemyCount;
+        encounterActive = true;
+        // Her vil I senere spawne fjender fra enemySpawnPoints
+        Debug.Log($"Encounter started: {remainingEnemies} fjender tilbage");
+    }
+
+    // Kaldes af hver fjende når den dør
+    public void OnEnemyDied()
+    {
+        if (!encounterActive) return;
+
+        remainingEnemies--;
+        Debug.Log($"Fjende dræbt. {remainingEnemies} tilbage.");
+
+        if (remainingEnemies <= 0)
+        {
+            encounterActive = false;
+            UnlockDoors();
+        }
     }
 
     public void UnlockDoors()
@@ -75,6 +105,7 @@ public class RoomController : MonoBehaviour
         UnlockDoor(doorSouthClosed, doorSouthTrigger, doorSouthCrosses);
         UnlockDoor(doorEastClosed,  doorEastTrigger,  doorEastCrosses);
         UnlockDoor(doorWestClosed,  doorWestTrigger,  doorWestCrosses);
+        Debug.Log("Døre låst op!");
     }
 
     void UnlockDoor(GameObject closed, Collider trigger, MeshRenderer[] crosses)

@@ -11,15 +11,17 @@ public class RoomManager : MonoBehaviour
     public Transform playerTransform;
 
     [Header("Room Prefab Folders")]
-    public string normalFolder    = "Rooms/Normal";
+    public string normalFolder     = "Rooms/Normal";
     public string corridorNSFolder = "Rooms/CorridorNS";
     public string corridorEWFolder = "Rooms/CorridorEW";
-    public string bossFolder      = "Rooms/Boss";
-    public string treasureFolder  = "Rooms/Treasure";
-    public string shopFolder      = "Rooms/Shop";
-    public string startFolder     = "Rooms/Start";
+    public string bossFolder       = "Rooms/Boss";
+    public string treasureFolder   = "Rooms/Treasure";
+    public string shopFolder       = "Rooms/Shop";
+    public string startFolder      = "Rooms/Start";
 
     GameObject currentRoomInstance;
+    public RoomController CurrentRoom { get; private set; }
+
     int currentCell = 35;
     bool isTransitioning = false;
 
@@ -56,39 +58,58 @@ public class RoomManager : MonoBehaviour
     {
         isTransitioning = true;
 
-        yield return TransitionManager.Instance.Transition(() =>
-        {
-            if (currentRoomInstance != null)
-                Destroy(currentRoomInstance);
+        if (currentRoomInstance != null)
+            Destroy(currentRoomInstance);
 
-            currentCell = targetCell;
-            LoadRoom(targetCell, fromDirection);
-        });
+        currentCell = targetCell;
+        LoadRoom(targetCell, fromDirection);
 
         isTransitioning = false;
+        yield break;
     }
 
     void LoadRoom(int cell, Direction fromDirection)
     {
+        string prefabPath = PickPrefab(generator.DungeonMap[cell]);
+        if (prefabPath == null) return;
+
         if (!cellPrefabMap.ContainsKey(cell))
-            cellPrefabMap[cell] = PickPrefab(generator.DungeonMap[cell]);
+            cellPrefabMap[cell] = prefabPath;
 
         GameObject prefab = Resources.Load<GameObject>(cellPrefabMap[cell]);
+        if (prefab == null)
+        {
+            Debug.LogError($"Prefab ikke fundet: {cellPrefabMap[cell]}");
+            return;
+        }
+
         currentRoomInstance = Instantiate(prefab, Vector3.zero, Quaternion.identity);
+        CurrentRoom = currentRoomInstance.GetComponent<RoomController>();
+
+        if (CurrentRoom == null)
+        {
+            Debug.LogError($"RoomController mangler på prefab: {cellPrefabMap[cell]}");
+            return;
+        }
 
         var neighbours = generator.GetNeighbours(cell);
-        var rc = currentRoomInstance.GetComponent<RoomController>();
-
-        rc.SetDoors(
+        CurrentRoom.SetDoors(
             north: neighbours.ContainsKey(Direction.North),
             south: neighbours.ContainsKey(Direction.South),
             east:  neighbours.ContainsKey(Direction.East),
             west:  neighbours.ContainsKey(Direction.West)
         );
 
-        Transform spawn = rc.GetSpawnPoint(fromDirection);
+        // Spawn spiller
+        bool isStartRoom = (cell == 35);
+        Transform spawn = isStartRoom && CurrentRoom.startSpawn != null
+            ? CurrentRoom.startSpawn
+            : CurrentRoom.GetSpawnPoint(fromDirection);
+
         if (spawn != null && playerTransform != null)
             playerTransform.position = spawn.position;
+
+        CurrentRoom.StartEncounter();
     }
 
     string PickPrefab(RoomType type)
