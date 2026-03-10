@@ -44,6 +44,10 @@ public class RoomController : MonoBehaviour
     [Header("Enemy Spawn Points")]
     public Transform[] enemySpawnPoints;
 
+    [Header("Enemy Prefabs")]
+    public GameObject[] enemyPrefabs;
+    public GameObject[] bossPrefabs;
+
     [Header("Encounter Settings")]
     public int enemyCount = 0;
     int remainingEnemies = 0;
@@ -83,14 +87,32 @@ public class RoomController : MonoBehaviour
 
     public void TriggerEncounter()
     {
-        if (enemyCount <= 0)
+        GameObject[] prefabsToUse = isBossRoom ? bossPrefabs : enemyPrefabs;
+
+        if ((prefabsToUse == null || prefabsToUse.Length == 0) && enemyCount <= 0)
         {
             UnlockDoors();
             return;
         }
 
         LockDoors();
-        remainingEnemies = enemyCount;
+
+        if (prefabsToUse != null && prefabsToUse.Length > 0 && enemySpawnPoints != null && enemySpawnPoints.Length > 0)
+        {
+            int spawnCount = enemyCount > 0 ? Mathf.Min(enemyCount, enemySpawnPoints.Length) : enemySpawnPoints.Length;
+            remainingEnemies = spawnCount;
+
+            for (int i = 0; i < spawnCount; i++)
+            {
+                GameObject prefab = prefabsToUse[Random.Range(0, prefabsToUse.Length)];
+                Instantiate(prefab, enemySpawnPoints[i].position, enemySpawnPoints[i].rotation);
+            }
+        }
+        else
+        {
+            remainingEnemies = enemyCount;
+        }
+
         encounterActive = true;
         Debug.Log($"Encounter triggered: {remainingEnemies} fjender");
     }

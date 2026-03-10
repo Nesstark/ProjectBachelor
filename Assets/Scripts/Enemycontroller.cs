@@ -152,6 +152,8 @@ public class EnemyController : MonoBehaviour
         Debug.Log($"[Enemy:{name}({enemyType})] Died — awarding {_stats.XpReward:F0} XP");
         GM?.AwardXp(_stats.XpReward);
 
+        RoomManager.Instance?.CurrentRoom?.OnEnemyDied();
+
         if (animator != null) animator.SetTrigger(HashDie);
         Destroy(gameObject, 0.15f);
     }

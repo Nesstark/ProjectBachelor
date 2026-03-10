@@ -206,6 +206,8 @@ public class ArcherController : MonoBehaviour
         Debug.Log($"[Archer] Died — awarding {_stats.XpReward:F0} XP");
         GM?.AwardXp(_stats.XpReward);
 
+        RoomManager.Instance?.CurrentRoom?.OnEnemyDied();
+
         if (animator != null) animator.SetTrigger(HashDie);
         Destroy(gameObject, 0.15f);
     }

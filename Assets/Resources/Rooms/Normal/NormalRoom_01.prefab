@@ -125,6 +125,7 @@ GameObject:
   - component: {fileID: 3634423327450210322}
   - component: {fileID: 653943871973267536}
   - component: {fileID: 1352903508641433704}
+  - component: {fileID: 3784791733217991780}
   m_Layer: 0
   m_Name: Bench(Log)
   m_TagString: Untagged
@@ -225,6 +226,22 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!208 &3784791733217991780
+NavMeshObstacle:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 337981265509621966}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Shape: 1
+  m_Extents: {x: 0.5, y: 0.5, z: 0.5}
+  m_MoveThreshold: 0.1
+  m_Carve: 0
+  m_CarveOnlyStationary: 1
+  m_Center: {x: 0, y: 0, z: 0}
+  m_TimeToStationary: 0.5
 --- !u!1 &345832869278804323
 GameObject:
   m_ObjectHideFlags: 0
@@ -968,7 +985,7 @@ GameObject:
   - component: {fileID: 1732869446041640779}
   - component: {fileID: 6140511723772254408}
   - component: {fileID: 8789561706252175742}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Plane (3)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1081,7 +1098,7 @@ GameObject:
   - component: {fileID: 31745498456445367}
   - component: {fileID: 5001848998918279881}
   - component: {fileID: 7394581458469624485}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Plane (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1337,7 +1354,7 @@ GameObject:
   - component: {fileID: 4262215031780433369}
   - component: {fileID: 1764208743082749606}
   - component: {fileID: 4130967426559885978}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Plane
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2119,7 +2136,7 @@ MonoBehaviour:
   m_Center: {x: 0, y: 2, z: 0}
   m_LayerMask:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 192
   m_UseGeometry: 1
   m_DefaultArea: 0
   m_GenerateLinks: 0
@@ -2130,7 +2147,7 @@ MonoBehaviour:
   m_OverrideVoxelSize: 0
   m_VoxelSize: 0.16666667
   m_MinRegionArea: 2
-  m_NavMeshData: {fileID: 23800000, guid: 44ef2e2139ee248faa81d83755d17e7d, type: 2}
+  m_NavMeshData: {fileID: 23800000, guid: 9956e2d6868504f979d6e3971ac4ed64, type: 2}
   m_BuildHeightMesh: 0
 --- !u!1 &2598832059102501695
 GameObject:
@@ -2370,6 +2387,7 @@ GameObject:
   - component: {fileID: 4520181727479339754}
   - component: {fileID: 28171368731364059}
   - component: {fileID: 218537341893698892}
+  - component: {fileID: 2121843395458073356}
   m_Layer: 0
   m_Name: Bench(Log)
   m_TagString: Untagged
@@ -2470,6 +2488,22 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!208 &2121843395458073356
+NavMeshObstacle:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2612184869735007372}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Shape: 1
+  m_Extents: {x: 0.5, y: 0.5, z: 0.5}
+  m_MoveThreshold: 0.1
+  m_Carve: 0
+  m_CarveOnlyStationary: 1
+  m_Center: {x: 0, y: 0, z: 0}
+  m_TimeToStationary: 0.5
 --- !u!1 &2694931033042887775
 GameObject:
   m_ObjectHideFlags: 0
@@ -2896,6 +2930,10 @@ MonoBehaviour:
   - {fileID: 8205193983500858065}
   - {fileID: 1642584994397729131}
   - {fileID: 1664877913202410437}
+  enemyPrefabs:
+  - {fileID: 7543761834999695512, guid: 67b34f8e3d66c40d6839f3e1d9991957, type: 3}
+  - {fileID: 8856747528781715408, guid: c423d2d981ef34248b61b8c6d94ba88d, type: 3}
+  bossPrefabs: []
   enemyCount: 4
   isBossRoom: 0
   levelExitSpawnPoint: {fileID: 0}
@@ -4629,7 +4667,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 9010970295615286869}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Floor
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4959,6 +4997,7 @@ GameObject:
   - component: {fileID: 2150294970248400563}
   - component: {fileID: 637089796439253840}
   - component: {fileID: 8698448700453294642}
+  - component: {fileID: 4127274980540912102}
   m_Layer: 0
   m_Name: Firepit
   m_TagString: Untagged
@@ -5059,6 +5098,22 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!208 &4127274980540912102
+NavMeshObstacle:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7057632948936824398}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Shape: 1
+  m_Extents: {x: 0.5, y: 0.5, z: 0.5}
+  m_MoveThreshold: 0.1
+  m_Carve: 0
+  m_CarveOnlyStationary: 1
+  m_Center: {x: 0, y: 0, z: 0}
+  m_TimeToStationary: 0.5
 --- !u!1 &7108308232842258556
 GameObject:
   m_ObjectHideFlags: 0
@@ -6102,7 +6157,7 @@ GameObject:
   - component: {fileID: 5895638286079256487}
   - component: {fileID: 2806413932927268976}
   - component: {fileID: 91268130067558193}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Plane (4)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
