@@ -746,6 +746,88 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1720002074}
   m_CullTransparentMesh: 1
+--- !u!1 &1812892293
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1812892295}
+  - component: {fileID: 1812892294}
+  m_Layer: 0
+  m_Name: Manager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1812892294
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1812892293}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fbd8aeffc8aa14f4c8dd35aef4e4012a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GameManager
+  basePlayerHealth: 100
+  basePlayerSpeed: 5
+  basePlayerDamage: 20
+  healthPerLevel: 20
+  speedPerLevel: 0.3
+  damagePerLevel: 5
+  baseXpToLevel: 100
+  xpScalingFactor: 1.5
+  enemyTypes:
+  - typeName: Warrior
+    baseHealth: 80
+    baseSpeed: 3
+    baseDamage: 15
+    baseXpReward: 30
+  - typeName: Archer
+    baseHealth: 40
+    baseSpeed: 3
+    baseDamage: 10
+    baseXpReward: 25
+  - typeName: Elite
+    baseHealth: 200
+    baseSpeed: 2.5
+    baseDamage: 30
+    baseXpReward: 80
+  enemyScalePerLevel: 0.15
+  attackRange: 3
+  OnPlayerLevelUp:
+    m_PersistentCalls:
+      m_Calls: []
+  OnPlayerHealthChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  OnXpChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  OnPlayerDied:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!4 &1812892295
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1812892293}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.98177, y: -3.87802, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1928009834
 GameObject:
   m_ObjectHideFlags: 0
@@ -936,6 +1018,7 @@ SceneRoots:
   m_Roots:
   - {fileID: 1928009837}
   - {fileID: 574516518}
+  - {fileID: 1812892295}
   - {fileID: 1534478826}
   - {fileID: 607407049}
   - {fileID: 4333385814943642807}
