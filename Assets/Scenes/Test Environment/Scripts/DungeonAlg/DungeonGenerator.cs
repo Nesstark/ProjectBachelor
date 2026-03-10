@@ -2,25 +2,14 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-/// <summary>
-/// Procedurally generates a dungeon layout inspired by The Binding of Isaac.
-///
-/// The dungeon is represented as a flat integer grid where each cell's coordinates
-/// are encoded as: cellIndex = (y * GridWidth) + x.
-/// Adjacency is therefore: North = +GridWidth, South = -GridWidth, East = +1, West = -1.
-///
-/// Generation steps:
-///   1. BFS expansion from a fixed start cell to fill a target room count.
-///   2. Validation (enough dead ends, boss room not adjacent to start).
-///   3. Special room assignment (Boss, Treasure, Shop) at dead ends.
-///   4. Straight-through Normal rooms are promoted to Corridor types.
-/// </summary>
+// Procedurally generates a dungeon layout inspired by The Binding of Isaac.
+//
+// The dungeon is a flat integer grid: cellIndex = (y * GridWidth) + x.
+// Adjacency offsets: North = +GridWidth, South = -GridWidth, East = +1, West = -1.
+//
+// Pipeline: BFS expansion -> validation -> special room assignment -> corridor promotion.
 public class DungeonGenerator : MonoBehaviour
 {
-    // -------------------------------------------------------------------------
-    // Inspector fields
-    // -------------------------------------------------------------------------
-
     [Header("Seed")]
     public int  seed          = 0;
     public bool useRandomSeed = true;
@@ -47,45 +36,14 @@ public class DungeonGenerator : MonoBehaviour
     [Tooltip("Maximum attempts to generate a valid map before giving up.")]
     public int maxGenerationAttempts = 100;
 
-    // -------------------------------------------------------------------------
-    // Constants
-    // -------------------------------------------------------------------------
-
-    /// <summary>
-    /// Width of the logical grid. Cells are addressed as y * GridWidth + x.
-    /// Must stay at 10 to keep the integer-encoding scheme valid.
-    /// </summary>
+    // Grid width must stay at 10 to keep the integer-encoding scheme valid.
     private const int GridWidth = 10;
-
-    /// <summary>The cell index used as the player's starting room.</summary>
     private const int StartCell = 35;
 
-    /// <summary>
-    /// Offsets for the four cardinal directions in cell-index space.
-    /// North/South step by <see cref="GridWidth"/>; East/West step by 1.
-    /// </summary>
     private static readonly int[] Directions = { GridWidth, -GridWidth, 1, -1 };
 
-    // -------------------------------------------------------------------------
-    // Public state
-    // -------------------------------------------------------------------------
-
-    /// <summary>
-    /// The generated dungeon, keyed by cell index with each cell's <see cref="RoomType"/>.
-    /// Populated after a successful call to <see cref="Generate"/>.
-    /// </summary>
     public Dictionary<int, RoomType> DungeonMap { get; private set; } = new();
 
-    // -------------------------------------------------------------------------
-    // Public API
-    // -------------------------------------------------------------------------
-
-    /// <summary>
-    /// Generates a complete dungeon for the given <paramref name="level"/>.
-    /// Re-runs BFS until a valid layout is produced, then assigns special rooms
-    /// and corridor types.
-    /// </summary>
-    /// <param name="level">Current dungeon depth; higher values yield more rooms.</param>
     public void Generate(int level)
     {
         if (useRandomSeed)
@@ -112,10 +70,6 @@ public class DungeonGenerator : MonoBehaviour
         AssignCorridors();
     }
 
-    /// <summary>
-    /// Returns all rooms directly adjacent (N/S/E/W) to <paramref name="cell"/>
-    /// that exist in the current <see cref="DungeonMap"/>, keyed by direction.
-    /// </summary>
     public Dictionary<Direction, int> GetNeighbours(int cell)
     {
         var result = new Dictionary<Direction, int>();
@@ -128,17 +82,6 @@ public class DungeonGenerator : MonoBehaviour
         return result;
     }
 
-    // -------------------------------------------------------------------------
-    // Generation pipeline
-    // -------------------------------------------------------------------------
-
-    /// <summary>
-    /// Runs a single BFS expansion attempt and validates the result.
-    /// </summary>
-    /// <returns>
-    /// <c>true</c> if the generated layout meets all validity constraints;
-    /// <c>false</c> if the caller should retry.
-    /// </returns>
     private bool TryGenerate(int level)
     {
         int targetRooms = baseRoomCount
@@ -147,7 +90,7 @@ public class DungeonGenerator : MonoBehaviour
 
         targetRooms = Mathf.Clamp(targetRooms, minRooms, maxRooms);
 
-        // BFS from the start cell — using Queue for O(1) dequeue (vs List.RemoveAt(0) which is O(n))
+        // Queue gives O(1) dequeue; List.RemoveAt(0) would be O(n).
         var queue = new Queue<int>();
         queue.Enqueue(StartCell);
         DungeonMap[StartCell] = RoomType.Start;
@@ -174,29 +117,20 @@ public class DungeonGenerator : MonoBehaviour
         return IsLayoutValid();
     }
 
-    /// <summary>
-    /// Validates the generated layout:
-    ///   - At least two dead ends must exist (one for boss, one for treasure/shop).
-    ///   - The boss room candidate must not be directly adjacent to the start.
-    /// </summary>
     private bool IsLayoutValid()
     {
         List<int> deadEnds = GetDeadEnds();
         if (deadEnds.Count < 2) return false;
 
-        int bossCandidate    = FarthestCell(deadEnds, StartCell);
+        int  bossCandidate       = FarthestCell(deadEnds, StartCell);
         bool bossAdjacentToStart = Directions.Any(d => bossCandidate + d == StartCell);
 
         return !bossAdjacentToStart;
     }
 
-    /// <summary>
-    /// Promotes dead-end rooms to special types: Boss (farthest from start),
-    /// then Treasure and Shop from the remaining dead ends.
-    /// </summary>
+    // Boss goes to the dead end farthest from start; Treasure and Shop take the next available.
     private void AssignSpecialRooms()
     {
-        // GetDeadEnds excludes the start cell by definition
         List<int> deadEnds = GetDeadEnds();
 
         int bossCell = FarthestCell(deadEnds, StartCell);
@@ -207,14 +141,9 @@ public class DungeonGenerator : MonoBehaviour
         if (deadEnds.Count > 0) { DungeonMap[deadEnds[0]] = RoomType.Shop;     deadEnds.RemoveAt(0); }
     }
 
-    /// <summary>
-    /// Promotes Normal rooms that form straight north–south or east–west corridors
-    /// (exactly two opposing connections) to the appropriate <see cref="RoomType"/> corridor variant.
-    /// </summary>
     private void AssignCorridors()
     {
-        // ToList() snapshots the keys before iteration — necessary because assigning a new
-        // RoomType value invalidates the dictionary's enumerator, even though no keys change.
+        // ToList() snapshots keys first -- modifying a value still invalidates the enumerator.
         foreach (int cell in DungeonMap.Keys.ToList())
         {
             if (DungeonMap[cell] != RoomType.Normal) continue;
@@ -228,19 +157,11 @@ public class DungeonGenerator : MonoBehaviour
 
             if (connections != 2) continue;
 
-            if (n && s) DungeonMap[cell] = RoomType.CorridorNS;
+            if      (n && s) DungeonMap[cell] = RoomType.CorridorNS;
             else if (e && w) DungeonMap[cell] = RoomType.CorridorEW;
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
-
-    /// <summary>
-    /// Returns all rooms that have exactly one neighbour and are not the start room.
-    /// These are candidate locations for boss, treasure, and shop rooms.
-    /// </summary>
     private List<int> GetDeadEnds()
     {
         return DungeonMap.Keys
@@ -248,31 +169,18 @@ public class DungeonGenerator : MonoBehaviour
             .ToList();
     }
 
-    /// <summary>
-    /// Returns the number of cardinal neighbours of <paramref name="cell"/>
-    /// that exist in the current <see cref="DungeonMap"/>.
-    /// </summary>
     private int CountNeighbours(int cell)
     {
         return Directions.Count(d => DungeonMap.ContainsKey(cell + d));
     }
 
-    /// <summary>
-    /// Returns the cell from <paramref name="candidates"/> with the greatest
-    /// Manhattan distance from <paramref name="origin"/>.
-    /// </summary>
     private int FarthestCell(IEnumerable<int> candidates, int origin)
     {
         return candidates.OrderByDescending(c => ManhattanDistance(c, origin)).First();
     }
 
-    /// <summary>
-    /// Computes the Manhattan distance between two cell indices.
-    ///
-    /// ⚠️ Assumes all cell indices are in the range [0, 99] (a 10×10 grid).
-    /// Values outside this range will produce incorrect results because the
-    /// x-coordinate is derived via modulo 10.
-    /// </summary>
+    // NOTE: Only valid for cell indices in range [0, 99]. The x-coordinate is derived
+    // via modulo 10, so values outside that range will produce incorrect results.
     private int ManhattanDistance(int a, int b)
     {
         int ax = a % GridWidth, ay = a / GridWidth;
