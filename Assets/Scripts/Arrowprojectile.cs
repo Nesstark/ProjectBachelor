@@ -1,21 +1,13 @@
 ﻿using UnityEngine;
 
 // ============================================================
-//  ArrowProjectile.cs  —  Rigidbody version
-//
+//  ArrowProjectile.cs
 //  ── Prefab Setup ──────────────────────────────────────────
 //   1. GameObject → 3D Object → Sphere
-//   2. Remove the MeshCollider Unity adds automatically
-//   3. Add Rigidbody
-//        • Use Gravity      : OFF
-//        • Is Kinematic     : OFF
-//        • Interpolate      : Interpolate
-//        • Freeze Rotation  : X Y Z all ON
-//   4. Add SphereCollider
-//        • Is Trigger       : ON
-//        • Radius           : 0.25
+//   2. Remove MeshCollider
+//   3. Add Rigidbody  →  Use Gravity: OFF, Freeze Rotation XYZ
+//   4. Add SphereCollider  →  Is Trigger: ON
 //   5. Attach this script
-//   6. Save as prefab → assign to ArcherController
 // ============================================================
 
 [RequireComponent(typeof(Rigidbody))]
@@ -29,6 +21,7 @@ public class ArrowProjectile : MonoBehaviour
     private Rigidbody _rb;
     private float _damage;
     private bool _hasHit;
+    private GameObject _spawner;   // the archer that fired this — ignored on collision
 
     // ─────────────────────────────────────────────────────────
     private void Awake()
@@ -44,15 +37,19 @@ public class ArrowProjectile : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────
-    /// <summary>Called by ArcherController immediately after Instantiate.</summary>
-    public void Init(Vector3 direction, float damage)
+    /// <summary>
+    /// Call immediately after Instantiate.
+    /// Pass the Archer's GameObject so the projectile ignores it.
+    /// </summary>
+    public void Init(Vector3 direction, float damage, GameObject spawner)
     {
         _damage = damage;
+        _spawner = spawner;
 
         Vector3 flatDir = new Vector3(direction.x, 0f, direction.z).normalized;
         _rb.linearVelocity = flatDir * speed;
 
-        Debug.Log($"[Arrow] Launched — dir:{flatDir}  speed:{speed}  dmg:{damage}");
+        Debug.Log($"[Arrow] Launched — dir:{flatDir}  dmg:{damage}  ignoring:{spawner.name}");
         Destroy(gameObject, lifetime);
     }
 
@@ -60,7 +57,16 @@ public class ArrowProjectile : MonoBehaviour
     private void OnTriggerEnter(Collider other)
     {
         if (_hasHit) return;
+
+        // Always ignore the archer that fired this
+        if (_spawner != null && other.gameObject == _spawner) return;
+        if (_spawner != null && other.transform.IsChildOf(_spawner.transform)) return;
+
+        // Ignore other projectiles
         if (other.GetComponent<ArrowProjectile>() != null) return;
+
+        // Never destroy when passing through enemies or other archers
+        if (other.CompareTag("Enemy") || other.CompareTag("Archer")) return;
 
         if (other.CompareTag("Player"))
         {
@@ -71,7 +77,8 @@ public class ArrowProjectile : MonoBehaviour
             return;
         }
 
-        if (!other.CompareTag("Enemy") && !other.CompareTag("Archer"))
+        // Hit a wall or any solid non-trigger object — destroy
+        if (!other.isTrigger)
         {
             _hasHit = true;
             Debug.Log($"[Arrow] Hit '{other.name}' — destroyed");

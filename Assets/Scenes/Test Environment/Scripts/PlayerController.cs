@@ -183,25 +183,16 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        // Check for EnemyController (Warrior / Elite)
-        EnemyController enemy = closest.GetComponentInParent<EnemyController>();
+        // Single check covers ALL enemy types since they all inherit BaseEnemy
+        BaseEnemy enemy = closest.GetComponentInParent<BaseEnemy>();
         if (enemy != null)
         {
             enemy.TakeDamage(damage);
-            Debug.Log($"[Player] HIT EnemyController '{closest.name}' for {damage:F1}");
+            Debug.Log($"[Player] HIT '{closest.name}' for {damage:F1}");
             return;
         }
 
-        // Check for ArcherController
-        ArcherController archer = closest.GetComponentInParent<ArcherController>();
-        if (archer != null)
-        {
-            archer.TakeDamage(damage);
-            Debug.Log($"[Player] HIT ArcherController '{closest.name}' for {damage:F1}");
-            return;
-        }
-
-        Debug.LogWarning($"[Player] '{closest.name}' has no EnemyController or ArcherController!");
+        Debug.LogWarning($"[Player] '{closest.name}' has no BaseEnemy component!");
     }
 
     // ─────────────────────────────────────────────────────────

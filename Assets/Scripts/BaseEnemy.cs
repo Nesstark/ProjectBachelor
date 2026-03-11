@@ -1,0 +1,186 @@
+﻿using UnityEngine;
+using UnityEngine.AI;
+
+// ============================================================
+//  BaseEnemy.cs  —  Abstract base class for all enemy types
+//  Contains all shared logic: stats, damage, death, flash.
+//  Subclasses only implement their unique movement/attack.
+// ============================================================
+
+[RequireComponent(typeof(NavMeshAgent))]
+public abstract class BaseEnemy : MonoBehaviour
+{
+    [Header("Attack Cycle")]
+    [SerializeField] protected float attackInterval = 1.5f;
+    [SerializeField] protected float meleeRange = 1.5f;
+
+    [Header("Optional")]
+    [SerializeField] protected Animator animator;
+    [SerializeField] protected SpriteRenderer spriteRenderer;
+
+    // ─── Animator Hashes ─────────────────────────────────────
+    protected static readonly int HashSpeed = Animator.StringToHash("Speed");
+    protected static readonly int HashAttackCharge = Animator.StringToHash("AttackCharge");
+    protected static readonly int HashAttack = Animator.StringToHash("Attack");
+    protected static readonly int HashDie = Animator.StringToHash("Die");
+
+    // ─── Shared Runtime State ────────────────────────────────
+    protected EnemyStats Stats;
+    protected NavMeshAgent Agent;
+    protected Transform PlayerTransform;
+    protected float AttackTimer;
+    protected bool IsDead;
+
+    protected GameManager GM => GameManager.Instance;
+
+    // ─────────────────────────────────────────────────────────
+    //  Unity Lifecycle
+    // ─────────────────────────────────────────────────────────
+    protected virtual void Awake()
+    {
+        Agent = GetComponent<NavMeshAgent>();
+    }
+
+    protected virtual void Start()
+    {
+        // Each subclass provides its enemy type name
+        Stats = GM != null ? GM.GetEnemyStats(EnemyTypeName) : FallbackStats();
+
+        Agent.speed = Stats.Speed;
+        Agent.stoppingDistance = meleeRange;
+
+        AttackTimer = Random.Range(0f, attackInterval);
+
+        GameObject playerGO = GameObject.FindGameObjectWithTag("Player");
+        if (playerGO != null)
+            PlayerTransform = playerGO.transform;
+        else
+            Debug.LogWarning($"[{name}] No GameObject tagged 'Player' found!");
+
+        Debug.Log($"[{name}] Type:{EnemyTypeName}  HP:{Stats.MaxHealth:F0}  " +
+                  $"SPD:{Stats.Speed:F1}  DMG:{Stats.Damage:F1}");
+    }
+
+    protected virtual void Update()
+    {
+        if (IsDead || PlayerTransform == null) return;
+
+        HandleMovement();
+        TickAttackCycle();
+        UpdateAnimator();
+        UpdateSpriteFlip();
+    }
+
+    // ─────────────────────────────────────────────────────────
+    //  Abstract — subclasses MUST implement these
+    // ─────────────────────────────────────────────────────────
+
+    /// <summary>The type name used to fetch stats from GameManager e.g. "Warrior".</summary>
+    protected abstract string EnemyTypeName { get; }
+
+    /// <summary>How this enemy moves each frame — chase, flee, strafe etc.</summary>
+    protected abstract void HandleMovement();
+
+    // ─────────────────────────────────────────────────────────
+    //  Attack Cycle — shared, subclasses can override
+    // ─────────────────────────────────────────────────────────
+    protected virtual void TickAttackCycle()
+    {
+        AttackTimer += Time.deltaTime;
+
+        if (AttackTimer >= attackInterval)
+        {
+            AttackTimer = 0f;
+            TryAttack();
+        }
+    }
+
+    /// <summary>
+    /// Default attack — melee damage when player is within meleeRange.
+    /// Override in subclasses for ranged attacks.
+    /// </summary>
+    protected virtual void TryAttack()
+    {
+        float dist = Vector3.Distance(transform.position, PlayerTransform.position);
+
+        if (dist <= meleeRange)
+        {
+            Debug.Log($"[{name}] ATTACK — {Stats.Damage:F1} dmg to Player");
+            GM?.ApplyDamageToPlayer(Stats.Damage);
+            if (animator != null) animator.SetTrigger(HashAttack);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────
+    //  Shared Public API
+    // ─────────────────────────────────────────────────────────
+    public virtual void TakeDamage(float amount)
+    {
+        if (IsDead) return;
+
+        Stats.CurrentHealth -= amount;
+        Debug.Log($"[{name}] Took {amount:F1} — HP:{Stats.CurrentHealth:F1}/{Stats.MaxHealth:F1}");
+
+        if (spriteRenderer != null) StartCoroutine(FlashRoutine());
+
+        if (Stats.CurrentHealth <= 0f) Die();
+    }
+
+    // ─────────────────────────────────────────────────────────
+    //  Death — shared, subclasses can override for special fx
+    // ─────────────────────────────────────────────────────────
+    protected virtual void Die()
+    {
+        if (IsDead) return;
+        IsDead = true;
+
+        Agent.ResetPath();
+        Agent.enabled = false;
+
+        Debug.Log($"[{name}] Died — awarding {Stats.XpReward:F0} XP");
+        GM?.AwardXp(Stats.XpReward);
+
+        if (animator != null) animator.SetTrigger(HashDie);
+        Destroy(gameObject, 0.15f);
+    }
+
+    // ─────────────────────────────────────────────────────────
+    //  Shared Helpers
+    // ─────────────────────────────────────────────────────────
+    protected virtual void UpdateAnimator()
+    {
+        if (animator == null) return;
+        animator.SetFloat(HashSpeed, Agent.velocity.magnitude);
+        animator.SetFloat(HashAttackCharge, AttackTimer / attackInterval);
+    }
+
+    protected virtual void UpdateSpriteFlip()
+    {
+        if (spriteRenderer == null) return;
+        float velX = Agent.velocity.x;
+        if (velX > 0.1f) spriteRenderer.flipX = false;
+        else if (velX < -0.1f) spriteRenderer.flipX = true;
+    }
+
+    protected System.Collections.IEnumerator FlashRoutine()
+    {
+        spriteRenderer.color = Color.red;
+        yield return new WaitForSeconds(0.1f);
+        spriteRenderer.color = Color.white;
+    }
+
+    private EnemyStats FallbackStats() => new EnemyStats
+    {
+        MaxHealth = 50f,
+        CurrentHealth = 50f,
+        Speed = 2.5f,
+        Damage = 10f,
+        XpReward = 25f
+    };
+
+    protected virtual void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, meleeRange);
+    }
+}
