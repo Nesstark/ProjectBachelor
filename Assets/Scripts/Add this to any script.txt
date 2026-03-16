@@ -1,0 +1,3 @@
+var bio = FindObjectOfType<RppgReceiver>();
+float stress = bio.stressLevel;   // 0.0 = calm, 1.0 = stressed
+float bpm    = bio.heartRate;
