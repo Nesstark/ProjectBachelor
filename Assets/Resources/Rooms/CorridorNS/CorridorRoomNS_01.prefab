@@ -249,6 +249,10 @@ MonoBehaviour:
   - {fileID: 8389344402762445487}
   - {fileID: 3131565214401119859}
   - {fileID: 6385594886640213769}
+  enemyPrefabs:
+  - {fileID: 7543761834999695512, guid: 67b34f8e3d66c40d6839f3e1d9991957, type: 3}
+  - {fileID: 8856747528781715408, guid: c423d2d981ef34248b61b8c6d94ba88d, type: 3}
+  bossPrefabs: []
   enemyCount: 4
   isBossRoom: 0
   levelExitSpawnPoint: {fileID: 0}
