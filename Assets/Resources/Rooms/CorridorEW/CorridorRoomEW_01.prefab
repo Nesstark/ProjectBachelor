@@ -673,7 +673,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6095604233836870228}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Floor
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -697,7 +697,6 @@ Transform:
   - {fileID: 1819375470711828157}
   - {fileID: 1326398789929047316}
   - {fileID: 3039481083189076283}
-  - {fileID: 3260969163631701107}
   m_Father: {fileID: 6197282962910490652}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &819576502542820611
@@ -712,7 +711,7 @@ GameObject:
   - component: {fileID: 8525403395457370243}
   - component: {fileID: 2961268745254611001}
   - component: {fileID: 716924790195169185}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Plane (3)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1363,6 +1362,7 @@ Transform:
   - {fileID: 8389344402762445487}
   - {fileID: 3131565214401119859}
   - {fileID: 6385594886640213769}
+  - {fileID: 3260969163631701107}
   m_Father: {fileID: 6197282962910490652}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2062322643092559977
@@ -2298,7 +2298,7 @@ GameObject:
   - component: {fileID: 1243436006381302065}
   - component: {fileID: 7697004154487297004}
   - component: {fileID: 7179921422169198850}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Plane
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2815,7 +2815,7 @@ GameObject:
   - component: {fileID: 7477752932751419655}
   - component: {fileID: 3675027770560787947}
   - component: {fileID: 1652484648007228739}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Plane (4)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4753,7 +4753,7 @@ Transform:
   m_LocalScale: {x: 18, y: 1, z: 18}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 6095604233836870228}
+  m_Father: {fileID: 1128037627807405316}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &1118080897340124660
 MeshFilter:
@@ -6471,7 +6471,7 @@ MonoBehaviour:
   m_Center: {x: 0, y: 2, z: 0}
   m_LayerMask:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 192
   m_UseGeometry: 1
   m_DefaultArea: 0
   m_GenerateLinks: 0
@@ -6482,7 +6482,7 @@ MonoBehaviour:
   m_OverrideVoxelSize: 0
   m_VoxelSize: 0.16666667
   m_MinRegionArea: 2
-  m_NavMeshData: {fileID: 23800000, guid: 44ef2e2139ee248faa81d83755d17e7d, type: 2}
+  m_NavMeshData: {fileID: 23800000, guid: 82af421349396f6438953c145f5e3caa, type: 2}
   m_BuildHeightMesh: 0
 --- !u!1 &8776667942192359593
 GameObject:
@@ -6754,7 +6754,7 @@ GameObject:
   - component: {fileID: 7652479542317376195}
   - component: {fileID: 494520416256710226}
   - component: {fileID: 2550631918970275810}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Plane (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}

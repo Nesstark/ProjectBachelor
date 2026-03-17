@@ -64,6 +64,7 @@ public abstract class BaseEnemy : MonoBehaviour
     protected virtual void Update()
     {
         if (IsDead || PlayerTransform == null) return;
+        if (!Agent.isOnNavMesh) return;
 
         HandleMovement();
         TickAttackCycle();
