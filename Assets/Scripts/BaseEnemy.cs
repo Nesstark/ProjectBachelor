@@ -140,6 +140,8 @@ public abstract class BaseEnemy : MonoBehaviour
         Debug.Log($"[{name}] Died — awarding {Stats.XpReward:F0} XP");
         GM?.AwardXp(Stats.XpReward);
 
+        RoomManager.Instance?.CurrentRoom?.OnEnemyDied(); // Tells the room that an Enemy has died
+
         if (animator != null) animator.SetTrigger(HashDie);
         Destroy(gameObject, 0.15f);
     }
