@@ -157,7 +157,6 @@ MonoBehaviour:
   breathingRate: 0
   arousalScore: 0
   arousalLabel: Low
-  signalValid: 0
   baselineDuration: 120
   isCollectingBaseline: 0
   baselineReady: 0
@@ -173,7 +172,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0399552a5a09899478b456eb93c2312a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RppgLogger
-  logLevelChangesOnly: 0
+  logLevelChangesOnly: 1
 --- !u!4 &84312727
 Transform:
   m_ObjectHideFlags: 0
