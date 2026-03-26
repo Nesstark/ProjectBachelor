@@ -129,7 +129,7 @@ GameObject:
   m_Component:
   - component: {fileID: 426442025}
   - component: {fileID: 426442026}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: StencilMask
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1143,10 +1143,18 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3676120199245324041, guid: 76a01ed9416164293bbe87cf782fdb52, type: 3}
+      propertyPath: m_Layer
+      value: 9
+      objectReference: {fileID: 0}
     - target: {fileID: 6021496512165655056, guid: 76a01ed9416164293bbe87cf782fdb52, type: 3}
       propertyPath: m_Name
       value: PlayerRoot
       objectReference: {fileID: 0}
+    - target: {fileID: 9200447030342310861, guid: 76a01ed9416164293bbe87cf782fdb52, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 6942b0ee46fb349d39d9d209e88b264a, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
