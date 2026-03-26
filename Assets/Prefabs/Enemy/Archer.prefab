@@ -45,6 +45,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6c929ffc099fd48bdbe3f23b4fed6dfb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Billboard
+  mainCam: {fileID: 0}
+  tiltMultiplier: 0.85
 --- !u!212 &3313307016795278824
 SpriteRenderer:
   serializedVersion: 2
@@ -54,8 +56,8 @@ SpriteRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2050597239074697506}
   m_Enabled: 1
-  m_CastShadows: 0
-  m_ReceiveShadows: 0
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
   m_DynamicOccludee: 1
   m_StaticShadowCaster: 0
   m_MotionVectors: 1
@@ -71,7 +73,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
+  - {fileID: 2100000, guid: 67ea1403bfff730b7985e3eff4813813, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -196,12 +198,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bb6c0862a4c8f9c4cbb1b7c0618f28b2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ArcherController
+  attackInterval: 4
+  meleeRange: 1.5
+  animator: {fileID: 0}
+  spriteRenderer: {fileID: 3313307016795278824}
   projectilePrefab: {fileID: 1298275985269948489, guid: 0046d061dceef634e9ee4cedffa004b7, type: 3}
   firePoint: {fileID: 3535738919132841180}
-  attackInterval: 4
   preferredRange: 8
   maxShootRange: 12
   fleeRange: 4
   fleeSpeed: 6
-  animator: {fileID: 0}
-  spriteRenderer: {fileID: 3313307016795278824}

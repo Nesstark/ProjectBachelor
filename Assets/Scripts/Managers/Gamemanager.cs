@@ -3,8 +3,8 @@ using UnityEngine.Events;
 using System.Collections.Generic;
 
 // ============================================================
-//  GameManager.cs  — Central Stat & Game-State Manager
-//  Attach to a single "GameManager" GameObject in your scene.
+// GameManager.cs — Central Stat & Game-State Manager
+// Attach to a single "GameManager" GameObject in your scene.
 // ============================================================
 
 public class GameManager : MonoBehaviour
@@ -15,17 +15,15 @@ public class GameManager : MonoBehaviour
     // ─── Player Base Stats ───────────────────────────────────
     [Header("Player Base Stats (Level 1)")]
     [SerializeField] private float basePlayerHealth = 100f;
-    [SerializeField] private float basePlayerSpeed = 5f;
     [SerializeField] private float basePlayerDamage = 20f;
 
     [Header("Player Scaling Per Level")]
     [SerializeField] private float healthPerLevel = 20f;
-    [SerializeField] private float speedPerLevel = 0.3f;
     [SerializeField] private float damagePerLevel = 5f;
 
     [Header("XP Curve")]
-    [SerializeField] private float baseXpToLevel = 100f;
-    [SerializeField] private float xpScalingFactor = 1.5f;
+    [SerializeField] private float baseXpToLevel    = 100f;
+    [SerializeField] private float xpScalingFactor  = 1.5f;
 
     // ─── Enemy Type Definitions ──────────────────────────────
     [Header("Enemy Type Definitions")]
@@ -39,14 +37,14 @@ public class GameManager : MonoBehaviour
     [SerializeField] private float attackRange = 3f;
 
     // ─── Events ──────────────────────────────────────────────
-    [HideInInspector] public UnityEvent OnPlayerLevelUp = new UnityEvent();
-    [HideInInspector] public UnityEvent<float, float> OnPlayerHealthChanged = new UnityEvent<float, float>();
-    [HideInInspector] public UnityEvent<int, float, float> OnXpChanged = new UnityEvent<int, float, float>();
-    [HideInInspector] public UnityEvent OnPlayerDied = new UnityEvent();
+    [HideInInspector] public UnityEvent                    OnPlayerLevelUp      = new UnityEvent();
+    [HideInInspector] public UnityEvent<float, float>      OnPlayerHealthChanged = new UnityEvent<float, float>();
+    [HideInInspector] public UnityEvent<int, float, float> OnXpChanged          = new UnityEvent<int, float, float>();
+    [HideInInspector] public UnityEvent                    OnPlayerDied         = new UnityEvent();
 
     // ─── Runtime Player Stats ────────────────────────────────
-    public PlayerStats Player { get; private set; }
-    public float AttackRange => attackRange;
+    public PlayerStats Player    { get; private set; }
+    public float       AttackRange => attackRange;
 
     // ─── Lookup cache ────────────────────────────────────────
     private Dictionary<string, EnemyTypeData> _enemyLookup;
@@ -94,11 +92,11 @@ public class GameManager : MonoBehaviour
 
         return new EnemyStats
         {
-            MaxHealth = data.baseHealth * scale,
-            CurrentHealth = data.baseHealth * scale,
-            Speed = data.baseSpeed * scale,
-            Damage = data.baseDamage * scale,
-            XpReward = data.baseXpReward * Mathf.Pow(1.1f, Player.Level - 1)
+            MaxHealth     = data.baseHealth    * scale,
+            CurrentHealth = data.baseHealth    * scale,
+            Speed         = data.baseSpeed     * scale,
+            Damage        = data.baseDamage    * scale,
+            XpReward      = data.baseXpReward  * Mathf.Pow(1.1f, Player.Level - 1)
         };
     }
 
@@ -107,13 +105,12 @@ public class GameManager : MonoBehaviour
     {
         Player = new PlayerStats
         {
-            Level = 1,
-            CurrentXp = 0f,
+            Level         = 1,
+            CurrentXp     = 0f,
             XpToNextLevel = baseXpToLevel,
-            MaxHealth = basePlayerHealth,
+            MaxHealth     = basePlayerHealth,
             CurrentHealth = basePlayerHealth,
-            Speed = basePlayerSpeed,
-            Damage = basePlayerDamage
+            Damage        = basePlayerDamage
         };
     }
 
@@ -156,13 +153,12 @@ public class GameManager : MonoBehaviour
     private void LevelUp()
     {
         Player.Level++;
-        Player.MaxHealth = basePlayerHealth + healthPerLevel * (Player.Level - 1);
+        Player.MaxHealth     = basePlayerHealth + healthPerLevel * (Player.Level - 1);
         Player.CurrentHealth = Mathf.Min(Player.CurrentHealth + healthPerLevel, Player.MaxHealth);
-        Player.Speed = basePlayerSpeed + speedPerLevel * (Player.Level - 1);
-        Player.Damage = basePlayerDamage + damagePerLevel * (Player.Level - 1);
+        Player.Damage        = basePlayerDamage + damagePerLevel * (Player.Level - 1);
         Player.XpToNextLevel = Mathf.Round(baseXpToLevel * Mathf.Pow(xpScalingFactor, Player.Level - 1));
 
-        Debug.Log($"[GM] LEVEL UP → {Player.Level}  HP:{Player.MaxHealth}  SPD:{Player.Speed:F1}  DMG:{Player.Damage:F1}");
+        Debug.Log($"[GM] LEVEL UP → {Player.Level} HP:{Player.MaxHealth} DMG:{Player.Damage:F1}");
 
         OnPlayerLevelUp.Invoke();
         OnPlayerHealthChanged.Invoke(Player.CurrentHealth, Player.MaxHealth);
@@ -171,10 +167,10 @@ public class GameManager : MonoBehaviour
     // ─── Fallback ────────────────────────────────────────────
     private EnemyTypeData FallbackType() => new EnemyTypeData
     {
-        typeName = "Fallback",
-        baseHealth = 50f,
-        baseSpeed = 2.5f,
-        baseDamage = 10f,
+        typeName    = "Fallback",
+        baseHealth  = 50f,
+        baseSpeed   = 2.5f,
+        baseDamage  = 10f,
         baseXpReward = 25f
     };
 
@@ -182,10 +178,9 @@ public class GameManager : MonoBehaviour
     private void OnGUI()
     {
         if (Player == null) return;
-        GUILayout.BeginArea(new Rect(10, 10, 260, 140));
+        GUILayout.BeginArea(new Rect(10, 10, 260, 120));
         GUILayout.Label($"Level  : {Player.Level}");
         GUILayout.Label($"HP     : {Player.CurrentHealth:F0} / {Player.MaxHealth:F0}");
-        GUILayout.Label($"Speed  : {Player.Speed:F2}");
         GUILayout.Label($"Damage : {Player.Damage:F1}");
         GUILayout.Label($"XP     : {Player.CurrentXp:F0} / {Player.XpToNextLevel:F0}");
         GUILayout.EndArea();
@@ -194,18 +189,17 @@ public class GameManager : MonoBehaviour
 }
 
 // ============================================================
-//  Data Classes
+// Data Classes
 // ============================================================
 
 [System.Serializable]
 public class PlayerStats
 {
-    public int Level;
+    public int   Level;
     public float CurrentXp;
     public float XpToNextLevel;
     public float MaxHealth;
     public float CurrentHealth;
-    public float Speed;
     public float Damage;
 }
 
@@ -230,8 +224,8 @@ public class EnemyTypeData
     public string typeName;
 
     [Space]
-    public float baseHealth = 50f;
-    public float baseSpeed = 3f;
-    public float baseDamage = 10f;
+    public float baseHealth   = 50f;
+    public float baseSpeed    = 3f;
+    public float baseDamage   = 10f;
     public float baseXpReward = 25f;
 }

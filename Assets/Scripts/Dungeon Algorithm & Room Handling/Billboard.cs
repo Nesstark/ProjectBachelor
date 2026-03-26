@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class Billboard : MonoBehaviour
 {
-    private Camera mainCam;
+    public Camera mainCam;
 
     [Header("Tilt Angle")]
     [Tooltip("Multiplier on camera pitch for the sprite lean.")]

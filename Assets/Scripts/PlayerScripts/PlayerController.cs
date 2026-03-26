@@ -4,11 +4,14 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(Rigidbody))]
 public class PlayerController : MonoBehaviour
 {
+    // ─── Serialized Fields ────────────────────────────────────
     [Header("Movement")]
-    [SerializeField] private float moveSpeed = 6f;
-    [SerializeField] private float dashSpeed = 18f;
-    [SerializeField] private float dashDuration = 0.15f;
-    [SerializeField] private float dashCooldown = 0.6f;
+    [SerializeField] private float moveSpeed     = 10f;   // was 6 — COTL feels around 10
+    [SerializeField] private float acceleration  = 80f;   // units/s² — near-instant ramp up
+    [SerializeField] private float deceleration  = 120f;  // units/s² — snaps to stop faster than accel
+    [SerializeField] private float dashSpeed     = 24f;   // was 18
+    [SerializeField] private float dashDuration  = 0.12f; // was 0.15 — slightly snappier
+    [SerializeField] private float dashCooldown  = 0.5f;  // was 0.6
 
     [Header("Attack")]
     [SerializeField] private float attackCooldown = 0.4f;
@@ -30,10 +33,10 @@ public class PlayerController : MonoBehaviour
     private float attackTimer;
     private bool isDead;
 
-    private static readonly int HashSpeed = Animator.StringToHash("Speed");
-    private static readonly int HashDirX = Animator.StringToHash("DirX");
-    private static readonly int HashDirZ = Animator.StringToHash("DirZ");
-    private static readonly int HashDash = Animator.StringToHash("Dash");
+    private static readonly int HashSpeed  = Animator.StringToHash("Speed");
+    private static readonly int HashDirX   = Animator.StringToHash("DirX");
+    private static readonly int HashDirZ   = Animator.StringToHash("DirZ");
+    private static readonly int HashDash   = Animator.StringToHash("Dash");
     private static readonly int HashAttack = Animator.StringToHash("Attack");
 
     private GameManager GM => GameManager.Instance;
@@ -44,6 +47,13 @@ public class PlayerController : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         lastMoveDir = Vector3.forward;
         if (attackOrigin == null) attackOrigin = transform;
+
+        // CRITICAL for sphere collider — prevents the ball from physically
+        // rolling and rotating your character sprite in unexpected directions
+        rb.constraints = RigidbodyConstraints.FreezeRotation;
+
+        // We control deceleration manually, so keep drag at 0
+        rb.linearDamping = 0f;
     }
 
     private void Start()
@@ -63,7 +73,7 @@ public class PlayerController : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────
-    //  Input
+    // Input
     // ─────────────────────────────────────────────────────────
     public void OnMove(InputValue value)
     {
@@ -79,26 +89,24 @@ public class PlayerController : MonoBehaviour
 
     public void OnAttack(InputValue value)
     {
-        Debug.Log($"[Player] OnAttack — isDead:{isDead} val:{value.Get<float>():F2} cooldown:{attackTimer:F2}");
-
-        if (isDead) { Debug.Log("[Player] BLOCKED: isDead"); return; }
-        if (value.Get<float>() < 0.5f) { Debug.Log("[Player] BLOCKED: released"); return; }
-        if (attackTimer > 0f) { Debug.Log($"[Player] BLOCKED: cooldown {attackTimer:F2}s"); return; }
+        if (isDead) return;
+        if (value.Get<float>() < 0.5f) return;
+        if (attackTimer > 0f) return;
 
         attackTimer = attackCooldown;
         PerformAttack();
     }
 
     // ─────────────────────────────────────────────────────────
-    //  Update / FixedUpdate
+    // Update / FixedUpdate
     // ─────────────────────────────────────────────────────────
     private void Update()
     {
         if (isDead) return;
 
-        dashTimer -= Time.deltaTime;
+        dashTimer         -= Time.deltaTime;
         dashCooldownTimer -= Time.deltaTime;
-        attackTimer -= Time.deltaTime;
+        attackTimer       -= Time.deltaTime;
 
         if (isDashing && dashTimer <= 0f)
             isDashing = false;
@@ -115,46 +123,41 @@ public class PlayerController : MonoBehaviour
     {
         if (isDead) return;
 
-        float speed = GM != null ? GM.Player.Speed : moveSpeed;
-
         if (isDashing)
         {
             rb.linearVelocity = lastMoveDir * dashSpeed;
+            return;
         }
-        else
-        {
-            Vector3 tv = moveDir * speed;
-            rb.linearVelocity = new Vector3(tv.x, rb.linearVelocity.y, tv.z);
-        }
+
+        float speed = moveSpeed;
+        Vector3 targetVelocity    = moveDir * speed;
+        Vector3 currentHorizontal = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
+
+        // Use higher deceleration when no input so the player snaps to a stop,
+        // and fast acceleration so direction changes feel immediate
+        float accel = moveDir.magnitude > 0.1f ? acceleration : deceleration;
+        Vector3 newHorizontal = Vector3.MoveTowards(currentHorizontal, targetVelocity, accel * Time.fixedDeltaTime);
+
+        // Preserve vertical velocity so gravity / jumping still works
+        rb.linearVelocity = new Vector3(newHorizontal.x, rb.linearVelocity.y, newHorizontal.z);
     }
 
     // ─────────────────────────────────────────────────────────
-    //  Attack
+    // Attack
     // ─────────────────────────────────────────────────────────
     private void PerformAttack()
     {
-        Debug.Log("[Player] PerformAttack ENTERED");
-
-        float range = GM != null ? GM.AttackRange : 3f;
+        float range  = GM != null ? GM.AttackRange  : 3f;
         float damage = GM != null ? GM.Player.Damage : 20f;
-        int mask = enemyLayer.value != 0 ? enemyLayer.value : ~0;
-
-        Debug.Log($"[Player] OverlapSphere — origin:{attackOrigin.position} range:{range} mask:{mask}");
+        int   mask   = enemyLayer.value != 0 ? enemyLayer.value : ~0;
 
         if (animator != null) animator.SetTrigger(HashAttack);
 
         Collider[] hits = Physics.OverlapSphere(attackOrigin.position, range, mask);
-
-        // Log every collider found — tells us names and layers
-        Debug.Log($"[Player] Found {hits.Length} collider(s):");
-        foreach (Collider h in hits)
-            Debug.Log($"  • {h.name}  layer:{LayerMask.LayerToName(h.gameObject.layer)}  hasEnemyController:{h.GetComponentInParent<EnemyController>() != null}");
-
         if (hits.Length == 0) return;
 
-        // ── Front-cone filter ─────────────────────────────────
-        Collider closest = null;
-        float bestDist = Mathf.Infinity;
+        Collider closest  = null;
+        float    bestDist = Mathf.Infinity;
 
         foreach (Collider hit in hits)
         {
@@ -166,24 +169,15 @@ public class PlayerController : MonoBehaviour
             if (lastMoveDir.magnitude > 0.1f)
             {
                 float dot = Vector3.Dot(lastMoveDir.normalized, toEnemy.normalized);
-                if (dot < 0.3f)
-                {
-                    Debug.Log($"  • {hit.name} skipped — behind player (dot:{dot:F2})");
-                    continue;
-                }
+                if (dot < 0.3f) continue;
             }
 
             float dist = toEnemy.magnitude;
             if (dist < bestDist) { bestDist = dist; closest = hit; }
         }
 
-        if (closest == null)
-        {
-            Debug.Log("[Player] No enemy in forward cone.");
-            return;
-        }
+        if (closest == null) return;
 
-        // Single check covers ALL enemy types since they all inherit BaseEnemy
         BaseEnemy enemy = closest.GetComponentInParent<BaseEnemy>();
         if (enemy != null)
         {
@@ -196,12 +190,12 @@ public class PlayerController : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────
-    //  Helpers
+    // Helpers
     // ─────────────────────────────────────────────────────────
     private void StartDash()
     {
-        isDashing = true;
-        dashTimer = dashDuration;
+        isDashing         = true;
+        dashTimer         = dashDuration;
         dashCooldownTimer = dashCooldown;
         if (animator != null) animator.SetTrigger(HashDash);
     }
@@ -210,14 +204,14 @@ public class PlayerController : MonoBehaviour
     {
         if (animator == null) return;
         animator.SetFloat(HashSpeed, moveDir.magnitude);
-        animator.SetFloat(HashDirX, lastMoveDir.x);
-        animator.SetFloat(HashDirZ, lastMoveDir.z);
+        animator.SetFloat(HashDirX,  lastMoveDir.x);
+        animator.SetFloat(HashDirZ,  lastMoveDir.z);
     }
 
     private void UpdateSpriteFlip()
     {
         if (spriteRenderer == null) return;
-        if (lastMoveDir.x > 0.1f) spriteRenderer.flipX = true;
+        if      (lastMoveDir.x >  0.1f) spriteRenderer.flipX = true;
         else if (lastMoveDir.x < -0.1f) spriteRenderer.flipX = false;
     }
 
@@ -226,14 +220,14 @@ public class PlayerController : MonoBehaviour
         if (isDead) return;
         isDead = true;
         rb.linearVelocity = Vector3.zero;
-        inputDir = Vector2.zero;
+        inputDir          = Vector2.zero;
         Debug.Log("[Player] Died — destroying in 0.5s");
         Destroy(gameObject, 0.5f);
     }
 
     private void OnDrawGizmosSelected()
     {
-        float range = Application.isPlaying && GM != null ? GM.AttackRange : 3f;
+        float   range  = Application.isPlaying && GM != null ? GM.AttackRange : 3f;
         Vector3 origin = attackOrigin != null ? attackOrigin.position : transform.position;
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(origin, range);

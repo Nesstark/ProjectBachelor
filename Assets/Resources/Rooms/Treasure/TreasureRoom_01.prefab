@@ -236,6 +236,8 @@ MonoBehaviour:
   - {fileID: 8389344402762445487}
   - {fileID: 3131565214401119859}
   - {fileID: 6385594886640213769}
+  enemyPrefabs: []
+  bossPrefabs: []
   enemyCount: 0
   isBossRoom: 0
   levelExitSpawnPoint: {fileID: 0}
@@ -492,6 +494,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6c929ffc099fd48bdbe3f23b4fed6dfb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Billboard
+  mainCam: {fileID: 0}
+  tiltMultiplier: 0.85
 --- !u!1 &604135700739389746
 GameObject:
   m_ObjectHideFlags: 0
@@ -793,7 +797,7 @@ MeshCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 819576502542820611}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 8bcdac4fdce96724b9c0a434409e3f10, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -2379,7 +2383,7 @@ MeshCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3384480778515092849}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 8bcdac4fdce96724b9c0a434409e3f10, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -2784,7 +2788,7 @@ MeshCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4027686467801636517}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 8bcdac4fdce96724b9c0a434409e3f10, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -4347,6 +4351,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6c929ffc099fd48bdbe3f23b4fed6dfb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Billboard
+  mainCam: {fileID: 0}
+  tiltMultiplier: 0.85
 --- !u!1 &6809304047619187230
 GameObject:
   m_ObjectHideFlags: 0
@@ -5098,6 +5104,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6c929ffc099fd48bdbe3f23b4fed6dfb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Billboard
+  mainCam: {fileID: 0}
+  tiltMultiplier: 0.85
 --- !u!1 &7626829929939578091
 GameObject:
   m_ObjectHideFlags: 0
@@ -6109,6 +6117,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6c929ffc099fd48bdbe3f23b4fed6dfb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Billboard
+  mainCam: {fileID: 0}
+  tiltMultiplier: 0.85
 --- !u!1 &8310951608182239269
 GameObject:
   m_ObjectHideFlags: 0
@@ -6598,7 +6608,7 @@ MeshCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8912263808126967964}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 8bcdac4fdce96724b9c0a434409e3f10, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
