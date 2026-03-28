@@ -178,6 +178,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyController
   attackInterval: 1.5
   meleeRange: 1.2
+  hitVFXPrefab: {fileID: 3042519775331041172, guid: 841004c4c6a39e244abe2257394de913, type: 3}
+  deathVFXPrefab: {fileID: 0}
   animator: {fileID: 0}
   spriteRenderer: {fileID: 4686065913143481910}
   enemyType: 0

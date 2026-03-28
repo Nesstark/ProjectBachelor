@@ -2,9 +2,9 @@
 using UnityEngine.AI;
 
 // ============================================================
-//  BaseEnemy.cs  —  Abstract base class for all enemy types
-//  Contains all shared logic: stats, damage, death, flash.
-//  Subclasses only implement their unique movement/attack.
+// BaseEnemy.cs — Abstract base class for all enemy types
+// Contains all shared logic: stats, damage, death, flash.
+// Subclasses only implement their unique movement/attack.
 // ============================================================
 
 [RequireComponent(typeof(NavMeshAgent))]
@@ -13,6 +13,10 @@ public abstract class BaseEnemy : MonoBehaviour
     [Header("Attack Cycle")]
     [SerializeField] protected float attackInterval = 1.5f;
     [SerializeField] protected float meleeRange = 1.5f;
+
+    [Header("VFX")]
+    [SerializeField] protected GameObject hitVFXPrefab;
+    [SerializeField] protected GameObject deathVFXPrefab;
 
     [Header("Optional")]
     [SerializeField] protected Animator animator;
@@ -34,7 +38,7 @@ public abstract class BaseEnemy : MonoBehaviour
     protected GameManager GM => GameManager.Instance;
 
     // ─────────────────────────────────────────────────────────
-    //  Unity Lifecycle
+    // Unity Lifecycle
     // ─────────────────────────────────────────────────────────
     protected virtual void Awake()
     {
@@ -43,7 +47,6 @@ public abstract class BaseEnemy : MonoBehaviour
 
     protected virtual void Start()
     {
-        // Each subclass provides its enemy type name
         Stats = GM != null ? GM.GetEnemyStats(EnemyTypeName) : FallbackStats();
 
         Agent.speed = Stats.Speed;
@@ -57,8 +60,8 @@ public abstract class BaseEnemy : MonoBehaviour
         else
             Debug.LogWarning($"[{name}] No GameObject tagged 'Player' found!");
 
-        Debug.Log($"[{name}] Type:{EnemyTypeName}  HP:{Stats.MaxHealth:F0}  " +
-                  $"SPD:{Stats.Speed:F1}  DMG:{Stats.Damage:F1}");
+        Debug.Log($"[{name}] Type:{EnemyTypeName} HP:{Stats.MaxHealth:F0} " +
+                  $"SPD:{Stats.Speed:F1} DMG:{Stats.Damage:F1}");
     }
 
     protected virtual void Update()
@@ -73,17 +76,13 @@ public abstract class BaseEnemy : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────
-    //  Abstract — subclasses MUST implement these
+    // Abstract — subclasses MUST implement these
     // ─────────────────────────────────────────────────────────
-
-    /// <summary>The type name used to fetch stats from GameManager e.g. "Warrior".</summary>
     protected abstract string EnemyTypeName { get; }
-
-    /// <summary>How this enemy moves each frame — chase, flee, strafe etc.</summary>
     protected abstract void HandleMovement();
 
     // ─────────────────────────────────────────────────────────
-    //  Attack Cycle — shared, subclasses can override
+    // Attack Cycle
     // ─────────────────────────────────────────────────────────
     protected virtual void TickAttackCycle()
     {
@@ -96,10 +95,6 @@ public abstract class BaseEnemy : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Default attack — melee damage when player is within meleeRange.
-    /// Override in subclasses for ranged attacks.
-    /// </summary>
     protected virtual void TryAttack()
     {
         float dist = Vector3.Distance(transform.position, PlayerTransform.position);
@@ -113,7 +108,7 @@ public abstract class BaseEnemy : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────
-    //  Shared Public API
+    // Shared Public API
     // ─────────────────────────────────────────────────────────
     public virtual void TakeDamage(float amount)
     {
@@ -124,11 +119,19 @@ public abstract class BaseEnemy : MonoBehaviour
 
         if (spriteRenderer != null) StartCoroutine(FlashRoutine());
 
+        if (hitVFXPrefab != null)
+        {
+            GameObject vfx = Instantiate(hitVFXPrefab, transform.position + Vector3.up * 0.7f, Quaternion.identity);
+            Destroy(vfx, 2f);
+        }
+
+        CameraShakeManager.Instance?.ShakeImpulse(CameraShakeManager.Instance.hitShakeForce);
+
         if (Stats.CurrentHealth <= 0f) Die();
     }
 
     // ─────────────────────────────────────────────────────────
-    //  Death — shared, subclasses can override for special fx
+    // Death
     // ─────────────────────────────────────────────────────────
     protected virtual void Die()
     {
@@ -141,14 +144,18 @@ public abstract class BaseEnemy : MonoBehaviour
         Debug.Log($"[{name}] Died — awarding {Stats.XpReward:F0} XP");
         GM?.AwardXp(Stats.XpReward);
 
-        RoomManager.Instance?.CurrentRoom?.OnEnemyDied(); // Tells the room that an Enemy has died
+        RoomManager.Instance?.CurrentRoom?.OnEnemyDied();
 
         if (animator != null) animator.SetTrigger(HashDie);
+
+        if (deathVFXPrefab != null)
+            Instantiate(deathVFXPrefab, transform.position + Vector3.up * 0.7f, Quaternion.identity);
+
         Destroy(gameObject, 0.15f);
     }
 
     // ─────────────────────────────────────────────────────────
-    //  Shared Helpers
+    // Shared Helpers
     // ─────────────────────────────────────────────────────────
     protected virtual void UpdateAnimator()
     {
@@ -167,8 +174,8 @@ public abstract class BaseEnemy : MonoBehaviour
 
     protected System.Collections.IEnumerator FlashRoutine()
     {
-        spriteRenderer.color = Color.red;
-        yield return new WaitForSeconds(0.1f);
+        spriteRenderer.color = Color.white * 5f;
+        yield return new WaitForSeconds(0.08f);
         spriteRenderer.color = Color.white;
     }
 

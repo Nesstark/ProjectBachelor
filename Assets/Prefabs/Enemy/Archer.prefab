@@ -200,6 +200,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArcherController
   attackInterval: 4
   meleeRange: 1.5
+  hitVFXPrefab: {fileID: 3042519775331041172, guid: 841004c4c6a39e244abe2257394de913, type: 3}
+  deathVFXPrefab: {fileID: 0}
   animator: {fileID: 0}
   spriteRenderer: {fileID: 3313307016795278824}
   projectilePrefab: {fileID: 1298275985269948489, guid: 0046d061dceef634e9ee4cedffa004b7, type: 3}
