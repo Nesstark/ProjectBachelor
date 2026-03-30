@@ -540,6 +540,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1713428459046670302, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
     - target: {fileID: 2545038029202872913, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
       propertyPath: mainCam
       value: 
@@ -551,6 +555,10 @@ PrefabInstance:
     - target: {fileID: 3992578147615154026, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
       propertyPath: m_Name
       value: PlayerRoot
+      objectReference: {fileID: 0}
+    - target: {fileID: 3992578147615154026, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
+      propertyPath: m_Layer
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4699108822094042223, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
       propertyPath: m_LocalPosition.x
@@ -1338,7 +1346,7 @@ MonoBehaviour:
   targetObject: {fileID: 322880166}
   wallMask:
     serializedVersion: 2
-    m_Bits: 256
+    m_Bits: 512
 --- !u!114 &1724022304
 MonoBehaviour:
   m_ObjectHideFlags: 0
