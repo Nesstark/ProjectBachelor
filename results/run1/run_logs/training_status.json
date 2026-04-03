@@ -1,4 +1,26 @@
 {
+    "AIPlayerAgent": {
+        "checkpoints": [
+            {
+                "steps": 20532,
+                "file_path": "results\\run1\\AIPlayerAgent\\AIPlayerAgent-20532.onnx",
+                "reward": null,
+                "creation_time": 1775250669.3086944,
+                "auxillary_file_paths": [
+                    "results\\run1\\AIPlayerAgent\\AIPlayerAgent-20532.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 20532,
+            "file_path": "results\\run1\\AIPlayerAgent.onnx",
+            "reward": null,
+            "creation_time": 1775250669.3086944,
+            "auxillary_file_paths": [
+                "results\\run1\\AIPlayerAgent\\AIPlayerAgent-20532.pt"
+            ]
+        }
+    },
     "metadata": {
         "stats_format_version": "0.3.0",
         "mlagents_version": "0.30.0",

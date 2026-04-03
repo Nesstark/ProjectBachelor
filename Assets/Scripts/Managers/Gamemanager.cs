@@ -114,6 +114,27 @@ public class GameManager : MonoBehaviour
         };
     }
 
+    // ─── Player Reset (called by AIPlayerAgent on episode begin) ─
+    /// <summary>
+    /// Fully resets player stats back to level 1 defaults.
+    /// Called at the start of every ML-Agents training episode.
+    /// </summary>
+    public void ResetPlayer()
+    {
+        Player.Level         = 1;
+        Player.CurrentXp     = 0f;
+        Player.XpToNextLevel = baseXpToLevel;
+        Player.MaxHealth     = basePlayerHealth;
+        Player.CurrentHealth = basePlayerHealth;
+        Player.Damage        = basePlayerDamage;
+
+        // Notify UI so health bars etc. update immediately
+        OnPlayerHealthChanged.Invoke(Player.CurrentHealth, Player.MaxHealth);
+        OnXpChanged.Invoke(Player.Level, Player.CurrentXp, Player.XpToNextLevel);
+
+        Debug.Log("[GM] Player reset — HP & stats restored to level 1.");
+    }
+
     // ─── Player Damage ───────────────────────────────────────
     public void ApplyDamageToPlayer(float amount)
     {

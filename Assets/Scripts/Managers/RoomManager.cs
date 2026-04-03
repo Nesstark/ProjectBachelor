@@ -44,6 +44,40 @@ public class RoomManager : MonoBehaviour
         LoadRoom(35, Direction.South);
     }
 
+    // ─── Reset — called by AIPlayerAgent on episode begin ────
+    /// <summary>
+    /// Fully resets the dungeon back to level 1, room 35.
+    /// Destroys all current room instances and regenerates the map.
+    /// Called at the start of every ML-Agents training episode.
+    /// </summary>
+    public void ResetDungeon()
+    {
+        // Stop any ongoing transitions
+        StopAllCoroutines();
+        isTransitioning = false;
+
+        // Clean up current level exit
+        if (currentLevelExit != null) Destroy(currentLevelExit);
+
+        // Clear all tracking state
+        cellPrefabMap.Clear();
+        visitedCells.Clear();
+        clearedCells.Clear();
+
+        // Reset level counter
+        CurrentLevel = 1;
+
+        // Regenerate the dungeon map
+        generator.Generate(CurrentLevel);
+
+        // Destroy current room and load the start room
+        if (currentRoomInstance != null) Destroy(currentRoomInstance);
+        currentCell = 35;
+        LoadRoom(35, Direction.South);
+
+        Debug.Log("[RoomManager] Dungeon reset — back to level 1 start room.");
+    }
+
     public void LoadNextLevel()
     {
         Debug.Log("LoadNextLevel kaldt, isTransitioning: " + isTransitioning);
@@ -174,7 +208,8 @@ public class RoomManager : MonoBehaviour
     }
 
     public void MarkRoomCleared(int cell) => clearedCells.Add(cell);
-    public bool IsRoomCleared(int cell) => clearedCells.Contains(cell);
+    public bool IsRoomCleared(int cell)   => clearedCells.Contains(cell);
+    public bool IsRoomVisited(int cell)   => visitedCells.Contains(cell);
 
     string PickPrefab(RoomType type)
     {

@@ -1,0 +1,38 @@
+{
+    "AIPlayerAgent": {
+        "checkpoints": [
+            {
+                "steps": 49999,
+                "file_path": "results\\run2\\AIPlayerAgent\\AIPlayerAgent-49999.onnx",
+                "reward": -5.391446421543757,
+                "creation_time": 1775251380.2873373,
+                "auxillary_file_paths": [
+                    "results\\run2\\AIPlayerAgent\\AIPlayerAgent-49999.pt"
+                ]
+            },
+            {
+                "steps": 58773,
+                "file_path": "results\\run2\\AIPlayerAgent\\AIPlayerAgent-58773.onnx",
+                "reward": null,
+                "creation_time": 1775251542.8759859,
+                "auxillary_file_paths": [
+                    "results\\run2\\AIPlayerAgent\\AIPlayerAgent-58773.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 58773,
+            "file_path": "results\\run2\\AIPlayerAgent.onnx",
+            "reward": null,
+            "creation_time": 1775251542.8759859,
+            "auxillary_file_paths": [
+                "results\\run2\\AIPlayerAgent\\AIPlayerAgent-58773.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "0.30.0",
+        "torch_version": "1.8.1+cpu"
+    }
+}

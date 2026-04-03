@@ -80,6 +80,7 @@ public class AIPlayerAgent : Agent
     [SerializeField] private float penaltyDie           = 3.0f;   // episode ends
     [SerializeField] private float penaltyIdlePerSec    = 0.01f;  // standing still too long
     [SerializeField] private float penaltyTimePerSec    = 0.001f; // small time pressure
+    [SerializeField] private float penaltyRevisitCell   = 0.005f; // stepping into already-visited cell
 
     // ─── Private Runtime State ────────────────────────────────
     private Rigidbody _rb;
@@ -141,7 +142,11 @@ public class AIPlayerAgent : Agent
     // Called at the start of every training episode
     public override void OnEpisodeBegin()
     {
-        // Reset physics and snap back to spawn
+        // ── Reset the full game state ──────────────────────────
+        GM?.ResetPlayer();                          // restore health, damage, level
+        RoomManager.Instance?.ResetDungeon();       // restart dungeon from room 1
+
+        // ── Reset physics and snap back to spawn ───────────────
         _rb.linearVelocity  = Vector3.zero;
         _rb.angularVelocity = Vector3.zero;
         transform.position  = _spawnPosition;
@@ -158,7 +163,7 @@ public class AIPlayerAgent : Agent
         _lastMoveDir       = Vector3.forward;
         _visitedCells.Clear();
 
-        if (GM != null) _lastHealth = GM.Player.CurrentHealth;
+        _lastHealth = GM != null ? GM.Player.CurrentHealth : 100f;
     }
 
     // =========================================================
@@ -309,10 +314,12 @@ public class AIPlayerAgent : Agent
             _idleTimer = 0f;
         }
 
-        // ── Exploration reward ────────────────────────────────
+        // ── Exploration reward / revisit penalty ──────────────
         Vector2Int cell = WorldToCell(transform.position);
-        if (_visitedCells.Add(cell))          // returns true if newly added
-            AddReward(rewardExploreNew);
+        if (_visitedCells.Add(cell))
+            AddReward(rewardExploreNew);          // carrot — new ground
+        else
+            AddReward(-penaltyRevisitCell);       // stick  — already been here
 
         // ── Exit proximity check ──────────────────────────────
         CheckExitProximity();
