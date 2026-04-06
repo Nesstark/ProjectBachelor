@@ -44,13 +44,15 @@ public class PlayerController : MonoBehaviour
     private bool      isDead;
     private float     _lastKnownHp = float.MaxValue;
 
-    private static readonly int HashSpeed  = Animator.StringToHash("Speed");
-    private static readonly int HashDirX   = Animator.StringToHash("DirX");
-    private static readonly int HashDirZ   = Animator.StringToHash("DirZ");
-    private static readonly int HashDash   = Animator.StringToHash("Dash");
-    private static readonly int HashAttack = Animator.StringToHash("Attack");
-    private static readonly int HashHit    = Animator.StringToHash("Hit");
-    private static readonly int HashDeath  = Animator.StringToHash("Death");
+    private static readonly int HashSpeed     = Animator.StringToHash("Speed");
+    private static readonly int HashDirX      = Animator.StringToHash("DirX");
+    private static readonly int HashDirZ      = Animator.StringToHash("DirZ");
+    private static readonly int HashDash      = Animator.StringToHash("Dash");
+    private static readonly int HashAttack    = Animator.StringToHash("attack");
+    private static readonly int HashIsWalking = Animator.StringToHash("isWalking");
+    private static readonly int HashFlipX     = Animator.StringToHash("FlipX");
+    private static readonly int HashHit       = Animator.StringToHash("Hit");
+    private static readonly int HashDeath     = Animator.StringToHash("Death");
 
     private GameManager GM => GameManager.Instance;
 
@@ -60,6 +62,7 @@ public class PlayerController : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         lastMoveDir = Vector3.forward;
         if (attackOrigin == null) attackOrigin = transform;
+        if (animator == null) animator = GetComponentInChildren<Animator>();
         rb.constraints   = RigidbodyConstraints.FreezeRotation;
         rb.linearDamping = 0f;
     }
@@ -301,6 +304,8 @@ public class PlayerController : MonoBehaviour
         animator.SetFloat(HashSpeed, moveDir.magnitude);
         animator.SetFloat(HashDirX,  lastMoveDir.x);
         animator.SetFloat(HashDirZ,  lastMoveDir.z);
+        animator.SetBool(HashIsWalking, moveDir.magnitude > 0.1f);
+        animator.SetBool(HashFlipX, spriteRenderer != null && spriteRenderer.flipX);
     }
 
     private void UpdateSpriteFlip()
