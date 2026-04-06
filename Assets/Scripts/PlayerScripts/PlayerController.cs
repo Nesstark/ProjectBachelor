@@ -23,26 +23,24 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private SpriteRenderer spriteRenderer;
     [SerializeField] private Animator       animator;
 
-    [Header("Hit Flash")]
-    [SerializeField] private Color      hitFlashColor    = Color.red;
-    [SerializeField] private int        hitFlashCount    = 3;
-    [SerializeField] private float      hitFlashInterval = 0.05f;
+    [Header("Hit VFX")]
     [SerializeField] private GameObject hitVFXPrefab;
 
     [Header("Death Animation")]
     [SerializeField] private float deathFadeDuration = 0.8f;
 
     // ─── Private State ────────────────────────────────────────
-    private Rigidbody rb;
-    private Vector2   inputDir;
-    private Vector3   moveDir;
-    private bool      isDashing;
-    private float     dashTimer;
-    private float     dashCooldownTimer;
-    private Vector3   lastMoveDir;
-    private float     attackTimer;
-    private bool      isDead;
-    private float     _lastKnownHp = float.MaxValue;
+    private Rigidbody       rb;
+    private Vector2         inputDir;
+    private Vector3         moveDir;
+    private bool            isDashing;
+    private float           dashTimer;
+    private float           dashCooldownTimer;
+    private Vector3         lastMoveDir;
+    private float           attackTimer;
+    private bool            isDead;
+    private float           _lastKnownHp = float.MaxValue;
+    private HitFlashHandler _hitFlash;
 
     private static readonly int HashSpeed     = Animator.StringToHash("Speed");
     private static readonly int HashDirX      = Animator.StringToHash("DirX");
@@ -65,6 +63,8 @@ public class PlayerController : MonoBehaviour
         if (animator == null) animator = GetComponentInChildren<Animator>();
         rb.constraints   = RigidbodyConstraints.FreezeRotation;
         rb.linearDamping = 0f;
+
+        _hitFlash = GetComponentInChildren<HitFlashHandler>();
     }
 
     private void Start()
@@ -217,29 +217,21 @@ public class PlayerController : MonoBehaviour
         if (animator != null) animator.SetTrigger(HashHit);
         CameraShakeManager.Instance?.ShakeImpulse(CameraShakeManager.Instance.hitShakeForce);
 
+        // Delegates to HitFlashHandler which uses MaterialPropertyBlock + _BaseColor
+        // so it works correctly with the URP Lit (SpriteLit) shader
+        _hitFlash?.Flash();
+
+        // Spawn VFX offset toward camera so it renders in front of the sprite
         if (hitVFXPrefab != null)
         {
-            GameObject vfx = Instantiate(hitVFXPrefab, transform.position, Quaternion.identity);
+            Vector3 towardCam = Camera.main != null
+                ? (Camera.main.transform.position - transform.position).normalized
+                : Vector3.up;
+
+            Vector3    vfxPos = transform.position + towardCam * 0.5f;
+            GameObject vfx    = Instantiate(hitVFXPrefab, vfxPos, Quaternion.identity);
             Destroy(vfx, 2f);
         }
-
-        StopCoroutine(nameof(HitFlashCoroutine));
-        StartCoroutine(nameof(HitFlashCoroutine));
-    }
-
-    private IEnumerator HitFlashCoroutine()
-    {
-        if (spriteRenderer == null) yield break;
-
-        for (int i = 0; i < hitFlashCount; i++)
-        {
-            spriteRenderer.color = hitFlashColor;
-            yield return new WaitForSeconds(hitFlashInterval);
-            spriteRenderer.color = Color.white;
-            yield return new WaitForSeconds(hitFlashInterval);
-        }
-
-        spriteRenderer.color = Color.white;
     }
 
     // ─────────────────────────────────────────────────────────
@@ -258,7 +250,6 @@ public class PlayerController : MonoBehaviour
     private IEnumerator DeathSequence()
     {
         if (animator != null) animator.SetTrigger(HashDeath);
-        StopCoroutine(nameof(HitFlashCoroutine));
 
         float   elapsed    = 0f;
         Vector3 startScale = spriteRenderer != null
@@ -279,7 +270,6 @@ public class PlayerController : MonoBehaviour
             yield return null;
         }
 
-        // Disable CutoutObject before destroying so it stops reading our transform
         CutoutObject cutout = FindFirstObjectByType<CutoutObject>();
         if (cutout != null) cutout.enabled = false;
 
@@ -301,11 +291,11 @@ public class PlayerController : MonoBehaviour
     private void UpdateAnimator()
     {
         if (animator == null) return;
-        animator.SetFloat(HashSpeed, moveDir.magnitude);
-        animator.SetFloat(HashDirX,  lastMoveDir.x);
-        animator.SetFloat(HashDirZ,  lastMoveDir.z);
+        animator.SetFloat(HashSpeed,    moveDir.magnitude);
+        animator.SetFloat(HashDirX,     lastMoveDir.x);
+        animator.SetFloat(HashDirZ,     lastMoveDir.z);
         animator.SetBool(HashIsWalking, moveDir.magnitude > 0.1f);
-        animator.SetBool(HashFlipX, spriteRenderer != null && spriteRenderer.flipX);
+        animator.SetBool(HashFlipX,     spriteRenderer != null && spriteRenderer.flipX);
     }
 
     private void UpdateSpriteFlip()

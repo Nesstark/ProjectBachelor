@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 6527057009731688167}
   - component: {fileID: 1618695433838542486}
   - component: {fileID: 4686065913143481910}
+  - component: {fileID: 2790648432189655123}
   m_Layer: 6
   m_Name: SpriteVisual
   m_TagString: Untagged
@@ -106,6 +107,23 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+--- !u!114 &2790648432189655123
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1195549217335815662}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3260f6a55612a51d28803d2e4a6c9d9e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HitFlashHandler
+  spriteRenderer: {fileID: 4686065913143481910}
+  flashColor: {r: 1, g: 0, b: 0, a: 1}
+  flashCount: 3
+  flashInterval: 0.05
+  colorPropertyName: _BaseColor
 --- !u!1 &7543761834999695512
 GameObject:
   m_ObjectHideFlags: 0

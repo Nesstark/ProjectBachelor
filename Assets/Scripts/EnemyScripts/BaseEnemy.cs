@@ -17,6 +17,7 @@ public abstract class BaseEnemy : MonoBehaviour
     [Header("VFX")]
     [SerializeField] protected GameObject hitVFXPrefab;
     [SerializeField] protected GameObject deathVFXPrefab;
+    private HitFlashHandler _hitFlash;
 
     [Header("Optional")]
     [SerializeField] protected Animator animator;
@@ -43,6 +44,7 @@ public abstract class BaseEnemy : MonoBehaviour
     protected virtual void Awake()
     {
         Agent = GetComponent<NavMeshAgent>();
+        _hitFlash = GetComponentInChildren<HitFlashHandler>();
     }
 
     protected virtual void Start()
@@ -117,7 +119,7 @@ public abstract class BaseEnemy : MonoBehaviour
         Stats.CurrentHealth -= amount;
         Debug.Log($"[{name}] Took {amount:F1} — HP:{Stats.CurrentHealth:F1}/{Stats.MaxHealth:F1}");
 
-        if (spriteRenderer != null) StartCoroutine(FlashRoutine());
+        _hitFlash?.Flash();
 
         if (hitVFXPrefab != null)
         {
@@ -170,13 +172,6 @@ public abstract class BaseEnemy : MonoBehaviour
         float velX = Agent.velocity.x;
         if (velX > 0.1f) spriteRenderer.flipX = false;
         else if (velX < -0.1f) spriteRenderer.flipX = true;
-    }
-
-    protected System.Collections.IEnumerator FlashRoutine()
-    {
-        spriteRenderer.color = Color.white * 5f;
-        yield return new WaitForSeconds(0.08f);
-        spriteRenderer.color = Color.white;
     }
 
     private EnemyStats FallbackStats() => new EnemyStats

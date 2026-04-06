@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 4156963792936963783}
   - component: {fileID: 2545038029202872913}
   - component: {fileID: 5437596053719042642}
+  - component: {fileID: 3200775120700210226}
   m_Layer: 0
   m_Name: SpriteVisual
   m_TagString: Untagged
@@ -106,6 +107,23 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+--- !u!114 &3200775120700210226
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1713428459046670302}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3260f6a55612a51d28803d2e4a6c9d9e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HitFlashHandler
+  spriteRenderer: {fileID: 5437596053719042642}
+  flashColor: {r: 1, g: 0, b: 0, a: 1}
+  flashCount: 3
+  flashInterval: 0.05
+  colorPropertyName: _BaseColor
 --- !u!1 &3992578147615154026
 GameObject:
   m_ObjectHideFlags: 0
@@ -194,9 +212,6 @@ MonoBehaviour:
   attackOrigin: {fileID: 4699108822094042223}
   spriteRenderer: {fileID: 5437596053719042642}
   animator: {fileID: 0}
-  hitFlashColor: {r: 1, g: 0, b: 0, a: 1}
-  hitFlashCount: 3
-  hitFlashInterval: 0.05
   hitVFXPrefab: {fileID: 3042519775331041172, guid: 841004c4c6a39e244abe2257394de913, type: 3}
   deathFadeDuration: 0.8
 --- !u!114 &6619534903725381708
