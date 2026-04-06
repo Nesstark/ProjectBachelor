@@ -16,6 +16,9 @@ using TMPro;
 
 public class DeathScreenUI : MonoBehaviour
 {
+    [Header("Scene")]
+    [SerializeField] private string menuSceneName = "MainMenu";
+    
     [Header("Panel References")]
     [SerializeField] private CanvasGroup     deathPanel;
     [SerializeField] private TextMeshProUGUI youDiedText;
@@ -38,8 +41,6 @@ public class DeathScreenUI : MonoBehaviour
 
         if (youDiedText != null)
             youDiedText.color = new Color(1f, 1f, 1f, 0f);
-
-        restartButton?.onClick.AddListener(RestartGame);
     }
 
     private void Start()
@@ -63,6 +64,7 @@ public class DeathScreenUI : MonoBehaviour
         if (deathPanel != null)
         {
             deathPanel.blocksRaycasts = true;
+            deathPanel.interactable   = true;
             yield return StartCoroutine(FadeGroup(deathPanel, 0f, 1.0f, overlayFadeDuration));
         }
 
@@ -105,6 +107,6 @@ public class DeathScreenUI : MonoBehaviour
     private void RestartGame()
     {
         Time.timeScale = 1f;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        SceneManager.LoadScene(menuSceneName);
     }
 }
