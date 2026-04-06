@@ -19,6 +19,13 @@ public class CutoutObject : MonoBehaviour
 
     private void Update()
     {
+        // If the tracked target has been destroyed, stop running
+        if (targetObject == null)
+        {
+            enabled = false;
+            return;
+        }
+
         Vector2 cutoutPos = mainCamera.WorldToViewportPoint(targetObject.position);
 
         Vector3 offset = targetObject.position - transform.position;
