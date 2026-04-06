@@ -186,8 +186,8 @@ public class RppgReceiver : MonoBehaviour
 
     private string GetArousalLabel(float score)
     {
-        if (score < 0.33f) return "Low";
-        if (score < 0.66f) return "Medium";
+        if (score < 0.15f) return "Low";
+        if (score < 0.50f) return "Medium";
         return "High";
     }
 
