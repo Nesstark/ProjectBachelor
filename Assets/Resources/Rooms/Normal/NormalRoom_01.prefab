@@ -4838,6 +4838,7 @@ MonoBehaviour:
   - {fileID: 1664877913202410437}
   enemyPrefabs:
   - {fileID: 7543761834999695512, guid: 67b34f8e3d66c40d6839f3e1d9991957, type: 3}
+  - {fileID: 7543761834999695512, guid: f8506945ecb9062daa361080236d8ce4, type: 3}
   - {fileID: 8856747528781715408, guid: c423d2d981ef34248b61b8c6d94ba88d, type: 3}
   bossPrefabs: []
   enemyCount: 4
