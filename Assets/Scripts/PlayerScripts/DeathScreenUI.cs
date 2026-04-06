@@ -4,21 +4,11 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
 
-// Hierarchy setup in Unity:
-//   Canvas (Screen Space — Overlay)
-//     └── DeathPanel          [Image (black), CanvasGroup]
-//           ├── YouDiedText   [TextMeshProUGUI]
-//           └── ButtonGroup   [CanvasGroup]
-//                 └── RestartButton [Button + TextMeshProUGUI]
-//
-// Attach this script to the Canvas or DeathPanel GameObject.
-// Wire all four references in the Inspector.
-
 public class DeathScreenUI : MonoBehaviour
 {
     [Header("Scene")]
     [SerializeField] private string menuSceneName = "MainMenu";
-    
+
     [Header("Panel References")]
     [SerializeField] private CanvasGroup     deathPanel;
     [SerializeField] private TextMeshProUGUI youDiedText;
@@ -81,7 +71,7 @@ public class DeathScreenUI : MonoBehaviour
         }
     }
 
-    // Uses unscaled time so it works even if you later freeze Time.timeScale
+    // ─────────────────────────────────────────────────────────
     private IEnumerator FadeGroup(CanvasGroup cg, float from, float to, float dur)
     {
         float t = 0f;
@@ -104,9 +94,11 @@ public class DeathScreenUI : MonoBehaviour
         cg.alpha = a; cg.blocksRaycasts = block; cg.interactable = block;
     }
 
-    private void RestartGame()
+    // ─────────────────────────────────────────────────────────
+    public void RestartGame()
     {
         Time.timeScale = 1f;
+        GameManager.Instance?.ResetForNewGame(); // ← wipes HP/XP/Level before scene loads
         SceneManager.LoadScene(menuSceneName);
     }
 }
