@@ -25,6 +25,7 @@ public class PlayerController : MonoBehaviour
 
     [Header("Hit VFX")]
     [SerializeField] private GameObject hitVFXPrefab;
+    [SerializeField] private GameObject slashVFXPrefab;
 
     [Header("Death Animation")]
     [SerializeField] private float deathFadeDuration = 0.8f;
@@ -165,6 +166,13 @@ public class PlayerController : MonoBehaviour
         int   mask   = enemyLayer.value != 0 ? enemyLayer.value : ~0;
 
         if (animator != null) animator.SetTrigger(HashAttack);
+
+        if (slashVFXPrefab != null)
+        {
+            Quaternion slashRot = Quaternion.LookRotation(lastMoveDir) * Quaternion.Euler(90f, 0f, 0f);
+            GameObject slash = Instantiate(slashVFXPrefab, attackOrigin.position, slashRot, attackOrigin);
+            Destroy(slash, 0.5f);
+        }
 
         Collider[] hits = Physics.OverlapSphere(attackOrigin.position, range, mask);
         if (hits.Length == 0) return;
