@@ -156,13 +156,17 @@ public class RppgReceiver : MonoBehaviour
             return Mathf.Clamp01((heartRate - hrBaseline) / hrBaseline);
         }
 
-        // Only score positively when IBI drops below baseline
-        // 0.3f multiplier makes it reach max at 30% IBI drop instead of 100%
+        // IBI — reaches max score at 30% drop from baseline
         float ibiScore   = Mathf.Clamp01((baselineIBI - hrv.ibi) / (baselineIBI * 0.3f));
-        float rmssdScore = baselineRMSSD > 0 ? Mathf.Clamp01(1f - (hrv.rmssd / baselineRMSSD)) : 0f;
-        float lfhfScore  = baselineLFHF  > 0 ? Mathf.Clamp01(hrv.lf_hf / (baselineLFHF * 2f))  : 0f;
 
-        return (ibiScore * 0.5f) + (rmssdScore * 0.3f) + (lfhfScore * 0.2f);
+        // RMSSD — lower than baseline = more aroused
+        float rmssdScore = baselineRMSSD > 0 ? Mathf.Clamp01(1f - (hrv.rmssd / baselineRMSSD)) : 0f;
+
+        // LF/HF — reaches max at 1.5x baseline, heavily weighted for phasic detection
+        float lfhfScore  = baselineLFHF  > 0 ? Mathf.Clamp01(hrv.lf_hf / (baselineLFHF * 1.5f)) : 0f;
+
+        // LF/HF now weighted equally with IBI for better phasic event detection
+        return (ibiScore * 0.4f) + (rmssdScore * 0.2f) + (lfhfScore * 0.4f);
     }
 
     private string GetArousalLabel(float score)
