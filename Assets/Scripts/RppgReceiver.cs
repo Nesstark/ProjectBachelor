@@ -31,6 +31,10 @@ public class RppgReceiver : MonoBehaviour
     private float baselineTimer, baselineIBISum, baselineRMSSDSum, baselineLFHFSum;
     private int baselineSamples;
 
+    // Smoothing
+    private float[] arousalHistory = new float[5];
+    private int arousalHistoryIndex = 0;
+
     // Level change event
     private string previousArousalLabel = "";
     public event Action<string, string> OnArousalLevelChanged;
@@ -56,6 +60,8 @@ public class RppgReceiver : MonoBehaviour
         baselineReady = false;
         baselineTimer = baselineIBISum = baselineRMSSDSum = baselineLFHFSum = 0f;
         baselineSamples = 0;
+        arousalHistoryIndex = 0;
+        Array.Clear(arousalHistory, 0, arousalHistory.Length);
         Debug.Log("Baseline started — sit still for 2 minutes.");
     }
 
@@ -120,7 +126,7 @@ public class RppgReceiver : MonoBehaviour
             {
                 // Fallback to HR-based arousal when IBI is unavailable
                 float hrBaseline = 60000f / baselineIBI;
-                arousalScore = Mathf.Clamp01((heartRate - hrBaseline) / hrBaseline);
+                arousalScore = SmoothArousal(Mathf.Clamp01((heartRate - hrBaseline) / hrBaseline));
                 arousalLabel = GetArousalLabel(arousalScore);
 
                 if (arousalLabel != previousArousalLabel && previousArousalLabel != "")
@@ -153,7 +159,7 @@ public class RppgReceiver : MonoBehaviour
         if (hrv.ibi < 300f)
         {
             float hrBaseline = 60000f / baselineIBI;
-            return Mathf.Clamp01((heartRate - hrBaseline) / hrBaseline);
+            return SmoothArousal(Mathf.Clamp01((heartRate - hrBaseline) / hrBaseline));
         }
 
         // IBI — reaches max score at 30% drop from baseline
@@ -165,8 +171,17 @@ public class RppgReceiver : MonoBehaviour
         // LF/HF — reaches max at 1.5x baseline, heavily weighted for phasic detection
         float lfhfScore  = baselineLFHF  > 0 ? Mathf.Clamp01(hrv.lf_hf / (baselineLFHF * 1.5f)) : 0f;
 
-        // LF/HF now weighted equally with IBI for better phasic event detection
-        return (ibiScore * 0.4f) + (rmssdScore * 0.2f) + (lfhfScore * 0.4f);
+        float raw = (ibiScore * 0.4f) + (rmssdScore * 0.2f) + (lfhfScore * 0.4f);
+        return SmoothArousal(raw);
+    }
+
+    private float SmoothArousal(float raw)
+    {
+        arousalHistory[arousalHistoryIndex % 5] = raw;
+        arousalHistoryIndex++;
+        float sum = 0f;
+        foreach (float v in arousalHistory) sum += v;
+        return sum / 5f;
     }
 
     private string GetArousalLabel(float score)
