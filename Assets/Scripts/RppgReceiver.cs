@@ -116,6 +116,19 @@ public class RppgReceiver : MonoBehaviour
 
                 previousArousalLabel = arousalLabel;
             }
+            else if (payload.hrv.ibi < 300f && heartRate > 0f)
+            {
+                // Fallback to HR-based arousal when IBI is unavailable
+                float hrBaseline = 60000f / baselineIBI;
+                arousalScore = Mathf.Clamp01((heartRate - hrBaseline) / hrBaseline);
+                arousalLabel = GetArousalLabel(arousalScore);
+
+                if (arousalLabel != previousArousalLabel && previousArousalLabel != "")
+                    OnArousalLevelChanged?.Invoke(previousArousalLabel, arousalLabel);
+
+                previousArousalLabel = arousalLabel;
+                Debug.LogWarning("[RppgReceiver] Signal too weak — using HR fallback.");
+            }
             else
             {
                 Debug.LogWarning("[RppgReceiver] Signal too weak — arousal paused. Get back on screen.");
@@ -136,9 +149,18 @@ public class RppgReceiver : MonoBehaviour
 
     private float CalculateArousal(HrvData hrv)
     {
-        float ibiScore   = Mathf.Clamp01((baselineIBI - hrv.ibi) / baselineIBI);
+        // If IBI is missing fall back to HR
+        if (hrv.ibi < 300f)
+        {
+            float hrBaseline = 60000f / baselineIBI;
+            return Mathf.Clamp01((heartRate - hrBaseline) / hrBaseline);
+        }
+
+        // Only score positively when IBI drops below baseline
+        // 0.3f multiplier makes it reach max at 30% IBI drop instead of 100%
+        float ibiScore   = Mathf.Clamp01((baselineIBI - hrv.ibi) / (baselineIBI * 0.3f));
         float rmssdScore = baselineRMSSD > 0 ? Mathf.Clamp01(1f - (hrv.rmssd / baselineRMSSD)) : 0f;
-        float lfhfScore  = baselineLFHF  > 0 ? Mathf.Clamp01(hrv.lf_hf / (baselineLFHF * 3f))  : 0f;
+        float lfhfScore  = baselineLFHF  > 0 ? Mathf.Clamp01(hrv.lf_hf / (baselineLFHF * 2f))  : 0f;
 
         return (ibiScore * 0.5f) + (rmssdScore * 0.3f) + (lfhfScore * 0.2f);
     }
