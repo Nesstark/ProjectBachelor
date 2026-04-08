@@ -161,8 +161,9 @@ public class PlayerController : MonoBehaviour
 
         if (slashVFXPrefab != null)
         {
-            Quaternion slashRot = Quaternion.LookRotation(lastMoveDir) * Quaternion.Euler(90f, 0f, 0f);
-            GameObject slash    = Instantiate(slashVFXPrefab, attackOrigin.position, slashRot, attackOrigin);
+            float yAngle = Mathf.Atan2(lastMoveDir.x, lastMoveDir.z) * Mathf.Rad2Deg;
+            Quaternion slashRot = Quaternion.Euler(0f, yAngle, 0f);
+            GameObject slash = Instantiate(slashVFXPrefab, attackOrigin.position, slashRot, attackOrigin);
             Destroy(slash, 0.5f);
         }
 

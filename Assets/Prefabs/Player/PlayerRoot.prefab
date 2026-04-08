@@ -237,7 +237,7 @@ MonoBehaviour:
   spriteRenderer: {fileID: 5437596053719042642}
   animator: {fileID: 8225933335618507940}
   hitVFXPrefab: {fileID: 3042519775331041172, guid: 841004c4c6a39e244abe2257394de913, type: 3}
-  slashVFXPrefab: {fileID: 0}
+  slashVFXPrefab: {fileID: 5503505460791601945, guid: 74c549d1b06b6b140a1fd9536eea637f, type: 3}
   deathFadeDuration: 0.8
 --- !u!114 &6619534903725381708
 MonoBehaviour:
