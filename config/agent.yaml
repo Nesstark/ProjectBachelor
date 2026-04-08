@@ -1,0 +1,78 @@
+﻿# ============================================================
+#  agent.yaml  —  ML-Agents PPO Training Config
+#
+#  Save this file at:  <ProjectRoot>/config/agent.yaml
+#
+#  Run training with:
+#    mlagents-learn config/agent.yaml --run-id=run1
+#
+#  Resume a run:
+#    mlagents-learn config/agent.yaml --run-id=run1 --resume
+#
+#  Watch live in TensorBoard:
+#    tensorboard --logdir results
+# ============================================================
+
+behaviors:
+  AIPlayerAgent:
+    trainer_type: ppo          # PPO = Proximal Policy Optimisation
+                               # The same core algorithm behind ChatGPT's RLHF
+
+    hyperparameters:
+      # ── Learning rate ────────────────────────────────────
+      # How big a step to take when updating the network.
+      # Too high = unstable. Too low = slow learning.
+      learning_rate: 3.0e-4
+      learning_rate_schedule: linear   # decays to 0 over training
+
+      # ── Batch / Buffer sizes ─────────────────────────────
+      # batch_size: samples processed per gradient update
+      # buffer_size: experience collected before each update
+      batch_size: 512
+      buffer_size: 20480
+
+      # ── PPO clip ─────────────────────────────────────────
+      # Limits how much the policy can change per update.
+      # This is the "proximal" part — prevents catastrophic forgetting.
+      beta: 5.0e-3              # entropy bonus — encourages exploration
+      epsilon: 0.2              # clip range
+      lambd: 0.95               # GAE lambda (credit assignment over time)
+      num_epoch: 3
+
+    network_settings:
+      normalize: true
+      hidden_units: 256
+      num_layers: 2
+
+      # ── LSTM Memory ────────────────────────────────────────
+      # Gives the agent a persistent hidden state across decisions.
+      # It can now "remember" things like:
+      #   - which doors it already tried
+      #   - rooms it visited and found empty
+      #   - where it took heavy damage from
+      # Without this, every decision is made with no memory of the past.
+      memory:
+        memory_size: 128       # memory slots (bigger = remembers more)
+        sequence_length: 64    # steps it reasons over per update
+
+    reward_signals:
+      extrinsic:
+        # Extrinsic = your hand-crafted carrot & stick rewards
+        gamma: 0.99             # discount factor — how much future rewards matter
+        strength: 1.0           # scale multiplier
+
+      curiosity:
+        # Intrinsic Curiosity Module (ICM):
+        # The agent gets a BONUS reward for seeing things it hasn't seen before.
+        # This drives exploration WITHOUT you having to hand-code every area.
+        # It naturally wants to find the exit because it hasn't been there yet.
+        gamma: 0.99
+        strength: 0.02          # keep low so it doesn't override extrinsic reward
+        encoding_size: 64
+        learning_rate: 3.0e-4
+
+    keep_checkpoints: 5
+    checkpoint_interval: 50000
+    max_steps: 5000000         # ← increase for longer training (10M for polished behaviour)
+    time_horizon: 128
+    summary_freq: 10000

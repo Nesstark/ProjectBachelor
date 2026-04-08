@@ -1,12 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.AI;
 
-// ============================================================
-// BaseEnemy.cs — Abstract base class for all enemy types
-// Contains all shared logic: stats, damage, death, flash.
-// Subclasses only implement their unique movement/attack.
-// ============================================================
-
 [RequireComponent(typeof(NavMeshAgent))]
 public abstract class BaseEnemy : MonoBehaviour
 {
@@ -23,27 +17,24 @@ public abstract class BaseEnemy : MonoBehaviour
     [SerializeField] protected Animator animator;
     [SerializeField] protected SpriteRenderer spriteRenderer;
 
-    // ─── Animator Hashes ─────────────────────────────────────
-    protected static readonly int HashSpeed = Animator.StringToHash("Speed");
+    protected static readonly int HashSpeed        = Animator.StringToHash("Speed");
     protected static readonly int HashAttackCharge = Animator.StringToHash("AttackCharge");
-    protected static readonly int HashAttack = Animator.StringToHash("Attack");
-    protected static readonly int HashDie = Animator.StringToHash("Die");
+    protected static readonly int HashAttack       = Animator.StringToHash("Attack");
+    protected static readonly int HashDie          = Animator.StringToHash("Die");
 
-    // ─── Shared Runtime State ────────────────────────────────
-    protected EnemyStats Stats;
+    protected EnemyStats   Stats;
     protected NavMeshAgent Agent;
-    protected Transform PlayerTransform;
-    protected float AttackTimer;
-    protected bool IsDead;
+    protected Transform    PlayerTransform;
+    protected float        AttackTimer;
+    protected bool         IsDead;
+
+    private EnemyHealthBar _healthBar;
 
     protected GameManager GM => GameManager.Instance;
 
-    // ─────────────────────────────────────────────────────────
-    // Unity Lifecycle
-    // ─────────────────────────────────────────────────────────
     protected virtual void Awake()
     {
-        Agent = GetComponent<NavMeshAgent>();
+        Agent     = GetComponent<NavMeshAgent>();
         _hitFlash = GetComponentInChildren<HitFlashHandler>();
     }
 
@@ -51,10 +42,9 @@ public abstract class BaseEnemy : MonoBehaviour
     {
         Stats = GM != null ? GM.GetEnemyStats(EnemyTypeName) : FallbackStats();
 
-        Agent.speed = Stats.Speed;
+        Agent.speed            = Stats.Speed;
         Agent.stoppingDistance = meleeRange;
-
-        AttackTimer = Random.Range(0f, attackInterval);
+        AttackTimer            = Random.Range(0f, attackInterval);
 
         GameObject playerGO = GameObject.FindGameObjectWithTag("Player");
         if (playerGO != null)
@@ -62,8 +52,10 @@ public abstract class BaseEnemy : MonoBehaviour
         else
             Debug.LogWarning($"[{name}] No GameObject tagged 'Player' found!");
 
-        Debug.Log($"[{name}] Type:{EnemyTypeName} HP:{Stats.MaxHealth:F0} " +
-                  $"SPD:{Stats.Speed:F1} DMG:{Stats.Damage:F1}");
+        _healthBar = GetComponentInChildren<EnemyHealthBar>();
+        _healthBar?.Init(EnemyTypeName, Stats.MaxHealth);
+
+        Debug.Log($"[{name}] Type:{EnemyTypeName} HP:{Stats.MaxHealth:F0} SPD:{Stats.Speed:F1} DMG:{Stats.Damage:F1}");
     }
 
     protected virtual void Update()
@@ -77,19 +69,12 @@ public abstract class BaseEnemy : MonoBehaviour
         UpdateSpriteFlip();
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Abstract — subclasses MUST implement these
-    // ─────────────────────────────────────────────────────────
     protected abstract string EnemyTypeName { get; }
     protected abstract void HandleMovement();
 
-    // ─────────────────────────────────────────────────────────
-    // Attack Cycle
-    // ─────────────────────────────────────────────────────────
     protected virtual void TickAttackCycle()
     {
         AttackTimer += Time.deltaTime;
-
         if (AttackTimer >= attackInterval)
         {
             AttackTimer = 0f;
@@ -100,7 +85,6 @@ public abstract class BaseEnemy : MonoBehaviour
     protected virtual void TryAttack()
     {
         float dist = Vector3.Distance(transform.position, PlayerTransform.position);
-
         if (dist <= meleeRange)
         {
             Debug.Log($"[{name}] ATTACK — {Stats.Damage:F1} dmg to Player");
@@ -109,9 +93,6 @@ public abstract class BaseEnemy : MonoBehaviour
         }
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Shared Public API
-    // ─────────────────────────────────────────────────────────
     public virtual void TakeDamage(float amount)
     {
         if (IsDead) return;
@@ -119,6 +100,7 @@ public abstract class BaseEnemy : MonoBehaviour
         Stats.CurrentHealth -= amount;
         Debug.Log($"[{name}] Took {amount:F1} — HP:{Stats.CurrentHealth:F1}/{Stats.MaxHealth:F1}");
 
+        _healthBar?.SetHealth(Stats.CurrentHealth, Stats.MaxHealth);
         _hitFlash?.Flash();
 
         if (hitVFXPrefab != null)
@@ -132,9 +114,6 @@ public abstract class BaseEnemy : MonoBehaviour
         if (Stats.CurrentHealth <= 0f) Die();
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Death
-    // ─────────────────────────────────────────────────────────
     protected virtual void Die()
     {
         if (IsDead) return;
@@ -156,13 +135,10 @@ public abstract class BaseEnemy : MonoBehaviour
         Destroy(gameObject, 0.15f);
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Shared Helpers
-    // ─────────────────────────────────────────────────────────
     protected virtual void UpdateAnimator()
     {
         if (animator == null) return;
-        animator.SetFloat(HashSpeed, Agent.velocity.magnitude);
+        animator.SetFloat(HashSpeed,        Agent.velocity.magnitude);
         animator.SetFloat(HashAttackCharge, AttackTimer / attackInterval);
     }
 
@@ -170,17 +146,14 @@ public abstract class BaseEnemy : MonoBehaviour
     {
         if (spriteRenderer == null) return;
         float velX = Agent.velocity.x;
-        if (velX > 0.1f) spriteRenderer.flipX = false;
+        if      (velX >  0.1f) spriteRenderer.flipX = false;
         else if (velX < -0.1f) spriteRenderer.flipX = true;
     }
 
     private EnemyStats FallbackStats() => new EnemyStats
     {
-        MaxHealth = 50f,
-        CurrentHealth = 50f,
-        Speed = 2.5f,
-        Damage = 10f,
-        XpReward = 25f
+        MaxHealth = 50f, CurrentHealth = 50f,
+        Speed = 2.5f, Damage = 10f, XpReward = 25f
     };
 
     protected virtual void OnDrawGizmosSelected()

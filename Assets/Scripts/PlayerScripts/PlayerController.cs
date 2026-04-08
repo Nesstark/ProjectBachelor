@@ -5,7 +5,6 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(Rigidbody))]
 public class PlayerController : MonoBehaviour
 {
-    // ─── Serialized Fields ────────────────────────────────────
     [Header("Movement")]
     [SerializeField] private float moveSpeed     = 10f;
     [SerializeField] private float acceleration  = 80f;
@@ -43,6 +42,12 @@ public class PlayerController : MonoBehaviour
     private float           _lastKnownHp = float.MaxValue;
     private HitFlashHandler _hitFlash;
 
+    // ─── Exposed for HUD ─────────────────────────────────────
+    // 1.0 = dash fully ready, 0.0 = just used / recharging
+    public float DashReadyFraction => dashCooldown > 0f
+        ? Mathf.Clamp01(1f - Mathf.Max(0f, dashCooldownTimer) / dashCooldown)
+        : 1f;
+
     private static readonly int HashSpeed     = Animator.StringToHash("Speed");
     private static readonly int HashDirX      = Animator.StringToHash("DirX");
     private static readonly int HashDirZ      = Animator.StringToHash("DirZ");
@@ -55,7 +60,6 @@ public class PlayerController : MonoBehaviour
 
     private GameManager GM => GameManager.Instance;
 
-    // ─────────────────────────────────────────────────────────
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -64,7 +68,6 @@ public class PlayerController : MonoBehaviour
         if (animator == null) animator = GetComponentInChildren<Animator>();
         rb.constraints   = RigidbodyConstraints.FreezeRotation;
         rb.linearDamping = 0f;
-
         _hitFlash = GetComponentInChildren<HitFlashHandler>();
     }
 
@@ -91,9 +94,6 @@ public class PlayerController : MonoBehaviour
         GM?.OnPlayerHealthChanged.RemoveListener(HandlePlayerHit);
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Input
-    // ─────────────────────────────────────────────────────────
     public void OnMove(InputValue value)
     {
         if (!isDead) inputDir = value.Get<Vector2>();
@@ -111,14 +111,10 @@ public class PlayerController : MonoBehaviour
         if (isDead) return;
         if (value.Get<float>() < 0.5f) return;
         if (attackTimer > 0f) return;
-
         attackTimer = attackCooldown;
         PerformAttack();
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Update / FixedUpdate
-    // ─────────────────────────────────────────────────────────
     private void Update()
     {
         if (isDead) return;
@@ -152,13 +148,9 @@ public class PlayerController : MonoBehaviour
         Vector3 currentHorizontal = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
         float   accel             = moveDir.magnitude > 0.1f ? acceleration : deceleration;
         Vector3 newHorizontal     = Vector3.MoveTowards(currentHorizontal, targetVelocity, accel * Time.fixedDeltaTime);
-
         rb.linearVelocity = new Vector3(newHorizontal.x, rb.linearVelocity.y, newHorizontal.z);
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Attack
-    // ─────────────────────────────────────────────────────────
     private void PerformAttack()
     {
         float range  = GM != null ? GM.AttackRange   : 3f;
@@ -170,7 +162,7 @@ public class PlayerController : MonoBehaviour
         if (slashVFXPrefab != null)
         {
             Quaternion slashRot = Quaternion.LookRotation(lastMoveDir) * Quaternion.Euler(90f, 0f, 0f);
-            GameObject slash = Instantiate(slashVFXPrefab, attackOrigin.position, slashRot, attackOrigin);
+            GameObject slash    = Instantiate(slashVFXPrefab, attackOrigin.position, slashRot, attackOrigin);
             Destroy(slash, 0.5f);
         }
 
@@ -211,9 +203,6 @@ public class PlayerController : MonoBehaviour
         Debug.LogWarning($"[Player] '{closest.name}' has no BaseEnemy component!");
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Hit Flash + VFX
-    // ─────────────────────────────────────────────────────────
     private void HandlePlayerHit(float currentHp, float maxHp)
     {
         if (isDead) return;
@@ -224,27 +213,19 @@ public class PlayerController : MonoBehaviour
 
         if (animator != null) animator.SetTrigger(HashHit);
         CameraShakeManager.Instance?.ShakeImpulse(CameraShakeManager.Instance.hitShakeForce);
-
-        // Delegates to HitFlashHandler which uses MaterialPropertyBlock + _BaseColor
-        // so it works correctly with the URP Lit (SpriteLit) shader
         _hitFlash?.Flash();
 
-        // Spawn VFX offset toward camera so it renders in front of the sprite
         if (hitVFXPrefab != null)
         {
             Vector3 towardCam = Camera.main != null
                 ? (Camera.main.transform.position - transform.position).normalized
                 : Vector3.up;
-
             Vector3    vfxPos = transform.position + towardCam * 0.5f;
             GameObject vfx    = Instantiate(hitVFXPrefab, vfxPos, Quaternion.identity);
             Destroy(vfx, 2f);
         }
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Death
-    // ─────────────────────────────────────────────────────────
     private void HandlePlayerDied()
     {
         if (isDead) return;
@@ -284,9 +265,6 @@ public class PlayerController : MonoBehaviour
         Destroy(gameObject);
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Helpers
-    // ─────────────────────────────────────────────────────────
     private void StartDash()
     {
         isDashing         = true;

@@ -314,10 +314,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a86e5111a7a06edcbb9c71526b2bbe35, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ArousalVignetteController
-  lowArousalIntensity: 0.1
-  mediumArousalIntensity: 0.3
-  highArousalIntensity: 0.6
-  lerpSpeed: 2
 --- !u!4 &322880166 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4699108822094042223, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
@@ -1045,29 +1041,13 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 1713428459046670302, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
-      propertyPath: m_Layer
-      value: 3
-      objectReference: {fileID: 0}
     - target: {fileID: 2545038029202872913, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
       propertyPath: mainCam
       value: 
       objectReference: {fileID: 1724022301}
-    - target: {fileID: 3142082933029665487, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
-      propertyPath: 'm_Materials.Array.data[0]'
-      value: 
-      objectReference: {fileID: 2100000, guid: 67ea1403bfff730b7985e3eff4813813, type: 2}
     - target: {fileID: 3992578147615154026, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
       propertyPath: m_Name
       value: PlayerRoot
-      objectReference: {fileID: 0}
-    - target: {fileID: 3992578147615154026, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
-      propertyPath: m_Layer
-      value: 3
-      objectReference: {fileID: 0}
-    - target: {fileID: 4156963792936963783, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
-      propertyPath: m_ConstrainProportionsScale
-      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4699108822094042223, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
       propertyPath: m_LocalPosition.x
@@ -1110,57 +1090,14 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7094382892921232682, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
-      propertyPath: animator
-      value: 
-      objectReference: {fileID: 946598691}
-    - target: {fileID: 8457449262467759089, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8457449262467759089, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 8.735281
-      objectReference: {fileID: 0}
-    - target: {fileID: 8457449262467759089, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: -8.235282
+      propertyPath: dashCooldown
+      value: 3
       objectReference: {fileID: 0}
     m_RemovedComponents: []
-    m_RemovedGameObjects:
-    - {fileID: 3518813713181454324, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
+    m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 1713428459046670302, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 946598691}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
---- !u!1 &946598690 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 1713428459046670302, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
-  m_PrefabInstance: {fileID: 946598689}
-  m_PrefabAsset: {fileID: 0}
---- !u!95 &946598691
-Animator:
-  serializedVersion: 7
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 946598690}
-  m_Enabled: 1
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: 522b06ccdf665aa43ae526c0f3e45189, type: 2}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_AnimatePhysics: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &1194349499
 GameObject:
   m_ObjectHideFlags: 0

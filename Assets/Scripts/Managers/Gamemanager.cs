@@ -182,19 +182,6 @@ public class GameManager : MonoBehaviour
         baseDamage  = 10f,
         baseXpReward = 25f
     };
-
-#if UNITY_EDITOR
-    private void OnGUI()
-    {
-        if (Player == null) return;
-        GUILayout.BeginArea(new Rect(10, 10, 260, 120));
-        GUILayout.Label($"Level  : {Player.Level}");
-        GUILayout.Label($"HP     : {Player.CurrentHealth:F0} / {Player.MaxHealth:F0}");
-        GUILayout.Label($"Damage : {Player.Damage:F1}");
-        GUILayout.Label($"XP     : {Player.CurrentXp:F0} / {Player.XpToNextLevel:F0}");
-        GUILayout.EndArea();
-    }
-#endif
 }
 
 // ============================================================
