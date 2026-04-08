@@ -266,6 +266,12 @@ public class PlayerController : MonoBehaviour
         Destroy(gameObject);
     }
 
+    public void OnFootstep()
+    {
+        if (moveDir.magnitude < 0.1f) return; // don't play if sliding to a stop
+        AudioManager.Instance.Play("Footstep");
+    }
+
     private void StartDash()
     {
         isDashing         = true;
