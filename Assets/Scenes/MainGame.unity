@@ -681,10 +681,10 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 64
   attackOrigin: {fileID: 322880166}
-  visionRadius: 12
+  visionRadius: 14
   maxTrackedEnemies: 5
   exitDoor: {fileID: 8325839888734890617, guid: 02cf4207cd33e66c6814e40e1c59d668, type: 3}
-  exitDiscoveryRadius: 6
+  exitDiscoveryRadius: 50
   exitCompleteRadius: 1.5
   spriteRenderer: {fileID: 946598690}
   animator: {fileID: 0}
