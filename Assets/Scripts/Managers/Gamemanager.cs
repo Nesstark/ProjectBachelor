@@ -4,9 +4,7 @@ using System.Collections.Generic;
 
 // ============================================================
 // GameManager.cs — Central Stat & Game-State Manager
-// Attach to a single "GameManager" GameObject in your scene.
 // ============================================================
-
 public class GameManager : MonoBehaviour
 {
     // ─── Singleton ───────────────────────────────────────────
@@ -37,14 +35,14 @@ public class GameManager : MonoBehaviour
     [SerializeField] private float attackRange = 3f;
 
     // ─── Events ──────────────────────────────────────────────
-    [HideInInspector] public UnityEvent                    OnPlayerLevelUp      = new UnityEvent();
-    [HideInInspector] public UnityEvent<float, float>      OnPlayerHealthChanged = new UnityEvent<float, float>();
-    [HideInInspector] public UnityEvent<int, float, float> OnXpChanged          = new UnityEvent<int, float, float>();
-    [HideInInspector] public UnityEvent                    OnPlayerDied         = new UnityEvent();
+    [HideInInspector] public UnityEvent                  OnPlayerLevelUp     = new UnityEvent();
+    [HideInInspector] public UnityEvent<float, float>    OnPlayerHealthChanged = new UnityEvent<float, float>();
+    [HideInInspector] public UnityEvent<int, float, float> OnXpChanged       = new UnityEvent<int, float, float>();
+    [HideInInspector] public UnityEvent                  OnPlayerDied        = new UnityEvent();
 
     // ─── Runtime Player Stats ────────────────────────────────
-    public PlayerStats Player    { get; private set; }
-    public float       AttackRange => attackRange;
+    public PlayerStats Player   { get; private set; }
+    public float AttackRange    => attackRange;
 
     // ─── Lookup cache ────────────────────────────────────────
     private Dictionary<string, EnemyTypeData> _enemyLookup;
@@ -92,11 +90,11 @@ public class GameManager : MonoBehaviour
 
         return new EnemyStats
         {
-            MaxHealth     = data.baseHealth    * scale,
-            CurrentHealth = data.baseHealth    * scale,
-            Speed         = data.baseSpeed     * scale,
-            Damage        = data.baseDamage    * scale,
-            XpReward      = data.baseXpReward  * Mathf.Pow(1.1f, Player.Level - 1)
+            MaxHealth   = data.baseHealth   * scale,
+            CurrentHealth = data.baseHealth * scale,
+            Speed       = data.baseSpeed    * scale,
+            Damage      = data.baseDamage   * scale,
+            XpReward    = data.baseXpReward * Mathf.Pow(1.1f, Player.Level - 1)
         };
     }
 
@@ -114,25 +112,15 @@ public class GameManager : MonoBehaviour
         };
     }
 
-    // ─── Player Reset (called by AIPlayerAgent on episode begin) ─
+    // ─── Reset for New Game ──────────────────────────────────
     /// <summary>
-    /// Fully resets player stats back to level 1 defaults.
-    /// Called at the start of every ML-Agents training episode.
+    /// Call this before loading a new game scene to fully wipe
+    /// all player progress and return stats to Level 1 defaults.
     /// </summary>
-    public void ResetPlayer()
+    public void ResetForNewGame()
     {
-        Player.Level         = 1;
-        Player.CurrentXp     = 0f;
-        Player.XpToNextLevel = baseXpToLevel;
-        Player.MaxHealth     = basePlayerHealth;
-        Player.CurrentHealth = basePlayerHealth;
-        Player.Damage        = basePlayerDamage;
-
-        // Notify UI so health bars etc. update immediately
-        OnPlayerHealthChanged.Invoke(Player.CurrentHealth, Player.MaxHealth);
-        OnXpChanged.Invoke(Player.Level, Player.CurrentXp, Player.XpToNextLevel);
-
-        Debug.Log("[GM] Player reset — HP & stats restored to level 1.");
+        InitPlayer();
+        Debug.Log("[GM] Player stats reset for new game.");
     }
 
     // ─── Player Damage ───────────────────────────────────────
@@ -194,25 +182,11 @@ public class GameManager : MonoBehaviour
         baseDamage  = 10f,
         baseXpReward = 25f
     };
-
-#if UNITY_EDITOR
-    private void OnGUI()
-    {
-        if (Player == null) return;
-        GUILayout.BeginArea(new Rect(10, 10, 260, 120));
-        GUILayout.Label($"Level  : {Player.Level}");
-        GUILayout.Label($"HP     : {Player.CurrentHealth:F0} / {Player.MaxHealth:F0}");
-        GUILayout.Label($"Damage : {Player.Damage:F1}");
-        GUILayout.Label($"XP     : {Player.CurrentXp:F0} / {Player.XpToNextLevel:F0}");
-        GUILayout.EndArea();
-    }
-#endif
 }
 
 // ============================================================
 // Data Classes
 // ============================================================
-
 [System.Serializable]
 public class PlayerStats
 {

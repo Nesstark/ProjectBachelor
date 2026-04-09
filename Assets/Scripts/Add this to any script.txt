@@ -1,3 +1,18 @@
 var bio = FindObjectOfType<RppgReceiver>();
-float stress = bio.stressLevel;   // 0.0 = calm, 1.0 = stressed
-float bpm    = bio.heartRate;
+
+float arousal    = bio.arousalScore;   // 0.0 = bored, 1.0 = stressed
+string level     = bio.arousalLabel;   // "Low", "Medium", "High"
+float bpm        = bio.heartRate;
+
+if (level == "Low")
+{
+    // player is bored — increase difficulty or intensity
+}
+else if (level == "Medium")
+{
+    // player is engaged — maintain current state
+}
+else if (level == "High")
+{
+    // player is stressed — ease off difficulty or trigger calming event
+}

@@ -19,6 +19,13 @@ public class CutoutObject : MonoBehaviour
 
     private void Update()
     {
+        // If the tracked target has been destroyed, stop running
+        if (targetObject == null)
+        {
+            enabled = false;
+            return;
+        }
+
         Vector2 cutoutPos = mainCamera.WorldToViewportPoint(targetObject.position);
 
         Vector3 offset = targetObject.position - transform.position;
@@ -30,7 +37,7 @@ public class CutoutObject : MonoBehaviour
             if (sr == null) continue;
 
             sr.material.SetVector("_CutoutPos", cutoutPos);
-            sr.material.SetFloat("_CutoutSize", 0.15f);   // tweak to taste
+            sr.material.SetFloat("_CutoutSize", 0.30f);
             sr.material.SetFloat("_FalloffSize", 0.05f);
         }
     }

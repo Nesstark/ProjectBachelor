@@ -66,12 +66,15 @@ public class ArrowProjectile : MonoBehaviour
         if (other.GetComponent<ArrowProjectile>() != null) return;
 
         // Never destroy when passing through enemies or other archers
-        if (other.CompareTag("Enemy") || other.CompareTag("Archer")) return;
+        if (other.CompareTag("Enemy")) return;
 
         if (other.CompareTag("Player"))
         {
             _hasHit = true;
             Debug.Log($"[Arrow] Hit Player — {_damage:F1} dmg");
+
+            AudioManager.Instance.Play("FireballHit");
+
             GameManager.Instance?.ApplyDamageToPlayer(_damage);
             Destroy(gameObject);
             return;

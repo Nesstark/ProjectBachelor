@@ -307,8 +307,113 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AudioManager
   audioMixer: {fileID: 24100000, guid: 3c3e18d2feacc42849f558351a3801e8, type: 2}
-  sfxSounds: []
-  uiSounds: []
+  sfxSounds:
+  - id: Footstep
+    clips:
+    - {fileID: 8300000, guid: cfa65dd1d3039a8a0a5b0727b90e1154, type: 3}
+    - {fileID: 8300000, guid: f40e523fece0ce2168466c5ed95591f2, type: 3}
+    - {fileID: 8300000, guid: 9afe2e3f5651a018693be375151be62b, type: 3}
+    - {fileID: 8300000, guid: 21f95165889056781b8b56525316642e, type: 3}
+    - {fileID: 8300000, guid: 06f91581bacf7d7b0987d7fb389e3ee6, type: 3}
+    volume: 0.7
+    pitch: 1
+    randomizePitch: 1
+    pitchVariance: 0
+    randomizeVolume: 0
+    volumeVariance: 0
+    loop: 0
+    playOnAwake: 0
+    mixerGroup: {fileID: 2132725367027035467, guid: 3c3e18d2feacc42849f558351a3801e8, type: 2}
+    source: {fileID: 0}
+  - id: PlayerAttack
+    clips:
+    - {fileID: 8300000, guid: 63019ef4b01b72b32a3668b0dde9d72c, type: 3}
+    - {fileID: 8300000, guid: 40e4215c4401bb3c2a2ea1bfa600fb5d, type: 3}
+    - {fileID: 8300000, guid: 7b61a82829f08a997b1eb85bc7b1a189, type: 3}
+    volume: 0.7
+    pitch: 1
+    randomizePitch: 1
+    pitchVariance: 0
+    randomizeVolume: 0
+    volumeVariance: 0
+    loop: 0
+    playOnAwake: 0
+    mixerGroup: {fileID: 2132725367027035467, guid: 3c3e18d2feacc42849f558351a3801e8, type: 2}
+    source: {fileID: 0}
+  - id: EnemyHit
+    clips:
+    - {fileID: 8300000, guid: 698f5bac36725683aaf1bf1d00aeb84b, type: 3}
+    - {fileID: 8300000, guid: f45cf91d02eb0d0cf9fefd9ce07cfe22, type: 3}
+    - {fileID: 8300000, guid: 1abc57d019551184b9ae68e72358d022, type: 3}
+    volume: 0.7
+    pitch: 1
+    randomizePitch: 1
+    pitchVariance: 0
+    randomizeVolume: 0
+    volumeVariance: 0
+    loop: 0
+    playOnAwake: 0
+    mixerGroup: {fileID: 2132725367027035467, guid: 3c3e18d2feacc42849f558351a3801e8, type: 2}
+    source: {fileID: 0}
+  - id: EnemyFireball
+    clips:
+    - {fileID: 8300000, guid: 470179c0ddf8ac2e99799e78e07a149b, type: 3}
+    - {fileID: 8300000, guid: 2e411ed04e6c3ebbe9ddb70784d76b4c, type: 3}
+    - {fileID: 8300000, guid: 83725f1c40d048467abbdbac503c69db, type: 3}
+    volume: 0.7
+    pitch: 1
+    randomizePitch: 1
+    pitchVariance: 0
+    randomizeVolume: 0
+    volumeVariance: 0
+    loop: 0
+    playOnAwake: 0
+    mixerGroup: {fileID: 2132725367027035467, guid: 3c3e18d2feacc42849f558351a3801e8, type: 2}
+    source: {fileID: 0}
+  - id: FireballHit
+    clips:
+    - {fileID: 8300000, guid: 5913f7f0a54f00ee9b1c369863b75c35, type: 3}
+    - {fileID: 8300000, guid: 24b10c5a4898b8c45a3e67bd6bf2213a, type: 3}
+    - {fileID: 8300000, guid: d9a2da605644a761482e97a722d14284, type: 3}
+    volume: 0.7
+    pitch: 1
+    randomizePitch: 1
+    pitchVariance: 0
+    randomizeVolume: 0
+    volumeVariance: 0
+    loop: 0
+    playOnAwake: 0
+    mixerGroup: {fileID: 2132725367027035467, guid: 3c3e18d2feacc42849f558351a3801e8, type: 2}
+    source: {fileID: 0}
+  - id: PlayerHit
+    clips:
+    - {fileID: 8300000, guid: 698f5bac36725683aaf1bf1d00aeb84b, type: 3}
+    - {fileID: 8300000, guid: f45cf91d02eb0d0cf9fefd9ce07cfe22, type: 3}
+    - {fileID: 8300000, guid: 1abc57d019551184b9ae68e72358d022, type: 3}
+    volume: 0.7
+    pitch: 1
+    randomizePitch: 1
+    pitchVariance: 0
+    randomizeVolume: 0
+    volumeVariance: 0
+    loop: 0
+    playOnAwake: 0
+    mixerGroup: {fileID: 2132725367027035467, guid: 3c3e18d2feacc42849f558351a3801e8, type: 2}
+    source: {fileID: 0}
+  uiSounds:
+  - id: Click
+    clips:
+    - {fileID: 8300000, guid: e7dafd19173ce50c799d7cd4d71309b4, type: 3}
+    volume: 0.7
+    pitch: 1
+    randomizePitch: 0
+    pitchVariance: 0
+    randomizeVolume: 0
+    volumeVariance: 0
+    loop: 0
+    playOnAwake: 0
+    mixerGroup: {fileID: -5197369323360071263, guid: 3c3e18d2feacc42849f558351a3801e8, type: 2}
+    source: {fileID: 0}
 --- !u!4 &107691608
 Transform:
   m_ObjectHideFlags: 0
@@ -703,7 +808,7 @@ Transform:
   m_GameObject: {fileID: 222853054}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -4.8303284e-10, z: 2.6182513e-11, w: 1}
-  m_LocalPosition: {x: 412, y: 231.75, z: -10}
+  m_LocalPosition: {x: 458, y: 257.5, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1026,6 +1131,7 @@ GameObject:
   - component: {fileID: 371727341}
   - component: {fileID: 371727340}
   - component: {fileID: 371727339}
+  - component: {fileID: 371727342}
   m_Layer: 5
   m_Name: MainCanvas
   m_TagString: Untagged
@@ -1118,6 +1224,18 @@ Canvas:
   m_SortingLayerID: 0
   m_SortingOrder: 0
   m_TargetDisplay: 0
+--- !u!114 &371727342
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 371727337}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 63b658906a09dbfd19db79370769c333, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIClickSound
 --- !u!1 &379427025
 GameObject:
   m_ObjectHideFlags: 0
@@ -3274,6 +3392,52 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1317068739}
   m_CullTransparentMesh: 1
+--- !u!1 &1345162457
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1345162459}
+  - component: {fileID: 1345162458}
+  m_Layer: 0
+  m_Name: MusicManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1345162458
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1345162457}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27bca14dfa6fc4bd6bb2f4013d1bdc05, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MusicManager
+  musicMixerGroup: {fileID: -1950059485515446603, guid: 3c3e18d2feacc42849f558351a3801e8, type: 2}
+  defaultCrossfadeDuration: 2
+--- !u!4 &1345162459
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1345162457}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.46114, y: 0, z: -0.24923}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1427580243
 GameObject:
   m_ObjectHideFlags: 0
@@ -3845,7 +4009,7 @@ Transform:
   m_GameObject: {fileID: 1641032696}
   serializedVersion: 2
   m_LocalRotation: {x: 1.2647013e-20, y: -4.8303284e-10, z: 6.1089226e-30, w: 1}
-  m_LocalPosition: {x: 412, y: 231.75, z: -10}
+  m_LocalPosition: {x: 458, y: 257.5, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -4620,3 +4784,4 @@ SceneRoots:
   - {fileID: 935263821}
   - {fileID: 392925671}
   - {fileID: 107691608}
+  - {fileID: 1345162459}

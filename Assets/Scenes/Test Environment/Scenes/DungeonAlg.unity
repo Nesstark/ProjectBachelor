@@ -608,6 +608,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DungeonGenerator
   seed: 0
   useRandomSeed: 1
+  baseRoomCount: 5
+  roomScalePerLevel: 2.6
+  roomCountVariance: 2
+  minRooms: 5
+  maxRooms: 20
+  expansionChance: 0.5
+  maxGenerationAttempts: 100
 --- !u!4 &1079365123
 Transform:
   m_ObjectHideFlags: 0
@@ -1002,6 +1009,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6c929ffc099fd48bdbe3f23b4fed6dfb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Billboard
+  mainCam: {fileID: 0}
+  tiltMultiplier: 0.85
 --- !u!81 &1770859549221104412
 AudioListener:
   m_ObjectHideFlags: 0
@@ -1295,6 +1304,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   moveSpeed: 10
+  acceleration: 80
+  deceleration: 120
   dashSpeed: 18
   dashDuration: 0.15
   dashCooldown: 0.6
@@ -1305,6 +1316,9 @@ MonoBehaviour:
   attackOrigin: {fileID: 0}
   spriteRenderer: {fileID: 5361742692472030881}
   animator: {fileID: 0}
+  hitVFXPrefab: {fileID: 0}
+  slashVFXPrefab: {fileID: 0}
+  deathFadeDuration: 0.8
 --- !u!4 &6982241027609649428
 Transform:
   m_ObjectHideFlags: 0
