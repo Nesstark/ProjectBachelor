@@ -243,6 +243,7 @@ MonoBehaviour:
   dashDuration: 0.15
   dashCooldown: 0.6
   attackCooldown: 0.4
+  attackAngle: 120
   enemyLayer:
     serializedVersion: 2
     m_Bits: 64

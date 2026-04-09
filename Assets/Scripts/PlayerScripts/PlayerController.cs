@@ -15,6 +15,7 @@ public class PlayerController : MonoBehaviour
 
     [Header("Attack")]
     [SerializeField] private float     attackCooldown = 0.4f;
+    [SerializeField] private float attackAngle = 90f;
     [SerializeField] private LayerMask enemyLayer;
     [SerializeField] private Transform attackOrigin;
 
@@ -185,7 +186,7 @@ public class PlayerController : MonoBehaviour
             if (lastMoveDir.magnitude > 0.1f)
             {
                 float dot = Vector3.Dot(lastMoveDir.normalized, toEnemy.normalized);
-                if (dot < 0.3f) continue;
+                if (dot < Mathf.Cos(attackAngle * 0.5f * Mathf.Deg2Rad)) continue;
             }
 
             float dist = toEnemy.magnitude;
@@ -304,9 +305,26 @@ public class PlayerController : MonoBehaviour
 
     private void OnDrawGizmosSelected()
     {
-        float   range  = Application.isPlaying && GM != null ? GM.AttackRange : 3f;
+        float range = Application.isPlaying && GM != null ? GM.AttackRange : 3f;
         Vector3 origin = attackOrigin != null ? attackOrigin.position : transform.position;
-        Gizmos.color   = Color.yellow;
+
+        // Sphere showing max range
+        Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(origin, range);
+
+        // Cone edges showing the angle window
+        Vector3 forward = Application.isPlaying ? lastMoveDir : transform.forward;
+        forward.y = 0f;
+        if (forward.magnitude > 0.01f)
+        {
+            forward.Normalize();
+            float halfAngle = attackAngle * 0.5f;
+            Vector3 leftEdge  = Quaternion.Euler(0f, -halfAngle, 0f) * forward;
+            Vector3 rightEdge = Quaternion.Euler(0f,  halfAngle, 0f) * forward;
+
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawLine(origin, origin + leftEdge  * range);
+            Gizmos.DrawLine(origin, origin + rightEdge * range);
+        }
     }
 }
