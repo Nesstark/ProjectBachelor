@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 1618695433838542486}
   - component: {fileID: 4686065913143481910}
   - component: {fileID: 5278161938299360087}
+  - component: {fileID: 2700800496339056598}
   m_Layer: 6
   m_Name: SpriteVisual
   m_TagString: Untagged
@@ -124,6 +125,28 @@ MonoBehaviour:
   flashCount: 3
   flashInterval: 0.05
   colorPropertyName: _BaseColor
+--- !u!95 &2700800496339056598
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1195549217335815662}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 792e26ee96648d443aa089fadfe3e047, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &7543761834999695512
 GameObject:
   m_ObjectHideFlags: 0
@@ -201,7 +224,7 @@ MonoBehaviour:
   deathVFXPrefab: {fileID: 0}
   attackOrigin: {fileID: 3376892719923082274}
   slashVFXPrefab: {fileID: 5503505460791601945, guid: d1d1ad8873cb54e8db68971b9d014d48, type: 3}
-  animator: {fileID: 0}
+  animator: {fileID: 2700800496339056598}
   spriteRenderer: {fileID: 4686065913143481910}
   enemyType: 0
 --- !u!195 &158293721029440219

@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 8965778121938010556}
   - component: {fileID: 3313307016795278824}
   - component: {fileID: 7110263022217403025}
+  - component: {fileID: 7643608384564979831}
   m_Layer: 6
   m_Name: SpriteVisual
   m_TagString: Untagged
@@ -99,7 +100,7 @@ SpriteRenderer:
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: cca882cc151a2b34ca589425661b9932, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_FlipX: 0
+  m_FlipX: 1
   m_FlipY: 0
   m_DrawMode: 0
   m_Size: {x: 5.94, y: 7.3638744}
@@ -124,6 +125,28 @@ MonoBehaviour:
   flashCount: 3
   flashInterval: 0.05
   colorPropertyName: _BaseColor
+--- !u!95 &7643608384564979831
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2050597239074697506}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 55b982d6f37c19b4b986f24706cecaea, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &8856747528781715408
 GameObject:
   m_ObjectHideFlags: 0
@@ -221,7 +244,9 @@ MonoBehaviour:
   meleeRange: 1.5
   hitVFXPrefab: {fileID: 3042519775331041172, guid: 841004c4c6a39e244abe2257394de913, type: 3}
   deathVFXPrefab: {fileID: 0}
-  animator: {fileID: 0}
+  attackOrigin: {fileID: 0}
+  slashVFXPrefab: {fileID: 0}
+  animator: {fileID: 7643608384564979831}
   spriteRenderer: {fileID: 3313307016795278824}
   projectilePrefab: {fileID: 1298275985269948489, guid: 0046d061dceef634e9ee4cedffa004b7, type: 3}
   firePoint: {fileID: 3535738919132841180}

@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 8965778121938010556}
   - component: {fileID: 3313307016795278824}
   - component: {fileID: 7110263022217403025}
+  - component: {fileID: 7660952516242129403}
   m_Layer: 6
   m_Name: SpriteVisual
   m_TagString: Untagged
@@ -124,6 +125,28 @@ MonoBehaviour:
   flashCount: 3
   flashInterval: 0.05
   colorPropertyName: _BaseColor
+--- !u!95 &7660952516242129403
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2050597239074697506}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 7a7182dc08dd8bb40b9a45d6a94a597f, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &8856747528781715408
 GameObject:
   m_ObjectHideFlags: 0
@@ -152,7 +175,7 @@ Transform:
   m_GameObject: {fileID: 8856747528781715408}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0.1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -223,7 +246,7 @@ MonoBehaviour:
   deathVFXPrefab: {fileID: 0}
   attackOrigin: {fileID: 3535738919132841180}
   slashVFXPrefab: {fileID: 0}
-  animator: {fileID: 0}
+  animator: {fileID: 7660952516242129403}
   spriteRenderer: {fileID: 3313307016795278824}
   projectilePrefab: {fileID: 1298275985269948489, guid: 0046d061dceef634e9ee4cedffa004b7, type: 3}
   firePoint: {fileID: 3535738919132841180}
