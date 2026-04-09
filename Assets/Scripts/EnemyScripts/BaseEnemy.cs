@@ -116,7 +116,7 @@ public abstract class BaseEnemy : MonoBehaviour
         _healthBar?.SetHealth(Stats.CurrentHealth, Stats.MaxHealth);
         _hitFlash?.Flash();
 
-        AudioManager.Instance.Play("EnemyHit");
+        AudioManager.Instance?.Play("EnemyHit");
 
         if (hitVFXPrefab != null)
         {
