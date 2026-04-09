@@ -3,17 +3,23 @@ using UnityEngine.InputSystem;
 
 public class DebugRoomUnlock : MonoBehaviour
 {
-    private PlayerInput playerInput;
     private InputAction interactAction;
 
-    void Awake()
+    void Start()
     {
-        playerInput = FindFirstObjectByType<PlayerInput>();
+        PlayerInput playerInput = FindFirstObjectByType<PlayerInput>();
+        if (playerInput == null)
+        {
+            Debug.LogError("[DebugRoomUnlock] No PlayerInput found in scene!");
+            return;
+        }
         interactAction = playerInput.actions["Interact"];
     }
 
     void Update()
     {
+        if (interactAction == null) return;
+
         if (interactAction.WasPressedThisFrame())
         {
             if (RoomManager.Instance?.CurrentRoom == null)

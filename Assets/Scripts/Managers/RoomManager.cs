@@ -135,19 +135,31 @@ public class RoomManager : MonoBehaviour
         StartCoroutine(DoTransition(targetCell, dir));
     }
 
-    IEnumerator DoTransition(int targetCell, Direction fromDirection)
+IEnumerator DoTransition(int targetCell, Direction fromDirection)
+{
+    isTransitioning = true;
+
+    // Disable gravity during room swap so player doesn't fall
+    Rigidbody rb = playerTransform?.GetComponent<Rigidbody>();
+    if (rb != null)
     {
-        isTransitioning = true;
-
-        yield return StartCoroutine(TransitionManager.Instance.Transition(() =>
-        {
-            if (currentRoomInstance != null) Destroy(currentRoomInstance);
-            currentCell = targetCell;
-            LoadRoom(targetCell, fromDirection);
-        }));
-
-        isTransitioning = false;
+        rb.useGravity = false;
+        rb.linearVelocity = Vector3.zero;
     }
+
+    yield return StartCoroutine(TransitionManager.Instance.Transition(() =>
+    {
+        if (currentRoomInstance != null) Destroy(currentRoomInstance);
+        currentCell = targetCell;
+        LoadRoom(targetCell, fromDirection);
+    }));
+
+    // Re-enable gravity after new room floor is loaded
+    if (rb != null)
+        rb.useGravity = true;
+
+    isTransitioning = false;
+}
 
     void LoadRoom(int cell, Direction fromDirection)
     {

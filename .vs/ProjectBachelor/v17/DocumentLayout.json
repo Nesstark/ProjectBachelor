@@ -3,11 +3,15 @@
   "WorkspaceRootPath": "C:\\Users\\trist\\Documents\\ProjectBachelor\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{DD99F37F-4499-F2B4-6CDA-D6E59FCB8924}|Assembly-CSharp.csproj|c:\\users\\trist\\documents\\projectbachelor\\assets\\scripts\\playerscripts\\playercontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DD99F37F-4499-F2B4-6CDA-D6E59FCB8924}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\playerscripts\\playercontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{DD99F37F-4499-F2B4-6CDA-D6E59FCB8924}|Assembly-CSharp.csproj|c:\\users\\trist\\documents\\projectbachelor\\assets\\scripts\\rppglogger.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{DD99F37F-4499-F2B4-6CDA-D6E59FCB8924}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\rppglogger.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{DD99F37F-4499-F2B4-6CDA-D6E59FCB8924}|Assembly-CSharp.csproj|c:\\users\\trist\\documents\\projectbachelor\\assets\\scripts\\managers\\roommanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{DD99F37F-4499-F2B4-6CDA-D6E59FCB8924}|Assembly-CSharp.csproj|C:\\Users\\trist\\Documents\\ProjectBachelor\\assets\\scripts\\managers\\roommanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{DD99F37F-4499-F2B4-6CDA-D6E59FCB8924}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\managers\\roommanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
@@ -27,6 +31,19 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "PlayerController.cs",
+              "DocumentMoniker": "C:\\Users\\trist\\Documents\\ProjectBachelor\\Assets\\Scripts\\PlayerScripts\\PlayerController.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\PlayerScripts\\PlayerController.cs",
+              "ToolTip": "C:\\Users\\trist\\Documents\\ProjectBachelor\\Assets\\Scripts\\PlayerScripts\\PlayerController.cs",
+              "RelativeToolTip": "Assets\\Scripts\\PlayerScripts\\PlayerController.cs",
+              "ViewState": "AgIAACoBAAAAAAAAAAAQwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-09T23:51:39.877Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
               "Title": "RppgLogger.cs",
               "DocumentMoniker": "C:\\Users\\trist\\Documents\\ProjectBachelor\\Assets\\Scripts\\RppgLogger.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\RppgLogger.cs",
@@ -39,7 +56,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "RoomManager.cs",
               "DocumentMoniker": "C:\\Users\\trist\\Documents\\ProjectBachelor\\Assets\\Scripts\\Managers\\RoomManager.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Managers\\RoomManager.cs",
@@ -47,12 +64,11 @@
               "RelativeToolTip": "Assets\\Scripts\\Managers\\RoomManager.cs",
               "ViewState": "AgIAAL8AAAAAAAAAAADwvwAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-09T21:56:41.85Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-09T21:56:41.85Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 3,
               "Title": "RppgReceiver.cs",
               "DocumentMoniker": "C:\\Users\\trist\\Documents\\ProjectBachelor\\Assets\\Scripts\\RppgReceiver.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\RppgReceiver.cs",
