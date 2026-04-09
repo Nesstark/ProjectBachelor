@@ -160,7 +160,7 @@ public class PlayerController : MonoBehaviour
 
         if (animator != null) animator.SetTrigger(HashAttack);
 
-        AudioManager.Instance.Play("PlayerAttack");
+        AudioManager.Instance?.Play("PlayerAttack");
 
         if (slashVFXPrefab != null)
         {
@@ -219,7 +219,7 @@ public class PlayerController : MonoBehaviour
         CameraShakeManager.Instance?.ShakeImpulse(CameraShakeManager.Instance.hitShakeForce);
         _hitFlash?.Flash();
 
-        AudioManager.Instance.Play("PlayerHit");
+        AudioManager.Instance?.Play("PlayerHit");
 
         if (hitVFXPrefab != null)
         {
@@ -274,7 +274,7 @@ public class PlayerController : MonoBehaviour
     public void OnFootstep()
     {
         if (moveDir.magnitude < 0.1f) return; // don't play if sliding to a stop
-        AudioManager.Instance.Play("Footstep");
+        AudioManager.Instance?.Play("Footstep");
     }
 
     private void StartDash()
