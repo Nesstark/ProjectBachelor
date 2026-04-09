@@ -355,6 +355,51 @@ MonoBehaviour:
     playOnAwake: 0
     mixerGroup: {fileID: 2132725367027035467, guid: 3c3e18d2feacc42849f558351a3801e8, type: 2}
     source: {fileID: 0}
+  - id: EnemyFireball
+    clips:
+    - {fileID: 8300000, guid: 470179c0ddf8ac2e99799e78e07a149b, type: 3}
+    - {fileID: 8300000, guid: 2e411ed04e6c3ebbe9ddb70784d76b4c, type: 3}
+    - {fileID: 8300000, guid: 83725f1c40d048467abbdbac503c69db, type: 3}
+    volume: 0.7
+    pitch: 1
+    randomizePitch: 1
+    pitchVariance: 0
+    randomizeVolume: 0
+    volumeVariance: 0
+    loop: 0
+    playOnAwake: 0
+    mixerGroup: {fileID: 2132725367027035467, guid: 3c3e18d2feacc42849f558351a3801e8, type: 2}
+    source: {fileID: 0}
+  - id: FireballHit
+    clips:
+    - {fileID: 8300000, guid: 5913f7f0a54f00ee9b1c369863b75c35, type: 3}
+    - {fileID: 8300000, guid: 24b10c5a4898b8c45a3e67bd6bf2213a, type: 3}
+    - {fileID: 8300000, guid: d9a2da605644a761482e97a722d14284, type: 3}
+    volume: 0.7
+    pitch: 1
+    randomizePitch: 1
+    pitchVariance: 0
+    randomizeVolume: 0
+    volumeVariance: 0
+    loop: 0
+    playOnAwake: 0
+    mixerGroup: {fileID: 2132725367027035467, guid: 3c3e18d2feacc42849f558351a3801e8, type: 2}
+    source: {fileID: 0}
+  - id: PlayerHit
+    clips:
+    - {fileID: 8300000, guid: 698f5bac36725683aaf1bf1d00aeb84b, type: 3}
+    - {fileID: 8300000, guid: f45cf91d02eb0d0cf9fefd9ce07cfe22, type: 3}
+    - {fileID: 8300000, guid: 1abc57d019551184b9ae68e72358d022, type: 3}
+    volume: 0.7
+    pitch: 1
+    randomizePitch: 1
+    pitchVariance: 0
+    randomizeVolume: 0
+    volumeVariance: 0
+    loop: 0
+    playOnAwake: 0
+    mixerGroup: {fileID: 2132725367027035467, guid: 3c3e18d2feacc42849f558351a3801e8, type: 2}
+    source: {fileID: 0}
   uiSounds: []
 --- !u!4 &107691608
 Transform:

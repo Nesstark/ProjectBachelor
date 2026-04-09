@@ -11,6 +11,8 @@ public abstract class BaseEnemy : MonoBehaviour
     [Header("VFX")]
     [SerializeField] protected GameObject hitVFXPrefab;
     [SerializeField] protected GameObject deathVFXPrefab;
+    [SerializeField] private Transform attackOrigin;
+    [SerializeField] private GameObject slashVFXPrefab;
     private HitFlashHandler _hitFlash;
 
     [Header("Optional")]
@@ -90,6 +92,17 @@ public abstract class BaseEnemy : MonoBehaviour
             Debug.Log($"[{name}] ATTACK — {Stats.Damage:F1} dmg to Player");
             GM?.ApplyDamageToPlayer(Stats.Damage);
             if (animator != null) animator.SetTrigger(HashAttack);
+            
+            if (slashVFXPrefab != null)
+            {
+                Transform origin = attackOrigin != null ? attackOrigin : transform;
+                Vector3 dir = (PlayerTransform.position - transform.position);
+                dir.y = 0f;
+                float yAngle = Mathf.Atan2(dir.x, dir.z) * Mathf.Rad2Deg;
+                Quaternion slashRot = Quaternion.Euler(0f, yAngle, 0f);
+                GameObject slash = Instantiate(slashVFXPrefab, origin.position, slashRot, origin);
+                Destroy(slash, 0.5f);
+            }
         }
     }
 
@@ -102,6 +115,8 @@ public abstract class BaseEnemy : MonoBehaviour
 
         _healthBar?.SetHealth(Stats.CurrentHealth, Stats.MaxHealth);
         _hitFlash?.Flash();
+
+        AudioManager.Instance.Play("EnemyHit");
 
         if (hitVFXPrefab != null)
         {

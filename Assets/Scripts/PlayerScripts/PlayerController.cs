@@ -159,6 +159,8 @@ public class PlayerController : MonoBehaviour
 
         if (animator != null) animator.SetTrigger(HashAttack);
 
+        AudioManager.Instance.Play("PlayerAttack");
+
         if (slashVFXPrefab != null)
         {
             float yAngle = Mathf.Atan2(lastMoveDir.x, lastMoveDir.z) * Mathf.Rad2Deg;
@@ -215,6 +217,8 @@ public class PlayerController : MonoBehaviour
         if (animator != null) animator.SetTrigger(HashHit);
         CameraShakeManager.Instance?.ShakeImpulse(CameraShakeManager.Instance.hitShakeForce);
         _hitFlash?.Flash();
+
+        AudioManager.Instance.Play("PlayerHit");
 
         if (hitVFXPrefab != null)
         {
