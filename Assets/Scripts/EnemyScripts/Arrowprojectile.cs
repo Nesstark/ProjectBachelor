@@ -73,7 +73,7 @@ public class ArrowProjectile : MonoBehaviour
             _hasHit = true;
             Debug.Log($"[Arrow] Hit Player — {_damage:F1} dmg");
 
-            AudioManager.Instance.Play("FireballHit");
+            AudioManager.Instance?.Play("FireballHit");
 
             GameManager.Instance?.ApplyDamageToPlayer(_damage);
             Destroy(gameObject);
