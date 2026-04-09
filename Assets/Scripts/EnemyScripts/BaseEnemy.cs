@@ -161,8 +161,8 @@ public abstract class BaseEnemy : MonoBehaviour
     {
         if (spriteRenderer == null) return;
         float velX = Agent.velocity.x;
-        if      (velX >  0.1f) spriteRenderer.flipX = false;
-        else if (velX < -0.1f) spriteRenderer.flipX = true;
+        if      (velX >  0.1f) spriteRenderer.flipX = true;
+        else if (velX < -0.1f) spriteRenderer.flipX = false;
     }
 
     private EnemyStats FallbackStats() => new EnemyStats
