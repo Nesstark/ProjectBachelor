@@ -310,11 +310,41 @@ MonoBehaviour:
   sfxSounds:
   - id: Footstep
     clips:
-    - {fileID: 8300000, guid: 14edde660a2f73f4282938e0bdff83fc, type: 3}
-    - {fileID: 8300000, guid: baf2f27cc176d7733b4f87520a116bd2, type: 3}
-    - {fileID: 8300000, guid: ac13a539a31e3cf4d9b5efda35468503, type: 3}
-    - {fileID: 8300000, guid: 3f7dec271a224522581bf2d7f0836ae8, type: 3}
-    - {fileID: 8300000, guid: 76713da86bd6119088256b901757f66b, type: 3}
+    - {fileID: 8300000, guid: cfa65dd1d3039a8a0a5b0727b90e1154, type: 3}
+    - {fileID: 8300000, guid: f40e523fece0ce2168466c5ed95591f2, type: 3}
+    - {fileID: 8300000, guid: 9afe2e3f5651a018693be375151be62b, type: 3}
+    - {fileID: 8300000, guid: 21f95165889056781b8b56525316642e, type: 3}
+    - {fileID: 8300000, guid: 06f91581bacf7d7b0987d7fb389e3ee6, type: 3}
+    volume: 0.7
+    pitch: 1
+    randomizePitch: 1
+    pitchVariance: 0
+    randomizeVolume: 0
+    volumeVariance: 0
+    loop: 0
+    playOnAwake: 0
+    mixerGroup: {fileID: 2132725367027035467, guid: 3c3e18d2feacc42849f558351a3801e8, type: 2}
+    source: {fileID: 0}
+  - id: PlayerAttack
+    clips:
+    - {fileID: 8300000, guid: 63019ef4b01b72b32a3668b0dde9d72c, type: 3}
+    - {fileID: 8300000, guid: 40e4215c4401bb3c2a2ea1bfa600fb5d, type: 3}
+    - {fileID: 8300000, guid: 7b61a82829f08a997b1eb85bc7b1a189, type: 3}
+    volume: 0.7
+    pitch: 1
+    randomizePitch: 1
+    pitchVariance: 0
+    randomizeVolume: 0
+    volumeVariance: 0
+    loop: 0
+    playOnAwake: 0
+    mixerGroup: {fileID: 2132725367027035467, guid: 3c3e18d2feacc42849f558351a3801e8, type: 2}
+    source: {fileID: 0}
+  - id: EnemyHit
+    clips:
+    - {fileID: 8300000, guid: 698f5bac36725683aaf1bf1d00aeb84b, type: 3}
+    - {fileID: 8300000, guid: f45cf91d02eb0d0cf9fefd9ce07cfe22, type: 3}
+    - {fileID: 8300000, guid: 1abc57d019551184b9ae68e72358d022, type: 3}
     volume: 0.7
     pitch: 1
     randomizePitch: 1
@@ -720,7 +750,7 @@ Transform:
   m_GameObject: {fileID: 222853054}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -4.8303284e-10, z: 2.6182513e-11, w: 1}
-  m_LocalPosition: {x: 457, y: 257, z: -10}
+  m_LocalPosition: {x: 458, y: 257.5, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3908,7 +3938,7 @@ Transform:
   m_GameObject: {fileID: 1641032696}
   serializedVersion: 2
   m_LocalRotation: {x: 1.2647013e-20, y: -4.8303284e-10, z: 6.1089226e-30, w: 1}
-  m_LocalPosition: {x: 457, y: 257, z: -10}
+  m_LocalPosition: {x: 458, y: 257.5, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

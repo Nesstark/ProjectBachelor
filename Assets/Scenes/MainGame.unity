@@ -480,9 +480,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 09562a3b76b984071b473d8013897846, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AmbianceController
-  ambianceClip: {fileID: 8300000, guid: df24faaad997ade838b7a1245bebf12c, type: 3}
+  ambianceClip: {fileID: 8300000, guid: ae043d27c3ec28737876dc71418e44a1, type: 3}
   ambianceMixerGroup: {fileID: 3703794860415202901, guid: 3c3e18d2feacc42849f558351a3801e8, type: 2}
-  targetVolume: 0.6
+  targetVolume: 0.25
   fadeDuration: 2.5
 --- !u!65 &568114099
 BoxCollider:
@@ -682,6 +682,10 @@ PrefabInstance:
     - target: {fileID: 9167155874596480953, guid: 5133e12fea091ff41953d0d1046dcddd, type: 3}
       propertyPath: m_Name
       value: BioManager
+      objectReference: {fileID: 0}
+    - target: {fileID: 9167155874596480953, guid: 5133e12fea091ff41953d0d1046dcddd, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
