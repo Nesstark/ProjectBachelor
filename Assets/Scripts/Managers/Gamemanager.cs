@@ -123,6 +123,19 @@ public class GameManager : MonoBehaviour
         Debug.Log("[GM] Player stats reset for new game.");
     }
 
+    // ─── Reset for ML-Agents episode ─────────────────────────
+/// <summary>
+/// Called by AIPlayerAgent at the start of every training episode.
+/// Same as ResetForNewGame but also fires events so the HUD updates.
+/// </summary>
+public void ResetPlayer()
+{
+    InitPlayer();
+    OnPlayerHealthChanged.Invoke(Player.CurrentHealth, Player.MaxHealth);
+    OnXpChanged.Invoke(Player.Level, Player.CurrentXp, Player.XpToNextLevel);
+    Debug.Log("[GM] Player reset for new training episode.");
+}
+
     // ─── Player Damage ───────────────────────────────────────
     public void ApplyDamageToPlayer(float amount)
     {
