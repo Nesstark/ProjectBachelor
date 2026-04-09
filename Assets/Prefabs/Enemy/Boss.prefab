@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 8965778121938010556}
   - component: {fileID: 3313307016795278824}
   - component: {fileID: 7110263022217403025}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: SpriteVisual
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -136,7 +136,7 @@ GameObject:
   - component: {fileID: 7264346223617248251}
   - component: {fileID: 4809084475916892534}
   - component: {fileID: 4850987941307024340}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Boss
   m_TagString: Enemy
   m_Icon: {fileID: 0}
@@ -179,8 +179,8 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.3
-  m_Height: 1.4
+  m_Radius: 0.5
+  m_Height: 2
   m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!195 &4809084475916892534
@@ -221,7 +221,7 @@ MonoBehaviour:
   meleeRange: 1.5
   hitVFXPrefab: {fileID: 3042519775331041172, guid: 841004c4c6a39e244abe2257394de913, type: 3}
   deathVFXPrefab: {fileID: 0}
-  attackOrigin: {fileID: 0}
+  attackOrigin: {fileID: 3535738919132841180}
   slashVFXPrefab: {fileID: 0}
   animator: {fileID: 0}
   spriteRenderer: {fileID: 3313307016795278824}
