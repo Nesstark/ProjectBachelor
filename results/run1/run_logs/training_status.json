@@ -2,31 +2,22 @@
     "AIPlayerAgent": {
         "checkpoints": [
             {
-                "steps": 49898,
-                "file_path": "results\\run1\\AIPlayerAgent\\AIPlayerAgent-49898.onnx",
-                "reward": -250.64431071281433,
-                "creation_time": 1775772897.2436469,
+                "steps": 48419,
+                "file_path": "results\\run1\\AIPlayerAgent\\AIPlayerAgent-48419.onnx",
+                "reward": -45.88487881422043,
+                "creation_time": 1775774201.2829285,
                 "auxillary_file_paths": [
-                    "results\\run1\\AIPlayerAgent\\AIPlayerAgent-49898.pt"
-                ]
-            },
-            {
-                "steps": 62570,
-                "file_path": "results\\run1\\AIPlayerAgent\\AIPlayerAgent-62570.onnx",
-                "reward": null,
-                "creation_time": 1775773020.7836452,
-                "auxillary_file_paths": [
-                    "results\\run1\\AIPlayerAgent\\AIPlayerAgent-62570.pt"
+                    "results\\run1\\AIPlayerAgent\\AIPlayerAgent-48419.pt"
                 ]
             }
         ],
         "final_checkpoint": {
-            "steps": 62570,
+            "steps": 48419,
             "file_path": "results\\run1\\AIPlayerAgent.onnx",
-            "reward": null,
-            "creation_time": 1775773020.7836452,
+            "reward": -45.88487881422043,
+            "creation_time": 1775774201.2829285,
             "auxillary_file_paths": [
-                "results\\run1\\AIPlayerAgent\\AIPlayerAgent-62570.pt"
+                "results\\run1\\AIPlayerAgent\\AIPlayerAgent-48419.pt"
             ]
         }
     },

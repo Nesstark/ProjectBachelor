@@ -83,7 +83,7 @@ public class ArcherController : BaseEnemy
 
         if (animator != null) animator.SetTrigger(HashAttack);
 
-        AudioManager.Instance.Play("EnemyFireball");
+        AudioManager.Instance?.Play("EnemyFireball");
 
         Vector3 dir = (PlayerTransform.position - firePoint.position);
         dir.y = 0f;
