@@ -400,7 +400,20 @@ MonoBehaviour:
     playOnAwake: 0
     mixerGroup: {fileID: 2132725367027035467, guid: 3c3e18d2feacc42849f558351a3801e8, type: 2}
     source: {fileID: 0}
-  uiSounds: []
+  uiSounds:
+  - id: Click
+    clips:
+    - {fileID: 8300000, guid: e7dafd19173ce50c799d7cd4d71309b4, type: 3}
+    volume: 0.7
+    pitch: 1
+    randomizePitch: 0
+    pitchVariance: 0
+    randomizeVolume: 0
+    volumeVariance: 0
+    loop: 0
+    playOnAwake: 0
+    mixerGroup: {fileID: -5197369323360071263, guid: 3c3e18d2feacc42849f558351a3801e8, type: 2}
+    source: {fileID: 0}
 --- !u!4 &107691608
 Transform:
   m_ObjectHideFlags: 0
@@ -1118,6 +1131,7 @@ GameObject:
   - component: {fileID: 371727341}
   - component: {fileID: 371727340}
   - component: {fileID: 371727339}
+  - component: {fileID: 371727342}
   m_Layer: 5
   m_Name: MainCanvas
   m_TagString: Untagged
@@ -1210,6 +1224,18 @@ Canvas:
   m_SortingLayerID: 0
   m_SortingOrder: 0
   m_TargetDisplay: 0
+--- !u!114 &371727342
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 371727337}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 63b658906a09dbfd19db79370769c333, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIClickSound
 --- !u!1 &379427025
 GameObject:
   m_ObjectHideFlags: 0
