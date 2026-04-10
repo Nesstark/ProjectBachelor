@@ -47,9 +47,13 @@ public class AIPlayerAgent : Agent
     [SerializeField] private float dashCooldown = 0.5f;
 
     [Header("Attack")]
-    [SerializeField] private float attackCooldown = 0.4f;
+    [SerializeField] private float     attackCooldown = 0.4f;
+    [SerializeField] private float     attackAngle    = 90f;   // matches PlayerController
     [SerializeField] private LayerMask enemyLayer;
     [SerializeField] private Transform attackOrigin;
+
+    [Header("Hit VFX")]
+    [SerializeField] private GameObject slashVFXPrefab;        // matches PlayerController
 
     [Header("Perception")]
     [Tooltip("How far the agent can 'see' enemies and the exit")]
@@ -65,7 +69,7 @@ public class AIPlayerAgent : Agent
 
     [Header("Visual")]
     [SerializeField] private SpriteRenderer spriteRenderer;
-    [SerializeField] private Animator animator;
+    [SerializeField] private Animator       animator;
 
     // ─── Reward Tuning (Carrot & Stick) ──────────────────────
     [Header("Rewards  (+carrots)")]
@@ -109,12 +113,14 @@ public class AIPlayerAgent : Agent
 
     private GameManager GM => GameManager.Instance;
 
-    // Animator hashes
-    private static readonly int HashSpeed  = Animator.StringToHash("Speed");
-    private static readonly int HashDirX   = Animator.StringToHash("DirX");
-    private static readonly int HashDirZ   = Animator.StringToHash("DirZ");
-    private static readonly int HashDash   = Animator.StringToHash("Dash");
-    private static readonly int HashAttack = Animator.StringToHash("Attack");
+    // Animator hashes — matches PlayerController exactly
+    private static readonly int HashSpeed     = Animator.StringToHash("Speed");
+    private static readonly int HashDirX      = Animator.StringToHash("DirX");
+    private static readonly int HashDirZ      = Animator.StringToHash("DirZ");
+    private static readonly int HashDash      = Animator.StringToHash("Dash");
+    private static readonly int HashAttack    = Animator.StringToHash("attack");   // lowercase, matches PlayerController
+    private static readonly int HashIsWalking = Animator.StringToHash("isWalking");
+    private static readonly int HashFlipX     = Animator.StringToHash("FlipX");
 
     // =========================================================
     //  AGENT LIFECYCLE
@@ -123,15 +129,17 @@ public class AIPlayerAgent : Agent
     public override void Initialize()
     {
         _rb = GetComponent<Rigidbody>();
-        _rb.constraints = RigidbodyConstraints.FreezePositionY
-                        | RigidbodyConstraints.FreezeRotation;
+
+        // FIX: Use FreezeRotation only (same as PlayerController).
+        // The old FreezePositionY was preventing the rigidbody from
+        // settling onto newly spawned floor geometry, causing fall-through.
+        _rb.constraints   = RigidbodyConstraints.FreezeRotation;
         _rb.linearDamping = 0f;
 
         if (attackOrigin == null) attackOrigin = transform;
         _lastMoveDir   = Vector3.forward;
-        _spawnPosition = transform.position;   // remember where we started
+        _spawnPosition = transform.position;
 
-        // Subscribe to damage events so we can dish out stick penalties
         if (GM != null)
         {
             GM.OnPlayerHealthChanged.AddListener(OnHealthChanged);
@@ -143,8 +151,8 @@ public class AIPlayerAgent : Agent
     public override void OnEpisodeBegin()
     {
         // ── Reset the full game state ──────────────────────────
-        GM?.ResetPlayer();                          // restore health, damage, level
-        RoomManager.Instance?.ResetDungeon();       // restart dungeon from room 1
+        GM?.ResetPlayer();
+        RoomManager.Instance?.ResetDungeon();
 
         // ── Reset physics and snap back to spawn ───────────────
         _rb.linearVelocity  = Vector3.zero;
@@ -204,7 +212,6 @@ public class AIPlayerAgent : Agent
             : 1f;
         sensor.AddObservation(healthFraction);                        // [0]
 
-        // Normalise position within a reasonable room bound (±30 units)
         sensor.AddObservation(transform.position.x / 30f);           // [1]
         sensor.AddObservation(transform.position.z / 30f);           // [2]
 
@@ -231,23 +238,21 @@ public class AIPlayerAgent : Agent
         // ── Nearby Enemies (only within visionRadius) ─────────
         List<EnemyObservation> visible = GetVisibleEnemies();
 
-        // Fill exactly maxTrackedEnemies slots — pad with zeros if fewer
         for (int i = 0; i < maxTrackedEnemies; i++)
         {
             if (i < visible.Count)
             {
                 EnemyObservation e = visible[i];
-                sensor.AddObservation(1f);                            // present
-                sensor.AddObservation(e.normalizedDist);              // distance
-                sensor.AddObservation(e.dirX);                        // direction x
-                sensor.AddObservation(e.dirZ);                        // direction z
-                sensor.AddObservation(e.typeCode);                    // type
-                sensor.AddObservation(e.healthFraction);              // hp
-                sensor.AddObservation(e.inMeleeRange ? 1f : 0f);     // reachable now?
+                sensor.AddObservation(1f);
+                sensor.AddObservation(e.normalizedDist);
+                sensor.AddObservation(e.dirX);
+                sensor.AddObservation(e.dirZ);
+                sensor.AddObservation(e.typeCode);
+                sensor.AddObservation(e.healthFraction);
+                sensor.AddObservation(e.inMeleeRange ? 1f : 0f);
             }
             else
             {
-                // Empty slot — seven zeros
                 sensor.AddObservation(0f); sensor.AddObservation(0f);
                 sensor.AddObservation(0f); sensor.AddObservation(0f);
                 sensor.AddObservation(0f); sensor.AddObservation(0f);
@@ -277,8 +282,8 @@ public class AIPlayerAgent : Agent
             return;
         }
 
-        float inputX = actions.ContinuousActions[0];
-        float inputZ = actions.ContinuousActions[1];
+        float inputX    = actions.ContinuousActions[0];
+        float inputZ    = actions.ContinuousActions[1];
         bool wantDash   = actions.DiscreteActions[0] == 1;
         bool wantAttack = actions.DiscreteActions[1] == 1;
 
@@ -299,10 +304,9 @@ public class AIPlayerAgent : Agent
         }
 
         // ── Step rewards ──────────────────────────────────────
-        AddReward(rewardSurvivePerSec  * Time.fixedDeltaTime);   // alive = good
-        AddReward(-penaltyTimePerSec   * Time.fixedDeltaTime);   // time pressure
+        AddReward(rewardSurvivePerSec  * Time.fixedDeltaTime);
+        AddReward(-penaltyTimePerSec   * Time.fixedDeltaTime);
 
-        // Idle penalty — discourages the agent from camping
         if (_moveDir.magnitude < 0.1f)
         {
             _idleTimer += Time.fixedDeltaTime;
@@ -317,15 +321,14 @@ public class AIPlayerAgent : Agent
         // ── Exploration reward / revisit penalty ──────────────
         Vector2Int cell = WorldToCell(transform.position);
         if (_visitedCells.Add(cell))
-            AddReward(rewardExploreNew);          // carrot — new ground
+            AddReward(rewardExploreNew);
         else
-            AddReward(-penaltyRevisitCell);       // stick  — already been here
+            AddReward(-penaltyRevisitCell);
 
         // ── Exit proximity check ──────────────────────────────
         CheckExitProximity();
 
         UpdateTimers();
-        UpdatePhysics();
         UpdateAnimator();
         UpdateSpriteFlip();
     }
@@ -340,7 +343,7 @@ public class AIPlayerAgent : Agent
         ActionSegment<float> cont = actionsOut.ContinuousActions;
         ActionSegment<int>   disc = actionsOut.DiscreteActions;
 
-        var kb = UnityEngine.InputSystem.Keyboard.current;
+        var kb    = UnityEngine.InputSystem.Keyboard.current;
         var mouse = UnityEngine.InputSystem.Mouse.current;
 
         Vector2 move = kb != null
@@ -351,12 +354,12 @@ public class AIPlayerAgent : Agent
 
         cont[0] = move.x;
         cont[1] = move.y;
-        disc[0] = kb != null && kb.spaceKey.wasPressedThisFrame ? 1 : 0;
-        disc[1] = mouse != null && mouse.leftButton.isPressed ? 1 : 0;
+        disc[0] = kb    != null && kb.spaceKey.wasPressedThisFrame  ? 1 : 0;
+        disc[1] = mouse != null && mouse.leftButton.isPressed        ? 1 : 0;
     }
 
     // =========================================================
-    //  PHYSICS
+    //  PHYSICS  — matches PlayerController.FixedUpdate exactly
     // =========================================================
     private void FixedUpdate()
     {
@@ -368,38 +371,52 @@ public class AIPlayerAgent : Agent
             return;
         }
 
-        Vector3 target = _moveDir * moveSpeed;
+        Vector3 target  = _moveDir * moveSpeed;
         Vector3 current = new Vector3(_rb.linearVelocity.x, 0f, _rb.linearVelocity.z);
-        float accel = _moveDir.magnitude > 0.1f ? acceleration : deceleration;
-        Vector3 next = Vector3.MoveTowards(current, target, accel * Time.fixedDeltaTime);
+        float   accel   = _moveDir.magnitude > 0.1f ? acceleration : deceleration;
+        Vector3 next    = Vector3.MoveTowards(current, target, accel * Time.fixedDeltaTime);
         _rb.linearVelocity = new Vector3(next.x, _rb.linearVelocity.y, next.z);
     }
 
     // =========================================================
-    //  ATTACK
+    //  ATTACK  — matches PlayerController.PerformAttack exactly:
+    //            configurable angle cone, audio, slash VFX,
+    //            camera shake on hit
     // =========================================================
     private void PerformAttack()
     {
-        float range  = GM != null ? GM.AttackRange : 3f;
+        float range  = GM != null ? GM.AttackRange   : 3f;
         float damage = GM != null ? GM.Player.Damage : 20f;
         int   mask   = enemyLayer.value != 0 ? enemyLayer.value : ~0;
 
         if (animator != null) animator.SetTrigger(HashAttack);
 
-        Collider[] hits = Physics.OverlapSphere(attackOrigin.position, range, mask);
-        Collider closest = null;
-        float bestDist = Mathf.Infinity;
+        AudioManager.Instance?.Play("PlayerAttack");
+
+        if (slashVFXPrefab != null)
+        {
+            float yAngle     = Mathf.Atan2(_lastMoveDir.x, _lastMoveDir.z) * Mathf.Rad2Deg;
+            Quaternion rot   = Quaternion.Euler(0f, yAngle, 0f);
+            GameObject slash = Instantiate(slashVFXPrefab, attackOrigin.position, rot, attackOrigin);
+            Destroy(slash, 0.5f);
+        }
+
+        Collider[] hits    = Physics.OverlapSphere(attackOrigin.position, range, mask);
+        Collider   closest = null;
+        float      bestDist = Mathf.Infinity;
 
         foreach (Collider hit in hits)
         {
             if (hit.gameObject == gameObject) continue;
+
             Vector3 toEnemy = hit.transform.position - transform.position;
             toEnemy.y = 0f;
 
             if (_lastMoveDir.magnitude > 0.1f)
             {
                 float dot = Vector3.Dot(_lastMoveDir.normalized, toEnemy.normalized);
-                if (dot < 0.3f) continue;
+                // FIX: use configurable attackAngle (was hardcoded dot < 0.3f)
+                if (dot < Mathf.Cos(attackAngle * 0.5f * Mathf.Deg2Rad)) continue;
             }
 
             float dist = toEnemy.magnitude;
@@ -411,8 +428,8 @@ public class AIPlayerAgent : Agent
         BaseEnemy enemy = closest.GetComponentInParent<BaseEnemy>();
         if (enemy != null)
         {
-            // Register the hit so we can reward the kill later via TakeDamage callback
             enemy.TakeDamage(damage);
+            CameraShakeManager.Instance?.ShakeImpulse(CameraShakeManager.Instance.hitShakeForce);
             Debug.Log($"[AIAgent] HIT '{closest.name}' for {damage:F1}");
         }
     }
@@ -421,13 +438,11 @@ public class AIPlayerAgent : Agent
     //  REWARD CALLBACKS
     // =========================================================
 
-    // Called by GameManager.OnPlayerHealthChanged
     private void OnHealthChanged(float current, float max)
     {
         float delta = _lastHealth - current;
         if (delta > 0f)
         {
-            // We took damage — apply stick proportional to HP lost
             float penalty = delta * penaltyTakeDamage;
             AddReward(-penalty);
             Debug.Log($"[AIAgent] STICK  took {delta:F1} dmg  penalty:{penalty:F3}");
@@ -435,7 +450,6 @@ public class AIPlayerAgent : Agent
         _lastHealth = current;
     }
 
-    // Called by GameManager.OnPlayerDied
     private void OnPlayerDied()
     {
         if (_isDead) return;
@@ -443,10 +457,9 @@ public class AIPlayerAgent : Agent
 
         AddReward(-penaltyDie);
         Debug.Log("[AIAgent] STICK  died  penalty:" + penaltyDie);
-        EndEpisode();       // tells ML-Agents to restart and train
+        EndEpisode();
     }
 
-    // Called when agent falls off the map
     public void FallDeath()
     {
         if (_isDead) return;
@@ -457,8 +470,6 @@ public class AIPlayerAgent : Agent
         EndEpisode();
     }
 
-    // Called when an enemy's health reaches 0 (hook into BaseEnemy.Die via event or override)
-    // Attach this to enemies at spawn or wire via EnemyKilledEvent
     public void OnEnemyKilled(float xpReward)
     {
         AddReward(rewardKillEnemy);
@@ -474,7 +485,6 @@ public class AIPlayerAgent : Agent
 
         float dist = Vector3.Distance(transform.position, exitDoor.position);
 
-        // Discovery — first time the agent gets close enough to "see" the exit
         if (!_exitDiscovered && dist <= exitDiscoveryRadius)
         {
             _exitDiscovered = true;
@@ -482,7 +492,6 @@ public class AIPlayerAgent : Agent
             Debug.Log("[AIAgent] CARROT  exit discovered  reward:" + rewardDiscoverExit);
         }
 
-        // Completion — agent walks through the exit
         if (dist <= exitCompleteRadius)
         {
             AddReward(rewardReachExit);
@@ -500,6 +509,8 @@ public class AIPlayerAgent : Agent
         _dashTimer         = dashDuration;
         _dashCooldownTimer = dashCooldown;
         if (animator != null) animator.SetTrigger(HashDash);
+        // FIX: added camera shake to match PlayerController
+        CameraShakeManager.Instance?.ShakeImpulse(CameraShakeManager.Instance.dashShakeForce);
     }
 
     private void UpdateTimers()
@@ -515,20 +526,21 @@ public class AIPlayerAgent : Agent
         }
     }
 
-    private void UpdatePhysics() { /* driven by FixedUpdate */ }
-
+    // FIX: now sets isWalking and FlipX bools to match PlayerController
     private void UpdateAnimator()
     {
         if (animator == null) return;
-        animator.SetFloat(HashSpeed, _moveDir.magnitude);
-        animator.SetFloat(HashDirX,  _lastMoveDir.x);
-        animator.SetFloat(HashDirZ,  _lastMoveDir.z);
+        animator.SetFloat(HashSpeed,    _moveDir.magnitude);
+        animator.SetFloat(HashDirX,     _lastMoveDir.x);
+        animator.SetFloat(HashDirZ,     _lastMoveDir.z);
+        animator.SetBool(HashIsWalking, _moveDir.magnitude > 0.1f);
+        animator.SetBool(HashFlipX,     spriteRenderer != null && spriteRenderer.flipX);
     }
 
     private void UpdateSpriteFlip()
     {
         if (spriteRenderer == null) return;
-        if (_lastMoveDir.x >  0.1f) spriteRenderer.flipX = true;
+        if      (_lastMoveDir.x >  0.1f) spriteRenderer.flipX = true;
         else if (_lastMoveDir.x < -0.1f) spriteRenderer.flipX = false;
     }
 
@@ -538,8 +550,6 @@ public class AIPlayerAgent : Agent
 
     // =========================================================
     //  ENEMY PERCEPTION
-    //  Sorted by distance — closest enemies fill the first slots.
-    //  Enemies behind solid walls (Physics.Linecast) are hidden.
     // =========================================================
     private List<EnemyObservation> GetVisibleEnemies()
     {
@@ -556,24 +566,21 @@ public class AIPlayerAgent : Agent
             toEnemy.y = 0f;
             float dist = toEnemy.magnitude;
 
-            // Line-of-sight check — walls block perception
             if (Physics.Linecast(transform.position + Vector3.up * 0.5f,
                                   col.transform.position + Vector3.up * 0.5f,
                                   LayerMask.GetMask("Wall", "Obstacle")))
-                continue;    // can't see through walls
+                continue;
 
-            BaseEnemy enemy = col.GetComponentInParent<BaseEnemy>();
-            float hpFraction = 1f;
-            float typeCode   = 0f;
+            BaseEnemy enemy    = col.GetComponentInParent<BaseEnemy>();
+            float     typeCode = 0f;
 
             if (enemy != null)
             {
-                // Read type code — agent learns type-specific behaviour from this
                 string typeName = enemy.GetType().Name.ToLower();
                 if      (typeName.Contains("archer")) typeCode = 0.33f;
                 else if (typeName.Contains("rogue"))  typeCode = 0.66f;
                 else if (typeName.Contains("boss"))   typeCode = 1.00f;
-                else                                  typeCode = 0.00f;  // warrior/elite
+                else                                  typeCode = 0.00f;
             }
 
             Vector3 dir = dist > 0f ? toEnemy / dist : Vector3.zero;
@@ -584,12 +591,11 @@ public class AIPlayerAgent : Agent
                 dirX           = dir.x,
                 dirZ           = dir.z,
                 typeCode       = typeCode,
-                healthFraction = hpFraction,
+                healthFraction = 1f,
                 inMeleeRange   = dist <= (GM != null ? GM.AttackRange : 3f)
             });
         }
 
-        // Sort by distance — closest threats fill observation slots first
         result.Sort((a, b) => a.normalizedDist.CompareTo(b.normalizedDist));
 
         if (result.Count > maxTrackedEnemies)
@@ -599,7 +605,7 @@ public class AIPlayerAgent : Agent
     }
 
     // =========================================================
-    //  GIZMOS — visualise perception radius in the Editor
+    //  GIZMOS
     // =========================================================
     private void OnDrawGizmosSelected()
     {
@@ -613,6 +619,27 @@ public class AIPlayerAgent : Agent
             Gizmos.color = new Color(0f, 1f, 0f, 0.3f);
             Gizmos.DrawWireSphere(transform.position, exitDiscoveryRadius);
         }
+
+        // Attack cone gizmo — matches PlayerController
+        float   range   = Application.isPlaying && GM != null ? GM.AttackRange : 3f;
+        Vector3 origin  = attackOrigin != null ? attackOrigin.position : transform.position;
+        Vector3 forward = Application.isPlaying ? _lastMoveDir : transform.forward;
+        forward.y = 0f;
+
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(origin, range);
+
+        if (forward.magnitude > 0.01f)
+        {
+            forward.Normalize();
+            float   halfAngle = attackAngle * 0.5f;
+            Vector3 leftEdge  = Quaternion.Euler(0f, -halfAngle, 0f) * forward;
+            Vector3 rightEdge = Quaternion.Euler(0f,  halfAngle, 0f) * forward;
+
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawLine(origin, origin + leftEdge  * range);
+            Gizmos.DrawLine(origin, origin + rightEdge * range);
+        }
     }
 
     private void OnDestroy()
@@ -625,7 +652,7 @@ public class AIPlayerAgent : Agent
     }
 }
 
-// ─── Helper struct — passed between perception and observation ────────────────
+// ─── Helper struct ────────────────────────────────────────────────────────────
 public struct EnemyObservation
 {
     public float normalizedDist;

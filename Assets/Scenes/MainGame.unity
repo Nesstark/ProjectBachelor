@@ -1202,6 +1202,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 3992578147615154026, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
       insertIndex: -1
       addedObject: {fileID: 946598692}
+    - targetCorrespondingSourceObject: {fileID: 3992578147615154026, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 946598697}
   m_SourcePrefab: {fileID: 100100000, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
 --- !u!212 &946598690 stripped
 SpriteRenderer:
@@ -1251,10 +1254,12 @@ MonoBehaviour:
   dashDuration: 0.12
   dashCooldown: 0.5
   attackCooldown: 0.4
+  attackAngle: 90
   enemyLayer:
     serializedVersion: 2
     m_Bits: 64
   attackOrigin: {fileID: 322880166}
+  slashVFXPrefab: {fileID: 5503505460791601945, guid: d1d1ad8873cb54e8db68971b9d014d48, type: 3}
   visionRadius: 12
   maxTrackedEnemies: 5
   exitDoor: {fileID: 8325839888734890617, guid: 02cf4207cd33e66c6814e40e1c59d668, type: 3}
@@ -1304,6 +1309,34 @@ MonoBehaviour:
   m_UseChildActuators: 1
   m_DeterministicInference: 0
   m_ObservableAttributeHandling: 0
+--- !u!114 &946598697
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 946598691}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6bb6b867a41448888c1cd4f99643ad71, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Sensors.RayPerceptionSensorComponent3D
+  m_SensorName: RayPerceptionSensor
+  m_DetectableTags: []
+  m_RaysPerDirection: 15
+  m_MaxRayDegrees: 180
+  m_SphereCastRadius: 0.5
+  m_RayLength: 20
+  m_RayLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967291
+  m_ObservationStacks: 1
+  m_AlternatingRayOrder: 1
+  m_UseBatchedRaycasts: 0
+  rayHitColor: {r: 1, g: 0, b: 0, a: 1}
+  rayMissColor: {r: 1, g: 1, b: 1, a: 1}
+  m_StartVerticalOffset: 0
+  m_EndVerticalOffset: 0
 --- !u!1 &1194349499
 GameObject:
   m_ObjectHideFlags: 0
