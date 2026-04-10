@@ -250,10 +250,10 @@ MonoBehaviour:
   spriteRenderer: {fileID: 3313307016795278824}
   projectilePrefab: {fileID: 1298275985269948489, guid: 0046d061dceef634e9ee4cedffa004b7, type: 3}
   firePoint: {fileID: 3535738919132841180}
-  shootInterval: 0.8
+  shootInterval: 1
   maxShootRange: 20
   meleeDamageMultiplier: 2
-  chargeRange: 5
+  chargeRange: 8
   chargeSpeed: 8
 --- !u!1001 &9169538906212212495
 PrefabInstance:

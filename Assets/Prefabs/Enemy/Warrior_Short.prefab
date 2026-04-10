@@ -159,6 +159,7 @@ GameObject:
   - component: {fileID: 7627835739975064346}
   - component: {fileID: 4734616633442414478}
   - component: {fileID: 158293721029440219}
+  - component: {fileID: 3096215623723383657}
   m_Layer: 6
   m_Name: Warrior_Short
   m_TagString: Enemy
@@ -249,6 +250,29 @@ NavMeshAgent:
   m_BaseOffset: 1
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
+--- !u!114 &3096215623723383657
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7543761834999695512}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 63abee52a2f21f243995af92945907ea, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RogueController
+  attackInterval: 1.5
+  meleeRange: 1.5
+  hitVFXPrefab: {fileID: 3042519775331041172, guid: 841004c4c6a39e244abe2257394de913, type: 3}
+  deathVFXPrefab: {fileID: 0}
+  attackOrigin: {fileID: 3376892719923082274}
+  slashVFXPrefab: {fileID: 5503505460791601945, guid: d1d1ad8873cb54e8db68971b9d014d48, type: 3}
+  animator: {fileID: 9072880873787584311}
+  spriteRenderer: {fileID: 4686065913143481910}
+  assassinRange: 5
+  flankDistance: 4
+  flankTolerance: 1.2
 --- !u!1001 &5403172109253254480
 PrefabInstance:
   m_ObjectHideFlags: 0
