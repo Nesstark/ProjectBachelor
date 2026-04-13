@@ -2230,7 +2230,7 @@ MonoBehaviour:
     baseDamage: 20
     baseXpReward: 15
   enemyScalePerLevel: 0.15
-  attackRange: 3
+  baseAttackRange: 3
   OnPlayerLevelUp:
     m_PersistentCalls:
       m_Calls: []
