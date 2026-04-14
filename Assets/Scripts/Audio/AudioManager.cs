@@ -46,7 +46,7 @@ public class AudioManager : MonoBehaviour
 
         s.source.clip = s.clips[Random.Range(0, s.clips.Length)];
         s.source.volume = s.randomizeVolume ? s.volume + Random.Range(-s.volumeVariance, s.volumeVariance) : s.volume;
-        s.source.pitch  = s.randomizePitch  ? s.pitch  + Random.Range(-s.pitchVariance,  s.pitchVariance)  : s.pitch;
+        s.source.pitch = s.randomizePitch ? s.pitch + Random.Range(-s.pitchVariance, s.pitchVariance) : s.pitch;
         s.source.Play();
     }
 
@@ -71,10 +71,12 @@ public class AudioManager : MonoBehaviour
         audioMixer.SetFloat(exposedParam, dB);
     }
 
-    public void SetSFXVolume(float val)    => SetVolume("SFXVolume", val);
-    public void SetMusicVolume(float val)  => SetVolume("MusicVolume", val);
-    public void SetAmbianceVolume(float v) => SetVolume("AmbianceVolume", v);
-    public void SetUIVolume(float val)     => SetVolume("UIVolume", val);
+    public void SetMasterVolume(float val)   => SetVolume("MasterVolume",   val);
+    public void SetMusicVolume(float val)    => SetVolume("MusicVolume",    val);
+    public void SetSFXVolume(float val)      => SetVolume("SFXVolume",      val);
+    public void SetAmbianceVolume(float val) => SetVolume("AmbianceVolume", val);
+    public void SetUIVolume(float val)       => SetVolume("UIVolume",       val);
+    public void SetVoiceVolume(float val)    => SetVolume("VoiceVolume",    val);
 
     // ── Fade Helpers ──────────────────────────────────────────
 
@@ -100,19 +102,29 @@ public class AudioManager : MonoBehaviour
 
     public void SaveVolumes()
     {
-        audioMixer.GetFloat("MusicVolume",   out float m);
-        audioMixer.GetFloat("SFXVolume",     out float s);
-        audioMixer.GetFloat("AmbianceVolume",out float a);
-        PlayerPrefs.SetFloat("Vol_Music",    m);
-        PlayerPrefs.SetFloat("Vol_SFX",      s);
-        PlayerPrefs.SetFloat("Vol_Ambiance", a);
+        audioMixer.GetFloat("MasterVolume",   out float master);
+        audioMixer.GetFloat("MusicVolume",    out float music);
+        audioMixer.GetFloat("SFXVolume",      out float sfx);
+        audioMixer.GetFloat("AmbianceVolume", out float ambiance);
+        audioMixer.GetFloat("UIVolume",       out float ui);
+        audioMixer.GetFloat("VoiceVolume",    out float voice);
+
+        PlayerPrefs.SetFloat("Vol_Master",   master);
+        PlayerPrefs.SetFloat("Vol_Music",    music);
+        PlayerPrefs.SetFloat("Vol_SFX",      sfx);
+        PlayerPrefs.SetFloat("Vol_Ambiance", ambiance);
+        PlayerPrefs.SetFloat("Vol_UI",       ui);
+        PlayerPrefs.SetFloat("Vol_Voice",    voice);
         PlayerPrefs.Save();
     }
 
     public void LoadVolumes()
     {
+        audioMixer.SetFloat("MasterVolume",   PlayerPrefs.GetFloat("Vol_Master",   0f));
         audioMixer.SetFloat("MusicVolume",    PlayerPrefs.GetFloat("Vol_Music",    0f));
         audioMixer.SetFloat("SFXVolume",      PlayerPrefs.GetFloat("Vol_SFX",      0f));
         audioMixer.SetFloat("AmbianceVolume", PlayerPrefs.GetFloat("Vol_Ambiance", 0f));
+        audioMixer.SetFloat("UIVolume",       PlayerPrefs.GetFloat("Vol_UI",       0f));
+        audioMixer.SetFloat("VoiceVolume",    PlayerPrefs.GetFloat("Vol_Voice",    0f));
     }
 }
