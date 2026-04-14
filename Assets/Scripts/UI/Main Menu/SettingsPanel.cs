@@ -6,35 +6,34 @@ public class SettingsPanel : MonoBehaviour
 {
     [Header("Volume Sliders")]
     [SerializeField] private Slider masterSlider;
-    [SerializeField] private Slider musicSlider;
+    [SerializeField] private Slider ambianceSlider;
     [SerializeField] private Slider sfxSlider;
 
     [Header("Value Labels")]
     [SerializeField] private TMP_Text masterValueLabel;
-    [SerializeField] private TMP_Text musicValueLabel;
+    [SerializeField] private TMP_Text ambianceValueLabel;
     [SerializeField] private TMP_Text sfxValueLabel;
 
     [Header("CRT Toggle")]
     [SerializeField] private Toggle crtToggle;
 
     [Header("Panels")]
-    [SerializeField] private GameObject menuRoot;       // Main Menu screen
-    [SerializeField] private GameObject settingsPanel;  // This panel
-    [SerializeField] private GameObject controlsPanel;  // Controls screen
+    [SerializeField] private GameObject menuRoot;
+    [SerializeField] private GameObject settingsPanel;
+    [SerializeField] private GameObject controlsPanel;
 
     // Keys for PlayerPrefs
-    private const string MasterKey = "vol_master";
-    private const string MusicKey  = "vol_music";
-    private const string SFXKey    = "vol_sfx";
-    private const string CRTKey    = "crt_enabled";
+    private const string MasterKey   = "vol_master";
+    private const string AmbianceKey = "vol_ambiance";
+    private const string SFXKey      = "vol_sfx";
+    private const string CRTKey      = "crt_enabled";
 
     private void OnEnable()
     {
-        // Load saved values each time the panel opens
-        masterSlider.value = PlayerPrefs.GetFloat(MasterKey, 0.8f);
-        musicSlider.value  = PlayerPrefs.GetFloat(MusicKey,  0.65f);
-        sfxSlider.value    = PlayerPrefs.GetFloat(SFXKey,    0.9f);
-        crtToggle.isOn     = PlayerPrefs.GetInt(CRTKey, 1) == 1;
+        masterSlider.value   = PlayerPrefs.GetFloat(MasterKey,   1f);
+        ambianceSlider.value = PlayerPrefs.GetFloat(AmbianceKey, 1f);
+        sfxSlider.value      = PlayerPrefs.GetFloat(SFXKey,      1f);
+        crtToggle.isOn       = PlayerPrefs.GetInt(CRTKey, 1) == 1;
 
         RefreshLabels();
         ApplyAll();
@@ -49,11 +48,11 @@ public class SettingsPanel : MonoBehaviour
         PlayerPrefs.SetFloat(MasterKey, value);
     }
 
-    public void OnMusicChanged(float value)
+    public void OnAmbianceChanged(float value)
     {
-        musicValueLabel.text = Mathf.RoundToInt(value * 100).ToString();
-        AudioManager.Instance.SetMusicVolume(value);
-        PlayerPrefs.SetFloat(MusicKey, value);
+        ambianceValueLabel.text = Mathf.RoundToInt(value * 100).ToString();
+        AudioManager.Instance.SetAmbianceVolume(value);
+        PlayerPrefs.SetFloat(AmbianceKey, value);
     }
 
     public void OnSFXChanged(float value)
@@ -67,7 +66,6 @@ public class SettingsPanel : MonoBehaviour
 
     public void OnCRTToggled(bool enabled)
     {
-        // Hook this up to your CRT post-process volume:
         // e.g. crtVolume.weight = enabled ? 1f : 0f;
         PlayerPrefs.SetInt(CRTKey, enabled ? 1 : 0);
         Debug.Log($"CRT filter: {(enabled ? "on" : "off")}");
@@ -75,7 +73,6 @@ public class SettingsPanel : MonoBehaviour
 
     // ── Navigation ────────────────────────────────────────────────────────────
 
-    // "Controls" button on the Settings panel → go to Controls
     public void OnControlsPressed()
     {
         AudioManager.Instance.Play("Click");
@@ -83,7 +80,6 @@ public class SettingsPanel : MonoBehaviour
         controlsPanel.SetActive(true);
     }
 
-    // "Back" button on the Controls panel → return to Settings
     public void OnControlsBackPressed()
     {
         AudioManager.Instance.Play("Click");
@@ -91,7 +87,6 @@ public class SettingsPanel : MonoBehaviour
         settingsPanel.SetActive(true);
     }
 
-    // "Back" button on the Settings panel → return to Main Menu
     public void OnBackPressed()
     {
         AudioManager.Instance.Play("Click");
@@ -104,15 +99,15 @@ public class SettingsPanel : MonoBehaviour
 
     private void RefreshLabels()
     {
-        masterValueLabel.text = Mathf.RoundToInt(masterSlider.value * 100).ToString();
-        musicValueLabel.text  = Mathf.RoundToInt(musicSlider.value  * 100).ToString();
-        sfxValueLabel.text    = Mathf.RoundToInt(sfxSlider.value    * 100).ToString();
+        masterValueLabel.text   = Mathf.RoundToInt(masterSlider.value   * 100).ToString();
+        ambianceValueLabel.text = Mathf.RoundToInt(ambianceSlider.value * 100).ToString();
+        sfxValueLabel.text      = Mathf.RoundToInt(sfxSlider.value      * 100).ToString();
     }
 
     private void ApplyAll()
     {
         AudioManager.Instance.SetMasterVolume(masterSlider.value);
-        AudioManager.Instance.SetMusicVolume(musicSlider.value);
+        AudioManager.Instance.SetAmbianceVolume(ambianceSlider.value);
         AudioManager.Instance.SetSFXVolume(sfxSlider.value);
     }
 }

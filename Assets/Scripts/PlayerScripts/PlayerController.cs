@@ -15,7 +15,7 @@ public class PlayerController : MonoBehaviour
 
     [Header("Attack")]
     [SerializeField] private float     attackCooldown = 0.4f;
-    [SerializeField] private float attackAngle = 90f;
+    [SerializeField] private float     attackAngle    = 90f;
     [SerializeField] private LayerMask enemyLayer;
     [SerializeField] private Transform attackOrigin;
 
@@ -31,20 +31,19 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float deathFadeDuration = 0.8f;
 
     // ─── Private State ────────────────────────────────────────
-    private Rigidbody       rb;
-    private Vector2         inputDir;
-    private Vector3         moveDir;
-    private bool            isDashing;
-    private float           dashTimer;
-    private float           dashCooldownTimer;
-    private Vector3         lastMoveDir;
-    private float           attackTimer;
-    private bool            isDead;
-    private float           _lastKnownHp = float.MaxValue;
+    private Rigidbody rb;
+    private Vector2   inputDir;
+    private Vector3   moveDir;
+    private bool      isDashing;
+    private float     dashTimer;
+    private float     dashCooldownTimer;
+    private Vector3   lastMoveDir;
+    private float     attackTimer;
+    private bool      isDead;
+    private float     _lastKnownHp = float.MaxValue;
     private HitFlashHandler _hitFlash;
 
-    // ─── Exposed for HUD ─────────────────────────────────────
-    // 1.0 = dash fully ready, 0.0 = just used / recharging
+    // ─── Exposed for HUD ──────────────────────────────────────
     public float DashReadyFraction => dashCooldown > 0f
         ? Mathf.Clamp01(1f - Mathf.Max(0f, dashCooldownTimer) / dashCooldown)
         : 1f;
@@ -95,14 +94,19 @@ public class PlayerController : MonoBehaviour
         GM?.OnPlayerHealthChanged.RemoveListener(HandlePlayerHit);
     }
 
+    // ─── Input Callbacks ──────────────────────────────────────
+
     public void OnMove(InputValue value)
     {
+        // Block movement input while settings are open
+        if (InGameSettings.Instance != null && InGameSettings.Instance.IsOpen) return;
         if (!isDead) inputDir = value.Get<Vector2>();
     }
 
     public void OnDash(InputValue value)
     {
         if (isDead) return;
+        if (InGameSettings.Instance != null && InGameSettings.Instance.IsOpen) return;
         if (value.isPressed && !isDashing && dashCooldownTimer <= 0f)
             StartDash();
     }
@@ -110,11 +114,14 @@ public class PlayerController : MonoBehaviour
     public void OnAttack(InputValue value)
     {
         if (isDead) return;
+        if (InGameSettings.Instance != null && InGameSettings.Instance.IsOpen) return;
         if (value.Get<float>() < 0.5f) return;
         if (attackTimer > 0f) return;
         attackTimer = attackCooldown;
         PerformAttack();
     }
+
+    // ─── Update / FixedUpdate ─────────────────────────────────
 
     private void Update()
     {
@@ -152,21 +159,22 @@ public class PlayerController : MonoBehaviour
         rb.linearVelocity = new Vector3(newHorizontal.x, rb.linearVelocity.y, newHorizontal.z);
     }
 
+    // ─── Combat ───────────────────────────────────────────────
+
     private void PerformAttack()
     {
-        float range  = GM != null ? GM.AttackRange   : 3f;
+        float range  = GM != null ? GM.AttackRange : 3f;
         float damage = GM != null ? GM.Player.Damage : 20f;
         int   mask   = enemyLayer.value != 0 ? enemyLayer.value : ~0;
 
         if (animator != null) animator.SetTrigger(HashAttack);
-
         AudioManager.Instance?.Play("PlayerAttack");
 
         if (slashVFXPrefab != null)
         {
-            float yAngle = Mathf.Atan2(lastMoveDir.x, lastMoveDir.z) * Mathf.Rad2Deg;
+            float      yAngle   = Mathf.Atan2(lastMoveDir.x, lastMoveDir.z) * Mathf.Rad2Deg;
             Quaternion slashRot = Quaternion.Euler(0f, yAngle, 0f);
-            GameObject slash = Instantiate(slashVFXPrefab, attackOrigin.position, slashRot, attackOrigin);
+            GameObject slash    = Instantiate(slashVFXPrefab, attackOrigin.position, slashRot, attackOrigin);
             Destroy(slash, 0.5f);
         }
 
@@ -207,18 +215,19 @@ public class PlayerController : MonoBehaviour
         Debug.LogWarning($"[Player] '{closest.name}' has no BaseEnemy component!");
     }
 
+    // ─── Event Handlers ───────────────────────────────────────
+
     private void HandlePlayerHit(float currentHp, float maxHp)
     {
         if (isDead) return;
 
         bool wasDamaged = currentHp < _lastKnownHp;
-        _lastKnownHp    = currentHp;
+        _lastKnownHp = currentHp;
         if (!wasDamaged) return;
 
         if (animator != null) animator.SetTrigger(HashHit);
         CameraShakeManager.Instance?.ShakeImpulse(CameraShakeManager.Instance.hitShakeForce);
         _hitFlash?.Flash();
-
         AudioManager.Instance?.Play("PlayerHit");
 
         if (hitVFXPrefab != null)
@@ -235,8 +244,8 @@ public class PlayerController : MonoBehaviour
     private void HandlePlayerDied()
     {
         if (isDead) return;
-        isDead            = true;
-        inputDir          = Vector2.zero;
+        isDead   = true;
+        inputDir = Vector2.zero;
         rb.linearVelocity = Vector3.zero;
         Debug.Log("[Player] Died — playing death sequence.");
         StartCoroutine(DeathSequence());
@@ -271,11 +280,15 @@ public class PlayerController : MonoBehaviour
         Destroy(gameObject);
     }
 
+    // ─── Animation Events ─────────────────────────────────────
+
     public void OnFootstep()
     {
-        if (moveDir.magnitude < 0.1f) return; // don't play if sliding to a stop
+        if (moveDir.magnitude < 0.1f) return;
         AudioManager.Instance?.Play("Footstep");
     }
+
+    // ─── Private Helpers ──────────────────────────────────────
 
     private void StartDash()
     {
@@ -303,22 +316,22 @@ public class PlayerController : MonoBehaviour
         else if (lastMoveDir.x < -0.1f) spriteRenderer.flipX = false;
     }
 
+    // ─── Gizmos ───────────────────────────────────────────────
+
     private void OnDrawGizmosSelected()
     {
-        float range = Application.isPlaying && GM != null ? GM.AttackRange : 3f;
+        float   range  = Application.isPlaying && GM != null ? GM.AttackRange : 3f;
         Vector3 origin = attackOrigin != null ? attackOrigin.position : transform.position;
 
-        // Sphere showing max range
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(origin, range);
 
-        // Cone edges showing the angle window
         Vector3 forward = Application.isPlaying ? lastMoveDir : transform.forward;
         forward.y = 0f;
         if (forward.magnitude > 0.01f)
         {
             forward.Normalize();
-            float halfAngle = attackAngle * 0.5f;
+            float   halfAngle = attackAngle * 0.5f;
             Vector3 leftEdge  = Quaternion.Euler(0f, -halfAngle, 0f) * forward;
             Vector3 rightEdge = Quaternion.Euler(0f,  halfAngle, 0f) * forward;
 
