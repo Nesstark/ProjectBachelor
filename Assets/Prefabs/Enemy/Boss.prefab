@@ -254,7 +254,7 @@ MonoBehaviour:
   maxShootRange: 20
   meleeDamageMultiplier: 2
   chargeRange: 10
-  chargeSpeed: 7
+  chargeSpeed: 10
 --- !u!1001 &9169538906212212495
 PrefabInstance:
   m_ObjectHideFlags: 0
