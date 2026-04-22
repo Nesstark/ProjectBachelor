@@ -19,7 +19,17 @@ public class RppgLogger : MonoBehaviour
 
     void Start()
     {
-        receiver = FindObjectOfType<RppgReceiver>();
+        // ── Persist across scene loads — only one instance ever exists ──
+        RppgLogger[] existing = FindObjectsByType<RppgLogger>(FindObjectsSortMode.None);
+        if (existing.Length > 1)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        DontDestroyOnLoad(gameObject);
+
+        receiver = FindFirstObjectByType<RppgReceiver>();
 
         // Auto-increment session number
         string logFolder = Path.Combine(Application.dataPath, "logged");
@@ -66,6 +76,8 @@ public class RppgLogger : MonoBehaviour
 
     void Update()
     {
+        if (receiver == null) return;
+
         // Log baseline end once
         if (receiver.baselineReady && !baselineLogged)
         {
@@ -94,7 +106,7 @@ public class RppgLogger : MonoBehaviour
 
     private void OnLevelChanged(string oldLevel, string newLevel)
     {
-        LogEntry($"LEVEL {oldLevel}→{newLevel}");
+        LogEntry($"LEVEL {oldLevel}>{newLevel}");
     }
 
     private void LogEntry(string eventType)
@@ -122,11 +134,13 @@ public class RppgLogger : MonoBehaviour
 
     public void EndSession()
     {
+        if (writer == null) return;
         writer.WriteLine();
         writer.WriteLine(new string('-', 100));
         writer.WriteLine($"Session ended: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         writer.WriteLine($"Total entries logged: {entryCount}");
         writer.Close();
+        writer = null;
         Debug.Log($"[RppgLogger] Session ended — {entryCount} entries saved to: {filePath}");
     }
 
