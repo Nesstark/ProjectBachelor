@@ -4,10 +4,9 @@ using UnityEngine.Rendering.Universal;
 
 public class ArousalVignetteController : MonoBehaviour
 {
-    [Header("Vignette Intensity Per Arousal Level")]
-    [Range(0f, 1f)] [SerializeField] private float lowArousalIntensity    = 0.1f;
-    [Range(0f, 1f)] [SerializeField] private float mediumArousalIntensity = 0.3f;
-    [Range(0f, 1f)] [SerializeField] private float highArousalIntensity   = 0.6f;
+    [Header("Vignette Range")]
+    [Range(0f, 1f)] [SerializeField] private float minIntensity = 0.05f;
+    [Range(0f, 1f)] [SerializeField] private float maxIntensity = 0.65f;
 
     [Header("Transition")]
     [SerializeField] private float lerpSpeed = 2f;
@@ -30,13 +29,11 @@ public class ArousalVignetteController : MonoBehaviour
     {
         if (bio == null || vignette == null) return;
 
-        targetIntensity = bio.arousalLabel switch
-        {
-            "Low"    => lowArousalIntensity,
-            "Medium" => mediumArousalIntensity,
-            "High"   => highArousalIntensity,
-            _        => mediumArousalIntensity
-        };
+        // Map arousalScore (0–1) directly to the configured intensity range.
+        // Falls back to minIntensity when the signal is invalid or baseline isn't ready.
+        targetIntensity = bio.signalValid
+            ? Mathf.Lerp(minIntensity, maxIntensity, bio.arousalScore)
+            : minIntensity;
 
         vignette.intensity.value = Mathf.Lerp(
             vignette.intensity.value,

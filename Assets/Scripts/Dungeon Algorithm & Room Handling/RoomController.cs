@@ -52,6 +52,7 @@ public class RoomController : MonoBehaviour
     public int enemyCount = 0;
     int remainingEnemies = 0;
     bool encounterActive = false;
+    bool encounterTriggered = false;
 
     [Header("Boss Settings")]
     public bool isBossRoom = false;
@@ -99,7 +100,9 @@ public class RoomController : MonoBehaviour
 
         if (prefabsToUse != null && prefabsToUse.Length > 0 && enemySpawnPoints != null && enemySpawnPoints.Length > 0)
         {
-            int spawnCount = enemyCount > 0 ? Mathf.Min(enemyCount, enemySpawnPoints.Length) : enemySpawnPoints.Length;
+            int spawnCount = isBossRoom
+            ? (enemyCount > 0 ? Mathf.Min(enemyCount, enemySpawnPoints.Length) : enemySpawnPoints.Length)
+            : Mathf.Min(Random.Range(3, 7), enemySpawnPoints.Length);
             remainingEnemies = spawnCount;
 
             for (int i = 0; i < spawnCount; i++)
