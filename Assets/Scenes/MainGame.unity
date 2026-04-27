@@ -691,9 +691,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a86e5111a7a06edcbb9c71526b2bbe35, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ArousalVignetteController
-  lowArousalIntensity: 0.4
-  mediumArousalIntensity: 0.2
-  highArousalIntensity: 0.6
+  minIntensity: 0.05
+  maxIntensity: 0.65
   lerpSpeed: 2
 --- !u!1 &125286872
 GameObject:
@@ -5753,8 +5752,8 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1214624560}
         m_TargetAssemblyTypeName: SettingsPanel, Assembly-CSharp
-        m_MethodName: OnMusicChanged
-        m_Mode: 0
+        m_MethodName: OnAmbianceChanged
+        m_Mode: 4
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine

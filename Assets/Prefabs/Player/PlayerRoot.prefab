@@ -50,6 +50,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Billboard
   mainCam: {fileID: 0}
   tiltMultiplier: 0.85
+  vfxTransform: {fileID: 0}
+  fireTipOffset: {x: 0, y: 0.5, z: 0}
 --- !u!212 &5437596053719042642
 SpriteRenderer:
   serializedVersion: 2
@@ -239,8 +241,8 @@ MonoBehaviour:
   moveSpeed: 10
   acceleration: 80
   deceleration: 120
-  dashSpeed: 18
-  dashDuration: 0.15
+  dashSpeed: 20
+  dashDuration: 0.18
   dashCooldown: 0.6
   attackCooldown: 0.4
   attackAngle: 120
