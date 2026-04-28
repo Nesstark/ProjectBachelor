@@ -108,17 +108,19 @@ public class RppgReceiver : MonoBehaviour
             baselineSamples++;
         }
 
+        // TODO: Evaluate signalValid variable. Introducing rolling window to smooth out data and circumvent loss of signal. Investigate why CognitiveLoadScore returns 0.00 in periods despite SQI > .5.
+
         if (baselineReady && payload.hrv != null)
         {
-            signalValid = payload.sqi > 0.3f && payload.hrv.ibi > 300f;
+            signalValid = payload.sqi > 0.3f;
 
             if (signalValid)
             {
-                cognitiveLoadScore = CalculateCognitiveLoad(payload.hrv);                    // FIX: was referencing non-existent arousalScore
-                cognitiveLoadLabel = GetCognitiveLoadLabel(cognitiveLoadScore);              // FIX: was referencing non-existent arousalScore
+                cognitiveLoadScore = CalculateCognitiveLoad(payload.hrv);
+                cognitiveLoadLabel = GetCognitiveLoadLabel(cognitiveLoadScore);
 
                 if (cognitiveLoadLabel != previousCognitiveLoadLabel && previousCognitiveLoadLabel != "")
-                    OnCognitiveLoadLevelChanged?.Invoke(previousCognitiveLoadLabel, cognitiveLoadLabel);  // FIX: was calling non-existent OnArousalLevelChanged
+                    OnCognitiveLoadLevelChanged?.Invoke(previousCognitiveLoadLabel, cognitiveLoadLabel);
 
                 previousCognitiveLoadLabel = cognitiveLoadLabel;
             }
@@ -149,11 +151,12 @@ public class RppgReceiver : MonoBehaviour
 
     private float CalculateCognitiveLoad(HrvData hrv)
     {
-        float ibiScore   = Mathf.Clamp01((baselineIBI - hrv.ibi) / baselineIBI);
+        // float ibiScore   = Mathf.Clamp01((baselineIBI - hrv.ibi) / baselineIBI);
         float rmssdScore = baselineRMSSD > 0 ? Mathf.Clamp01(1f - (hrv.rmssd / baselineRMSSD)) : 0f;
-        float lfhfScore  = baselineLFHF  > 0 ? Mathf.Clamp01(hrv.lf_hf / (baselineLFHF * 3f))  : 0f;
+        // float lfhfScore  = baselineLFHF  > 0 ? Mathf.Clamp01(hrv.lf_hf / (baselineLFHF * 3f))  : 0f;
 
-        return (ibiScore * 0.5f) + (rmssdScore * 0.3f) + (lfhfScore * 0.2f);
+        // return (ibiScore * 0.5f) + (rmssdScore * 0.3f) + (lfhfScore * 0.2f);
+        return rmssdScore;
     }
 
     private string GetCognitiveLoadLabel(float score)
