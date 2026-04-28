@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 6107845581335541628}
   - component: {fileID: 2546971115695708071}
   - component: {fileID: -5365700765253546204}
-  m_Layer: 0
+  m_Layer: 11
   m_Name: Fireball
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -223,6 +223,10 @@ PrefabInstance:
     - target: {fileID: 8330006320348072208, guid: 6e4b6c99591848e4ca95111a6f384e71, type: 3}
       propertyPath: m_Name
       value: VFX_Fire_Green
+      objectReference: {fileID: 0}
+    - target: {fileID: 8330006320348072208, guid: 6e4b6c99591848e4ca95111a6f384e71, type: 3}
+      propertyPath: m_Layer
+      value: 11
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
