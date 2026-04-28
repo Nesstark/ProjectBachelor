@@ -136,16 +136,23 @@ public class RppgReceiver : MonoBehaviour
         }
     }
 
-    private void FinalizeBaseline()
+private void FinalizeBaseline()
+{
+    if (baselineSamples < 10)
     {
-        baselineIBI   = baselineSamples > 0 ? baselineIBISum   / baselineSamples : 800f;
-        baselineRMSSD = baselineSamples > 0 ? baselineRMSSDSum / baselineSamples : 60f;
-        baselineLFHF  = baselineSamples > 0 ? baselineLFHFSum  / baselineSamples : 1f;
-
-        isCollectingBaseline = false;
-        baselineReady = true;
-        Debug.Log($"[RppgReceiver] Baseline complete — IBI: {baselineIBI:F1}ms  RMSSD: {baselineRMSSD:F1}ms  LF/HF: {baselineLFHF:F2}");
+        Debug.LogWarning($"[RppgReceiver] Not enough baseline samples ({baselineSamples}) — restarting baseline collection. Check camera and lighting.");
+        StartBaseline();
+        return;
     }
+
+    baselineIBI   = baselineIBISum   / baselineSamples;
+    baselineRMSSD = baselineRMSSDSum / baselineSamples;
+    baselineLFHF  = baselineLFHFSum  / baselineSamples;
+
+    isCollectingBaseline = false;
+    baselineReady = true;
+    Debug.Log($"[RppgReceiver] Baseline complete — IBI: {baselineIBI:F1}ms  RMSSD: {baselineRMSSD:F1}ms  LF/HF: {baselineLFHF:F2}  (from {baselineSamples} samples)");
+}
 
     private float CalculateArousal(HrvData hrv)
     {
