@@ -48,7 +48,6 @@ public class RppgReceiver : MonoBehaviour
         RppgReceiver[] existing = FindObjectsByType<RppgReceiver>(FindObjectsSortMode.None);
         if (existing.Length > 1)
         {
-            // A receiver already exists from a previous scene — destroy this duplicate
             Destroy(gameObject);
             return;
         }
@@ -59,7 +58,6 @@ public class RppgReceiver : MonoBehaviour
         receiveThread = new Thread(Receive) { IsBackground = true };
         receiveThread.Start();
 
-        // Only collect baseline once — on first launch, not on restart
         StartBaseline();
     }
 
@@ -74,7 +72,6 @@ public class RppgReceiver : MonoBehaviour
 
     void Update()
     {
-        // Always tick the baseline timer regardless of data
         if (isCollectingBaseline)
         {
             baselineTimer += Time.deltaTime;
@@ -84,7 +81,6 @@ public class RppgReceiver : MonoBehaviour
                 FinalizeBaseline();
         }
 
-        // Get latest UDP data if available
         RppgPayload payload = null;
         lock (dataLock)
         {
@@ -93,7 +89,6 @@ public class RppgReceiver : MonoBehaviour
 
         if (payload == null) return;
 
-        // Update live values
         heartRate     = payload.hr;
         signalQuality = payload.sqi;
 
@@ -105,7 +100,6 @@ public class RppgReceiver : MonoBehaviour
             breathingRate = payload.hrv.breathingrate;
         }
 
-        // Accumulate baseline samples
         if (isCollectingBaseline && payload.hrv != null && payload.hrv.ibi > 0)
         {
             baselineIBISum   += payload.hrv.ibi;
@@ -114,18 +108,17 @@ public class RppgReceiver : MonoBehaviour
             baselineSamples++;
         }
 
-        // Calculate arousal once baseline is ready
         if (baselineReady && payload.hrv != null)
         {
             signalValid = payload.sqi > 0.3f && payload.hrv.ibi > 300f;
 
             if (signalValid)
             {
-                cognitiveLoadScore = CalculateCognitiveLoad(payload.hrv);
-                cognitiveLoadLabel = GetCognitiveLoadLabel(arousalScore);
+                cognitiveLoadScore = CalculateCognitiveLoad(payload.hrv);                    // FIX: was referencing non-existent arousalScore
+                cognitiveLoadLabel = GetCognitiveLoadLabel(cognitiveLoadScore);              // FIX: was referencing non-existent arousalScore
 
                 if (cognitiveLoadLabel != previousCognitiveLoadLabel && previousCognitiveLoadLabel != "")
-                    OnArousalLevelChanged?.Invoke(previousCognitiveLoadLabel, cognitiveLoadLabel);
+                    OnCognitiveLoadLevelChanged?.Invoke(previousCognitiveLoadLabel, cognitiveLoadLabel);  // FIX: was calling non-existent OnArousalLevelChanged
 
                 previousCognitiveLoadLabel = cognitiveLoadLabel;
             }
@@ -136,23 +129,23 @@ public class RppgReceiver : MonoBehaviour
         }
     }
 
-private void FinalizeBaseline()
-{   
-    if (baselineSamples < 10)
+    private void FinalizeBaseline()
     {
-        Debug.LogWarning($"[RppgReceiver] Not enough baseline samples ({baselineSamples}) — restarting baseline collection. Check camera and lighting.");
-        StartBaseline();
-        return;
+        if (baselineSamples < 10)
+        {
+            Debug.LogWarning($"[RppgReceiver] Not enough baseline samples ({baselineSamples}) — restarting baseline collection. Check camera and lighting.");
+            StartBaseline();
+            return;
+        }
+
+        baselineIBI   = baselineIBISum   / baselineSamples;
+        baselineRMSSD = baselineRMSSDSum / baselineSamples;
+        baselineLFHF  = baselineLFHFSum  / baselineSamples;
+
+        isCollectingBaseline = false;
+        baselineReady = true;
+        Debug.Log($"[RppgReceiver] Baseline complete — IBI: {baselineIBI:F1}ms  RMSSD: {baselineRMSSD:F1}ms  LF/HF: {baselineLFHF:F2}  (from {baselineSamples} samples)");
     }
-
-    baselineIBI   = baselineIBISum   / baselineSamples;
-    baselineRMSSD = baselineRMSSDSum / baselineSamples;
-    baselineLFHF  = baselineLFHFSum  / baselineSamples;
-
-    isCollectingBaseline = false;
-    baselineReady = true;
-    Debug.Log($"[RppgReceiver] Baseline complete — IBI: {baselineIBI:F1}ms  RMSSD: {baselineRMSSD:F1}ms  LF/HF: {baselineLFHF:F2}  (from {baselineSamples} samples)");
-}
 
     private float CalculateCognitiveLoad(HrvData hrv)
     {
@@ -166,7 +159,7 @@ private void FinalizeBaseline()
     private string GetCognitiveLoadLabel(float score)
     {
         if (score < 0.15f) return "Low";
-        if (score < 0.4f) return "Medium";
+        if (score < 0.4f)  return "Medium";
         return "High";
     }
 
