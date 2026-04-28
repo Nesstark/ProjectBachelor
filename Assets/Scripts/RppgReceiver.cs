@@ -137,7 +137,7 @@ public class RppgReceiver : MonoBehaviour
     }
 
 private void FinalizeBaseline()
-{
+{   
     if (baselineSamples < 10)
     {
         Debug.LogWarning($"[RppgReceiver] Not enough baseline samples ({baselineSamples}) — restarting baseline collection. Check camera and lighting.");
