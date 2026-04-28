@@ -53,7 +53,7 @@ public class RppgLogger : MonoBehaviour
         writer.Flush();
 
         // Subscribe to level change event
-        receiver.OnArousalLevelChanged += OnLevelChanged;
+        receiver.OnCognitiveLoadLevelChanged += OnLevelChanged;
 
         Debug.Log($"[RppgLogger] Session {sessionNumber:D2} started — logging to: {filePath}");
     }
@@ -90,7 +90,7 @@ public class RppgLogger : MonoBehaviour
             );
             writer.Flush();
             baselineLogged = true;
-            Debug.Log($"[RppgLogger] Baseline complete — HR: {receiver.heartRate:F1} BPM  IBI: {receiver.hrv_ibi:F1}ms  RMSSD: {receiver.hrv_rmssd:F1}ms  Arousal tracking started.");
+            Debug.Log($"[RppgLogger] Baseline complete — HR: {receiver.heartRate:F1} BPM  IBI: {receiver.hrv_ibi:F1}ms  RMSSD: {receiver.hrv_rmssd:F1}ms  Cognitive Load tracking started.");
         }
 
         if (!receiver.baselineReady) return;
@@ -117,8 +117,8 @@ public class RppgLogger : MonoBehaviour
             "{0,-10} {1,-18} {2,-10} {3,-8} {4,-8} {5,-8} {6,-8} {7,-8} {8,-12} {9,-6}",
             timeStr,
             eventType,
-            receiver.arousalLabel,
-            receiver.arousalScore.ToString("F3"),
+            receiver.cognitiveLoadLabel,
+            receiver.cognitiveLoadScore.ToString("F3"),
             receiver.heartRate.ToString("F1"),
             receiver.hrv_ibi.ToString("F1"),
             receiver.hrv_rmssd.ToString("F1"),
