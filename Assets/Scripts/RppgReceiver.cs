@@ -16,9 +16,9 @@ public class RppgReceiver : MonoBehaviour
     public float breathingRate = 0f;
 
     [Header("Arousal")]
-    public float arousalScore = 0f;
-    public float stressLevel => arousalScore;
-    public string arousalLabel = "Low";
+    public float cognitiveLoadScore = 0f;
+    public float stressLevel => cognitiveLoadScore;
+    public string cognitiveLoadLabel = "Low";
     public bool signalValid = false;
 
     [Header("Baseline")]
@@ -32,8 +32,8 @@ public class RppgReceiver : MonoBehaviour
     private int baselineSamples;
 
     // Level change event
-    private string previousArousalLabel = "";
-    public event Action<string, string> OnArousalLevelChanged;
+    private string previousCognitiveLoadLabel = "";
+    public event Action<string, string> OnCognitiveLoadLevelChanged;
 
     // UDP
     private UdpClient udpClient;
@@ -121,17 +121,17 @@ public class RppgReceiver : MonoBehaviour
 
             if (signalValid)
             {
-                arousalScore = CalculateArousal(payload.hrv);
-                arousalLabel = GetArousalLabel(arousalScore);
+                cognitiveLoadScore = CalculateCognitiveLoad(payload.hrv);
+                cognitiveLoadLabel = GetCognitiveLoadLabel(arousalScore);
 
-                if (arousalLabel != previousArousalLabel && previousArousalLabel != "")
-                    OnArousalLevelChanged?.Invoke(previousArousalLabel, arousalLabel);
+                if (cognitiveLoadLabel != previousCognitiveLoadLabel && previousCognitiveLoadLabel != "")
+                    OnArousalLevelChanged?.Invoke(previousCognitiveLoadLabel, cognitiveLoadLabel);
 
-                previousArousalLabel = arousalLabel;
+                previousCognitiveLoadLabel = cognitiveLoadLabel;
             }
             else
             {
-                Debug.LogWarning("[RppgReceiver] Signal too weak — arousal paused. Get back on screen.");
+                Debug.LogWarning("[RppgReceiver] Signal too weak — cognitive load monitoring paused. Get back on screen.");
             }
         }
     }
@@ -154,7 +154,7 @@ private void FinalizeBaseline()
     Debug.Log($"[RppgReceiver] Baseline complete — IBI: {baselineIBI:F1}ms  RMSSD: {baselineRMSSD:F1}ms  LF/HF: {baselineLFHF:F2}  (from {baselineSamples} samples)");
 }
 
-    private float CalculateArousal(HrvData hrv)
+    private float CalculateCognitiveLoad(HrvData hrv)
     {
         float ibiScore   = Mathf.Clamp01((baselineIBI - hrv.ibi) / baselineIBI);
         float rmssdScore = baselineRMSSD > 0 ? Mathf.Clamp01(1f - (hrv.rmssd / baselineRMSSD)) : 0f;
@@ -163,7 +163,7 @@ private void FinalizeBaseline()
         return (ibiScore * 0.5f) + (rmssdScore * 0.3f) + (lfhfScore * 0.2f);
     }
 
-    private string GetArousalLabel(float score)
+    private string GetCognitiveLoadLabel(float score)
     {
         if (score < 0.15f) return "Low";
         if (score < 0.4f) return "Medium";
