@@ -59,8 +59,27 @@ public class ArousalVignetteController : MonoBehaviour
             Debug.LogError("ArousalVignetteController: No RppgReceiver found in scene.");
 
         Volume volume = GetComponent<Volume>();
-        if (volume == null || !volume.profile.TryGet(out vignette))
+        if (volume == null)
+        {
+            Debug.LogError("ArousalVignetteController: No Volume component found on this GameObject.");
+            return;
+        }
+
+        // Clone the shared profile so we write to a runtime instance, not the asset on disk.
+        // This also ensures a clean override state every time the scene loads.
+        volume.profile = Instantiate(volume.sharedProfile);
+
+        if (!volume.profile.TryGet(out vignette))
+        {
             Debug.LogError("ArousalVignetteController: No Vignette override found on the Global Volume profile.");
+            return;
+        }
+
+        // Explicitly enable the override — this is what makes the vignette
+        // actually visible after a scene reload. Without it the value is set
+        // but URP ignores it because overrideState is false.
+        vignette.intensity.overrideState = true;
+        vignette.intensity.value = neutralIntensity;
     }
 
     void Update()
