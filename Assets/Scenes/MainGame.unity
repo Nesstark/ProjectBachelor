@@ -691,9 +691,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a86e5111a7a06edcbb9c71526b2bbe35, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ArousalVignetteController
-  neutralIntensity: 0.04
-  lowArousalIntensity: 0.4
-  highArousalIntensity: 0.55
+  neutralIntensity: 0.3
+  lowArousalIntensity: 0
+  highArousalIntensity: 0.6
   neutralScore: 0.275
   lowSatPoint: 0.15
   highSatPoint: 0.4
