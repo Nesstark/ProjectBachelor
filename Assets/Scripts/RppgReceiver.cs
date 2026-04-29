@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class RppgReceiver : MonoBehaviour
@@ -12,13 +13,10 @@ public class RppgReceiver : MonoBehaviour
     public float heartRate = 0f;
     public float signalQuality = 0f;
     public float hrv_rmssd = 0f;
-    public float hrv_ibi = 0f;
-    public float hrv_lfhf = 0f;
     public float breathingRate = 0f;
 
     [Header("Arousal")]
     public float cognitiveLoadScore = 0f;
-    public float stressLevel => cognitiveLoadScore;
     public string cognitiveLoadLabel = "Low";
     public bool signalValid = false;
 
@@ -27,18 +25,18 @@ public class RppgReceiver : MonoBehaviour
     public bool isCollectingBaseline = false;
     public bool baselineReady = false;
 
-    List<float> rrList = new List<float>();
+    [Header("Smoothing")]
+    public int smoothingWindow = 5;
 
-    // Baseline internals
-    private float baselineIBI, baselineRMSSD, baselineLFHF;
-    private float baselineTimer, baselineIBISum, baselineRMSSDSum, baselineLFHFSum;
-    private int baselineSamples;
+    private const float SubsampleInterval = 10f;
+    private float baselineTimer = 0f;
+    private float subsampleTimer = 0f;
 
-    // Level change event
-    private string previousCognitiveLoadLabel = "";
-    public event Action<string, string> OnCognitiveLoadLevelChanged;
+    private List<float> baselineRMSSDSamples = new List<float>();
+    private float baselineRMSSD_mean, baselineRMSSD_std;
 
-    // UDP
+    private Queue<float> scoreHistory = new Queue<float>();
+
     private UdpClient udpClient;
     private Thread receiveThread;
     private RppgPayload latestPayload;
@@ -47,14 +45,6 @@ public class RppgReceiver : MonoBehaviour
 
     void Start()
     {
-        // ── Persist across scene loads — only one instance ever exists ──
-        RppgReceiver[] existing = FindObjectsByType<RppgReceiver>(FindObjectsSortMode.None);
-        if (existing.Length > 1)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
         DontDestroyOnLoad(gameObject);
 
         udpClient = new UdpClient(5005);
@@ -68,122 +58,108 @@ public class RppgReceiver : MonoBehaviour
     {
         isCollectingBaseline = true;
         baselineReady = false;
-        baselineTimer = baselineIBISum = baselineRMSSDSum = baselineLFHFSum = 0f;
-        baselineSamples = 0;
-        Debug.Log("Baseline started — sit still for 2 minutes.");
+        baselineTimer = subsampleTimer = 0f;
+
+        baselineRMSSDSamples.Clear();
+        scoreHistory.Clear();
+
+        Debug.Log("Baseline started");
     }
 
     void Update()
     {
-        if (isCollectingBaseline)
-        {
-            baselineTimer += Time.deltaTime;
-            Debug.Log($"[Baseline] {baselineTimer:F0}s / {baselineDuration:F0}s — samples: {baselineSamples}");
-
-            if (baselineTimer >= baselineDuration)
-                FinalizeBaseline();
-        }
-
         RppgPayload payload = null;
         lock (dataLock)
         {
             if (newData) { payload = latestPayload; newData = false; }
         }
 
-        if (payload == null) return;
+        if (isCollectingBaseline)
+        {
+            baselineTimer += Time.deltaTime;
+            subsampleTimer += Time.deltaTime;
 
-        UpdateVariables(payload);
-
-        // TODO: Evaluate signalValid variable. Introducing rolling window to smooth out data and circumvent loss of signal. Investigate why CognitiveLoadScore returns 0.00 in periods despite SQI > .5.
-
-        if (baselineReady && payload.hrv != null) {
-            signalValid = payload.sqi > 0.3f;
-
-            if (signalValid) {
-                cognitiveLoadScore = CalculateCognitiveLoad(payload.hrv);
-                cognitiveLoadLabel = GetCognitiveLoadLabel(cognitiveLoadScore);
-
-                if (cognitiveLoadLabel != previousCognitiveLoadLabel && previousCognitiveLoadLabel != "")
-                    OnCognitiveLoadLevelChanged?.Invoke(previousCognitiveLoadLabel, cognitiveLoadLabel);
-
-                previousCognitiveLoadLabel = cognitiveLoadLabel;
-            }
-            else
+            if (payload != null &&
+                payload.hrv != null &&
+                subsampleTimer >= SubsampleInterval)
             {
-                Debug.LogWarning("[RppgReceiver] Signal too weak — cognitive load monitoring paused. Get back on screen.");
+                baselineRMSSDSamples.Add(payload.hrv.rmssd);
+                subsampleTimer = 0f;
             }
+
+            if (baselineTimer >= baselineDuration)
+                FinalizeBaseline();
+
+            if (payload != null) UpdateLive(payload);
+            return;
         }
+
+        if (payload == null || !baselineReady) return;
+
+        UpdateLive(payload);
+
+        signalValid = payload.sqi > 0.3f;
+        if (!signalValid) return;
+
+        float rawScore = CalculateCognitiveLoad(payload.hrv);
+
+        scoreHistory.Enqueue(rawScore);
+        if (scoreHistory.Count > smoothingWindow)
+            scoreHistory.Dequeue();
+
+        cognitiveLoadScore = scoreHistory.Average();
+        cognitiveLoadLabel = GetLabel(cognitiveLoadScore);
     }
 
-    private void UpdateVariables(RppgPayload payload)
+    private void UpdateLive(RppgPayload p)
     {
-        heartRate     = payload.hr;
-        signalQuality = payload.sqi;
+        heartRate = p.hr;
+        signalQuality = p.sqi;
 
-        if (payload.hrv != null) {
-            hrv_rmssd     = payload.hrv.rmssd;
-            hrv_ibi       = payload.hrv.ibi;
-            hrv_lfhf      = payload.hrv.lf_hf;
-            breathingRate = payload.hrv.breathingrate;
-        }
-
-        if (isCollectingBaseline && payload.hrv != null && payload.hrv.ibi > 0) {
-            baselineIBISum   += payload.hrv.ibi;
-            baselineRMSSDSum += payload.hrv.rmssd;
-            baselineLFHFSum  += payload.hrv.lf_hf;
-            baselineSamples++;
-
-            // rrList.Add(payload.hrv.ibi);
+        if (p.hrv != null)
+        {
+            hrv_rmssd = p.hrv.rmssd;
+            breathingRate = p.hrv.breathingrate;
         }
     }
 
     private void FinalizeBaseline()
     {
-        if (baselineSamples < 10) {
-            Debug.LogWarning($"[RppgReceiver] Not enough baseline samples ({baselineSamples}) — restarting baseline collection. Check camera and lighting.");
+        if (baselineRMSSDSamples.Count < 6)
+        {
             StartBaseline();
             return;
         }
 
-        baselineIBI   = baselineIBISum   / baselineSamples;
-        baselineLFHF  = baselineLFHFSum  / baselineSamples;
-        baselineRMSSD = baselineRMSSDSum / baselineSamples;
+        baselineRMSSD_mean = baselineRMSSDSamples.Average();
 
-        // CalculateRMSSDBaseline(rrList.ToArray());
+        float variance = baselineRMSSDSamples
+            .Select(v => (v - baselineRMSSD_mean) * (v - baselineRMSSD_mean))
+            .Average();
 
-        isCollectingBaseline = false;
+        baselineRMSSD_std = Mathf.Sqrt(variance);
+
         baselineReady = true;
-        Debug.Log($"[RppgReceiver] Baseline complete — IBI: {baselineIBI:F1}ms  RMSSD: {baselineRMSSD:F1}ms  LF/HF: {baselineLFHF:F2}  (from {baselineSamples} samples)");
+        isCollectingBaseline = false;
+
+        Debug.Log($"Baseline RMSSD: {baselineRMSSD_mean} ± {baselineRMSSD_std}");
     }
-
-    
-    /* private float CalculateRMSSDBaseline(float[] rrArray)
-    {
-        int n = rrArray.Length;
-        if (n < 2) throw new ArgumentException("At least 2 RR intervals are required to calculate RMSSD baseline.");
-
-        float sumSqDiffs = 0f;
-        for (int i = 1; i < n; i++) {
-            float diff = rrArray[i] - rrArray[i - 1];
-            sumSqDiffs += diff * diff;
-        }
-
-        float meanSqDiffs = sumSqDiffs / (n - 1);
-        baselineRMSSD = Mathf.Sqrt(meanSqDiffs);
-        return Mathf.Log(baselineRMSSD+1e-6f); 
-    } */
 
     private float CalculateCognitiveLoad(HrvData hrv)
     {
-        float rmssdScore = baselineRMSSD > 0 ? Mathf.Clamp01(1f - (hrv.rmssd / baselineRMSSD)) : 0f;
+        float delta = baselineRMSSD_mean - hrv.rmssd;
+        float std = Mathf.Max(baselineRMSSD_std, baselineRMSSD_mean * 0.05f);
 
-        return rmssdScore;
+        float z = delta / std;
+        float score = Mathf.Clamp01(Mathf.Max(0f, z) / 2f);
+
+        return score;
     }
 
-    private string GetCognitiveLoadLabel(float score)
+    private string GetLabel(float score)
     {
-        if (score < 0.15f) return "Low";
-        if (score < 0.4f)  return "Medium";
+        if (score < 0.25f) return "Low";
+        if (score < 0.5f) return "Medium";
         return "High";
     }
 
@@ -197,9 +173,14 @@ public class RppgReceiver : MonoBehaviour
                 byte[] data = udpClient.Receive(ref ep);
                 string json = Encoding.UTF8.GetString(data);
                 var payload = JsonUtility.FromJson<RppgPayload>(json);
-                lock (dataLock) { latestPayload = payload; newData = true; }
+
+                lock (dataLock)
+                {
+                    latestPayload = payload;
+                    newData = true;
+                }
             }
-            catch (Exception e) { Debug.LogWarning("UDP error: " + e.Message); }
+            catch { }
         }
     }
 
@@ -214,9 +195,6 @@ public class RppgReceiver : MonoBehaviour
 public class HrvData
 {
     public float rmssd;
-    public float sdnn;
-    public float ibi;
-    public float lf_hf;
     public float breathingrate;
 }
 
