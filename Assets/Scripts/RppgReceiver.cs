@@ -27,6 +27,8 @@ public class RppgReceiver : MonoBehaviour
     public bool isCollectingBaseline = false;
     public bool baselineReady = false;
 
+    List<float> rrList = new List<float>();
+
     // Baseline internals
     private float baselineIBI, baselineRMSSD, baselineLFHF;
     private float baselineTimer, baselineIBISum, baselineRMSSDSum, baselineLFHFSum;
@@ -68,9 +70,6 @@ public class RppgReceiver : MonoBehaviour
         baselineReady = false;
         baselineTimer = baselineIBISum = baselineRMSSDSum = baselineLFHFSum = 0f;
         baselineSamples = 0;
-
-        List<float> rrList = new List<float>();
-
         Debug.Log("Baseline started — sit still for 2 minutes.");
     }
 
@@ -162,7 +161,7 @@ public class RppgReceiver : MonoBehaviour
         int n = rrArray.Length;
         if (n < 2) throw new ArgumentException("At least 2 RR intervals are required to calculate RMSSD baseline.");
 
-        float sumSqDiffs = 0.0;
+        float sumSqDiffs = 0f;
         for (int i = 1; i < n; i++) {
             float diff = rrArray[i] - rrArray[i - 1];
             sumSqDiffs += diff * diff;
@@ -175,10 +174,12 @@ public class RppgReceiver : MonoBehaviour
 
     private float CalculateCognitiveLoad(HrvData hrv)
     {
-        float logRMSSD = Math.Log(hrv.rmssd + 1e-6f);
+        float logRMSSD = Mathf.Log(hrv.rmssd + 1e-6f);
         float deviation = logRMSSD - baselineRMSSD;
         float normalized = 0.5f*(1f +(float)Math.Tanh(deviation*2f));
         float rmssdScore = 1f - normalized; // invert scoring
+
+        Debug.Log("RMSSD score: " + rmssdScore.ToString("F3") + " (deviation: " + deviation.ToString("F3") + ")");
 
         return rmssdScore;
     }
