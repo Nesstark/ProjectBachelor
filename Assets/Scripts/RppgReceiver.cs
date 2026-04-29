@@ -78,6 +78,8 @@ public class RppgReceiver : MonoBehaviour
         {
             baselineTimer += Time.deltaTime;
             subsampleTimer += Time.deltaTime;
+            
+            Debug.Log($"[Baseline] {baselineTimer:F0}s / {baselineDuration:F0}s — independent samples: {baselineSamples}");
 
             if (payload != null &&
                 payload.hrv != null &&
