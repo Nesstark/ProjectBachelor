@@ -90,9 +90,9 @@ public class RppgReceiver : MonoBehaviour
             if (newData) { payload = latestPayload; newData = false; }
         }
 
-        if (payload != null) {
-            UpdateVariables(payload);
-        }
+        if (payload == null) return;
+
+        UpdateVariables(payload);
 
         // TODO: Evaluate signalValid variable. Introducing rolling window to smooth out data and circumvent loss of signal. Investigate why CognitiveLoadScore returns 0.00 in periods despite SQI > .5.
 
@@ -133,7 +133,7 @@ public class RppgReceiver : MonoBehaviour
             baselineLFHFSum  += payload.hrv.lf_hf;
             baselineSamples++;
 
-            rrList.Add(payload.hrv.ibi);
+            // rrList.Add(payload.hrv.ibi);
         }
     }
 
@@ -147,16 +147,17 @@ public class RppgReceiver : MonoBehaviour
 
         baselineIBI   = baselineIBISum   / baselineSamples;
         baselineLFHF  = baselineLFHFSum  / baselineSamples;
-        // baselineRMSSD = baselineRMSSDSum / baselineSamples;
+        baselineRMSSD = baselineRMSSDSum / baselineSamples;
 
-        CalculateRMSSDBaseline(rrList.ToArray());
+        // CalculateRMSSDBaseline(rrList.ToArray());
 
         isCollectingBaseline = false;
         baselineReady = true;
         Debug.Log($"[RppgReceiver] Baseline complete — IBI: {baselineIBI:F1}ms  RMSSD: {baselineRMSSD:F1}ms  LF/HF: {baselineLFHF:F2}  (from {baselineSamples} samples)");
     }
 
-    private float CalculateRMSSDBaseline(float[] rrArray)
+    
+    /* private float CalculateRMSSDBaseline(float[] rrArray)
     {
         int n = rrArray.Length;
         if (n < 2) throw new ArgumentException("At least 2 RR intervals are required to calculate RMSSD baseline.");
@@ -169,17 +170,12 @@ public class RppgReceiver : MonoBehaviour
 
         float meanSqDiffs = sumSqDiffs / (n - 1);
         baselineRMSSD = Mathf.Sqrt(meanSqDiffs);
-        return Mathf.Log(baselineRMSSD+1e-6f);
-    }
+        return Mathf.Log(baselineRMSSD+1e-6f); 
+    } */
 
     private float CalculateCognitiveLoad(HrvData hrv)
     {
-        float logRMSSD = Mathf.Log(hrv.rmssd + 1e-6f);
-        float deviation = logRMSSD - baselineRMSSD;
-        float normalized = 0.5f*(1f +(float)Math.Tanh(deviation*2f));
-        float rmssdScore = 1f - normalized; // invert scoring
-
-        Debug.Log("RMSSD score: " + rmssdScore.ToString("F3") + " (deviation: " + deviation.ToString("F3") + ")");
+        float rmssdScore = baselineRMSSD > 0 ? Mathf.Clamp01(1f - (hrv.rmssd / baselineRMSSD)) : 0f;
 
         return rmssdScore;
     }
