@@ -242,9 +242,12 @@ MonoBehaviour:
   enemyPrefabs: []
   bossPrefabs:
   - {fileID: 8856747528781715408, guid: 86771880a674e2a54a210790e14d336a, type: 3}
-  enemyCount: 1
   isBossRoom: 1
   levelExitSpawnPoint: {fileID: 3934997411358175084}
+  levelExitPrefab: {fileID: 4735494618048794802, guid: 02cf4207cd33e66c6814e40e1c59d668, type: 3}
+  roomType: 4
+  pickupPrefabs: []
+  treasureSpawnPoints: []
 --- !u!1 &422453625958289475
 GameObject:
   m_ObjectHideFlags: 0

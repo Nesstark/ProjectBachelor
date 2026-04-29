@@ -166,6 +166,9 @@ MonoBehaviour:
   enemyCount: 3
   isBossRoom: 0
   levelExitSpawnPoint: {fileID: 0}
+  roomType: 3
+  pickupPrefabs: []
+  treasureSpawnPoints: []
 --- !u!1 &422453625958289475
 GameObject:
   m_ObjectHideFlags: 0

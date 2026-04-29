@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public class RoomController : MonoBehaviour
 {
@@ -49,14 +50,37 @@ public class RoomController : MonoBehaviour
     public GameObject[] bossPrefabs;
 
     [Header("Encounter Settings")]
-    public int enemyCount = 0;
+    // Normal rooms: 3-6 enemies. Shop rooms: 4-8 (ambush).
+    // Boss rooms always spawn exactly 1. No public count needed.
     int remainingEnemies = 0;
     bool encounterActive = false;
-    bool encounterTriggered = false;
 
     [Header("Boss Settings")]
     public bool isBossRoom = false;
     public Transform levelExitSpawnPoint;
+
+    [Header("Room Type")]
+    public RoomType roomType = RoomType.Normal;
+
+    [Header("Treasure Room")]
+    [Tooltip("Drag all 4 pickup prefabs here. Two will be chosen randomly.")]
+    public GameObject[] pickupPrefabs;
+
+    [Tooltip("Two empty child GameObjects placed where the items should appear (e.g. on pedestals).")]
+    public Transform[] treasureSpawnPoints;
+
+    // ── Private state ─────────────────────────────────────────
+    private GameObject _treasureA;
+    private GameObject _treasureB;
+    private bool _treasureChosen = false;
+
+    // Static list of every enemy spawned this floor.
+    // Cleared by CleanupForNextLevel() before loading a new floor.
+    private static readonly List<GameObject> _allSpawnedEnemies = new List<GameObject>();
+
+    // ─────────────────────────────────────────────────────────
+    // DOOR SETUP
+    // ─────────────────────────────────────────────────────────
 
     public void SetDoors(bool north, bool south, bool east, bool west)
     {
@@ -77,6 +101,10 @@ public class RoomController : MonoBehaviour
         SetDoorwayMaterial(crosses, false);
     }
 
+    // ─────────────────────────────────────────────────────────
+    // ENCOUNTER
+    // ─────────────────────────────────────────────────────────
+
     public void StartEncounter()
     {
         if (RoomManager.Instance.IsRoomCleared(RoomManager.Instance.CurrentCellPublic))
@@ -90,7 +118,8 @@ public class RoomController : MonoBehaviour
     {
         GameObject[] prefabsToUse = isBossRoom ? bossPrefabs : enemyPrefabs;
 
-        if ((prefabsToUse == null || prefabsToUse.Length == 0) && enemyCount <= 0)
+        if (prefabsToUse == null || prefabsToUse.Length == 0 ||
+            enemySpawnPoints == null || enemySpawnPoints.Length == 0)
         {
             UnlockDoors();
             return;
@@ -98,22 +127,19 @@ public class RoomController : MonoBehaviour
 
         LockDoors();
 
-        if (prefabsToUse != null && prefabsToUse.Length > 0 && enemySpawnPoints != null && enemySpawnPoints.Length > 0)
-        {
-            int spawnCount = isBossRoom
-            ? (enemyCount > 0 ? Mathf.Min(enemyCount, enemySpawnPoints.Length) : enemySpawnPoints.Length)
-            : Mathf.Min(Random.Range(3, 7), enemySpawnPoints.Length);
-            remainingEnemies = spawnCount;
+        // Boss: always 1. Shop: ambush (4-8). Normal: 3-6.
+        int spawnCount;
+        if      (isBossRoom)               spawnCount = 1;
+        else if (roomType == RoomType.Shop) spawnCount = Mathf.Min(Random.Range(4, 9), enemySpawnPoints.Length);
+        else                               spawnCount = Mathf.Min(Random.Range(3, 7), enemySpawnPoints.Length);
 
-            for (int i = 0; i < spawnCount; i++)
-            {
-                GameObject prefab = prefabsToUse[Random.Range(0, prefabsToUse.Length)];
-                Instantiate(prefab, enemySpawnPoints[i].position, enemySpawnPoints[i].rotation);
-            }
-        }
-        else
+        remainingEnemies = spawnCount;
+
+        for (int i = 0; i < spawnCount; i++)
         {
-            remainingEnemies = enemyCount;
+            GameObject prefab = prefabsToUse[Random.Range(0, prefabsToUse.Length)];
+            GameObject enemy  = Instantiate(prefab, enemySpawnPoints[i].position, enemySpawnPoints[i].rotation);
+            _allSpawnedEnemies.Add(enemy);
         }
 
         encounterActive = true;
@@ -123,6 +149,7 @@ public class RoomController : MonoBehaviour
     public void OnEnemyDied()
     {
         if (!encounterActive) return;
+
         remainingEnemies--;
         Debug.Log($"Fjende dræbt. {remainingEnemies} tilbage.");
 
@@ -132,6 +159,10 @@ public class RoomController : MonoBehaviour
             UnlockDoors();
         }
     }
+
+    // ─────────────────────────────────────────────────────────
+    // DOOR LOCK / UNLOCK
+    // ─────────────────────────────────────────────────────────
 
     public void LockDoors()
     {
@@ -154,6 +185,7 @@ public class RoomController : MonoBehaviour
         UnlockDoor(doorSouthClosed, doorSouthTrigger, doorSouthCrosses);
         UnlockDoor(doorEastClosed,  doorEastTrigger,  doorEastCrosses);
         UnlockDoor(doorWestClosed,  doorWestTrigger,  doorWestCrosses);
+
         RoomManager.Instance.MarkRoomCleared(RoomManager.Instance.CurrentCellPublic);
 
         if (isBossRoom && levelExitSpawnPoint != null)
@@ -172,10 +204,33 @@ public class RoomController : MonoBehaviour
     void SetDoorwayMaterial(MeshRenderer[] crosses, bool locked)
     {
         if (crosses == null) return;
+
         Material mat = locked ? doorwayLit : doorwayDim;
         foreach (var r in crosses)
             if (r != null) r.material = mat;
     }
+
+    // ─────────────────────────────────────────────────────────
+    // LEVEL CLEANUP
+    // ─────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Called by RoomManager.DoLevelUpTransition() before generating
+    /// the next floor. Destroys every enemy spawned this level so
+    /// none carry over into the new floor's start room.
+    /// </summary>
+    public static void CleanupForNextLevel()
+    {
+        foreach (GameObject enemy in _allSpawnedEnemies)
+            if (enemy != null) Destroy(enemy);
+
+        _allSpawnedEnemies.Clear();
+        Debug.Log("[RoomController] Spawned enemies cleaned up for next level.");
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // UTILITY
+    // ─────────────────────────────────────────────────────────
 
     public Transform GetSpawnPoint(Direction from)
     {
@@ -187,5 +242,64 @@ public class RoomController : MonoBehaviour
             Direction.West  => spawnEast,
             _ => spawnSouth
         };
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // TREASURE ROOM
+    // ─────────────────────────────────────────────────────────
+
+    public void TriggerTreasure()
+    {
+        if (RoomManager.Instance.IsRoomCleared(RoomManager.Instance.CurrentCellPublic))
+        {
+            UnlockDoors();
+            return;
+        }
+
+        if (pickupPrefabs == null || pickupPrefabs.Length < 2 ||
+            treasureSpawnPoints == null || treasureSpawnPoints.Length < 2)
+        {
+            Debug.LogWarning("[TreasureRoom] pickupPrefabs or treasureSpawnPoints not assigned — unlocking.", this);
+            UnlockDoors();
+            return;
+        }
+
+        _treasureChosen = false;
+        LockDoors();
+
+        int idxA = Random.Range(0, pickupPrefabs.Length);
+        int idxB;
+        do { idxB = Random.Range(0, pickupPrefabs.Length); } while (idxB == idxA);
+
+        _treasureA = Instantiate(pickupPrefabs[idxA], treasureSpawnPoints[0].position, Quaternion.identity);
+        _treasureB = Instantiate(pickupPrefabs[idxB], treasureSpawnPoints[1].position, Quaternion.identity);
+
+        PickupBase.OnAnyPickupCollected -= HandleTreasurePickup;
+        PickupBase.OnAnyPickupCollected += HandleTreasurePickup;
+
+        Debug.Log($"[TreasureRoom] Offering: {pickupPrefabs[idxA].name} vs {pickupPrefabs[idxB].name}");
+    }
+
+    private void HandleTreasurePickup(PickupBase collected)
+    {
+        if (_treasureChosen) return;
+
+        bool isA = _treasureA != null && collected.gameObject == _treasureA;
+        bool isB = _treasureB != null && collected.gameObject == _treasureB;
+        if (!isA && !isB) return;
+
+        _treasureChosen = true;
+        PickupBase.OnAnyPickupCollected -= HandleTreasurePickup;
+
+        GameObject unchosen = isA ? _treasureB : _treasureA;
+        if (unchosen != null) Destroy(unchosen);
+
+        UnlockDoors();
+        Debug.Log($"[TreasureRoom] Player picked {collected.gameObject.name} — unchosen item removed, doors unlocked.");
+    }
+
+    private void OnDestroy()
+    {
+        PickupBase.OnAnyPickupCollected -= HandleTreasurePickup;
     }
 }

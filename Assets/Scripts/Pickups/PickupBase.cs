@@ -1,18 +1,22 @@
 using UnityEngine;
 
 // ============================================================
-//  PickupBase.cs — Abstract base for all pickups
-//  Attach to a trigger collider GameObject.
-//  Subclasses only implement OnPickedUp().
+// PickupBase.cs — Abstract base for all pickups
+// MODIFIED: Added OnAnyPickupCollected event for the Treasure
+// Room system. Card content lives on PickupCardUI instead.
 // ============================================================
 [RequireComponent(typeof(Collider))]
 public abstract class PickupBase : MonoBehaviour
 {
     [Header("Pickup Settings")]
-    [SerializeField] private float bobSpeed    = 2f;
-    [SerializeField] private float bobHeight   = 0.2f;
-    [SerializeField] private float spinSpeed   = 90f;
+    [SerializeField] private float bobSpeed = 2f;
+    [SerializeField] private float bobHeight = 0.2f;
+    [SerializeField] private float spinSpeed = 90f;
     [SerializeField] private GameObject collectVFXPrefab;
+
+    // TreasureRoomController subscribes here to know when a choice is made.
+    // Static event — no manual wiring between the room and the pickup needed.
+    public static event System.Action<PickupBase> OnAnyPickupCollected;
 
     private Vector3 _startPos;
 
@@ -24,12 +28,9 @@ public abstract class PickupBase : MonoBehaviour
 
     private void Update()
     {
-        // Bob up and down
         Vector3 pos = _startPos;
         pos.y += Mathf.Sin(Time.time * bobSpeed) * bobHeight;
         transform.position = pos;
-
-        // Spin
         transform.Rotate(Vector3.up, spinSpeed * Time.deltaTime, Space.World);
     }
 
@@ -45,6 +46,8 @@ public abstract class PickupBase : MonoBehaviour
             Destroy(vfx, 2f);
         }
 
+        // Notify listeners (e.g. TreasureRoomController) before destroying
+        OnAnyPickupCollected?.Invoke(this);
         Destroy(gameObject);
     }
 
