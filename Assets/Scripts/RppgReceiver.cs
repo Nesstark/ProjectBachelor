@@ -24,8 +24,8 @@ public class RppgReceiver : MonoBehaviour
     public float baselineDuration = 120f;
     public bool isCollectingBaseline = false;
     public bool baselineReady = false;
-    
-    public float baselineSamples = 0f;
+
+    public int baselineSamples = 0; // FIXED: int instead of float
 
     [Header("Smoothing")]
     public int smoothingWindow = 5;
@@ -60,10 +60,12 @@ public class RppgReceiver : MonoBehaviour
     {
         isCollectingBaseline = true;
         baselineReady = false;
-        baselineTimer = subsampleTimer = 0f;
+        baselineTimer = 0f;
+        subsampleTimer = 0f;
 
         baselineRMSSDSamples.Clear();
         scoreHistory.Clear();
+        baselineSamples = 0; // FIXED: reset counter
 
         Debug.Log("Baseline started");
     }
@@ -80,7 +82,7 @@ public class RppgReceiver : MonoBehaviour
         {
             baselineTimer += Time.deltaTime;
             subsampleTimer += Time.deltaTime;
-            
+
             Debug.Log($"[Baseline] {baselineTimer:F0}s / {baselineDuration:F0}s — independent samples: {baselineSamples}");
 
             if (payload != null &&
@@ -88,6 +90,7 @@ public class RppgReceiver : MonoBehaviour
                 subsampleTimer >= SubsampleInterval)
             {
                 baselineRMSSDSamples.Add(payload.hrv.rmssd);
+                baselineSamples++; // FIXED: increment sample count
                 subsampleTimer = 0f;
             }
 
@@ -131,6 +134,7 @@ public class RppgReceiver : MonoBehaviour
     {
         if (baselineRMSSDSamples.Count < 6)
         {
+            Debug.LogWarning("Not enough baseline samples, restarting...");
             StartBaseline();
             return;
         }
@@ -146,7 +150,7 @@ public class RppgReceiver : MonoBehaviour
         baselineReady = true;
         isCollectingBaseline = false;
 
-        Debug.Log($"Baseline RMSSD: {baselineRMSSD_mean} ± {baselineRMSSD_std}");
+        Debug.Log($"Baseline RMSSD: {baselineRMSSD_mean} ± {baselineRMSSD_std} (Samples: {baselineSamples})");
     }
 
     private float CalculateCognitiveLoad(HrvData hrv)
