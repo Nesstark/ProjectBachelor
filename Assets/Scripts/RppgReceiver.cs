@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class RppgReceiver : MonoBehaviour
@@ -67,6 +68,9 @@ public class RppgReceiver : MonoBehaviour
         baselineReady = false;
         baselineTimer = baselineIBISum = baselineRMSSDSum = baselineLFHFSum = 0f;
         baselineSamples = 0;
+
+        List<float> RR_n = new List<float>();
+
         Debug.Log("Baseline started — sit still for 2 minutes.");
     }
 
@@ -133,16 +137,16 @@ public class RppgReceiver : MonoBehaviour
 
     private void FinalizeBaseline()
     {
-        if (baselineSamples < 10)
-        {
+        if (baselineSamples < 10) {
             Debug.LogWarning($"[RppgReceiver] Not enough baseline samples ({baselineSamples}) — restarting baseline collection. Check camera and lighting.");
             StartBaseline();
             return;
         }
 
         baselineIBI   = baselineIBISum   / baselineSamples;
-        baselineRMSSD = baselineRMSSDSum / baselineSamples;
         baselineLFHF  = baselineLFHFSum  / baselineSamples;
+
+        baselineRMSSD = baselineRMSSDSum / baselineSamples;
 
         isCollectingBaseline = false;
         baselineReady = true;
@@ -152,10 +156,9 @@ public class RppgReceiver : MonoBehaviour
     private float CalculateCognitiveLoad(HrvData hrv)
     {
         // float ibiScore   = Mathf.Clamp01((baselineIBI - hrv.ibi) / baselineIBI);
-        float rmssdScore = baselineRMSSD > 0 ? Mathf.Clamp01(1f - (hrv.rmssd / baselineRMSSD)) : 0f;
         // float lfhfScore  = baselineLFHF  > 0 ? Mathf.Clamp01(hrv.lf_hf / (baselineLFHF * 3f))  : 0f;
 
-        // return (ibiScore * 0.5f) + (rmssdScore * 0.3f) + (lfhfScore * 0.2f);
+        float rmssdScore = baselineRMSSD > 0 ? Mathf.Clamp01(1f - (hrv.rmssd / baselineRMSSD)) : 0f;
         return rmssdScore;
     }
 
