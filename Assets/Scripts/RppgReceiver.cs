@@ -24,6 +24,8 @@ public class RppgReceiver : MonoBehaviour
     public float baselineDuration = 120f;
     public bool isCollectingBaseline = false;
     public bool baselineReady = false;
+    
+    public float baselineSamples = 0f;
 
     [Header("Smoothing")]
     public int smoothingWindow = 5;
