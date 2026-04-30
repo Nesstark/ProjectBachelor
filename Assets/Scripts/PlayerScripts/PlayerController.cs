@@ -2,51 +2,64 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+
 [RequireComponent(typeof(Rigidbody))]
 public class PlayerController : MonoBehaviour
 {
     [Header("Movement")]
-    [SerializeField] private float moveSpeed     = 10f;
+    [SerializeField] private float baseMoveSpeed = 10f;
+    [SerializeField] private float maxMoveSpeed  = 20f;
     [SerializeField] private float acceleration  = 80f;
     [SerializeField] private float deceleration  = 120f;
     [SerializeField] private float dashSpeed     = 18f;
     [SerializeField] private float dashDuration  = 0.15f;
     [SerializeField] private float dashCooldown  = 0.6f;
 
+
     [Header("Attack")]
-    [SerializeField] private float     attackCooldown = 0.4f;
-    [SerializeField] private float     attackAngle    = 90f;
+    [SerializeField] private float     attackCooldown  = 0.4f;
+    [SerializeField] private float     attackAngle     = 90f;
+    [SerializeField] private float     baseAttackRange = 3f;
+    [SerializeField] private float     maxAttackRange  = 8f;
     [SerializeField] private LayerMask enemyLayer;
     [SerializeField] private Transform attackOrigin;
+
 
     [Header("Visual")]
     [SerializeField] private SpriteRenderer spriteRenderer;
     [SerializeField] private Animator       animator;
 
+
     [Header("Hit VFX")]
     [SerializeField] private GameObject hitVFXPrefab;
     [SerializeField] private GameObject slashVFXPrefab;
 
+
     [Header("Death Animation")]
     [SerializeField] private float deathFadeDuration = 0.8f;
+
 
     // ─── Private State ────────────────────────────────────────
     private Rigidbody rb;
     private Vector2   inputDir;
     private Vector3   moveDir;
+    private float     moveSpeed;
     private bool      isDashing;
     private float     dashTimer;
     private float     dashCooldownTimer;
     private Vector3   lastMoveDir;
     private float     attackTimer;
+    private float     _attackRange;
     private bool      isDead;
     private float     _lastKnownHp = float.MaxValue;
     private HitFlashHandler _hitFlash;
+
 
     // ─── Exposed for HUD ──────────────────────────────────────
     public float DashReadyFraction => dashCooldown > 0f
         ? Mathf.Clamp01(1f - Mathf.Max(0f, dashCooldownTimer) / dashCooldown)
         : 1f;
+
 
     private static readonly int HashSpeed     = Animator.StringToHash("Speed");
     private static readonly int HashDirX      = Animator.StringToHash("DirX");
@@ -58,7 +71,9 @@ public class PlayerController : MonoBehaviour
     private static readonly int HashHit       = Animator.StringToHash("Hit");
     private static readonly int HashDeath     = Animator.StringToHash("Death");
 
+
     private GameManager GM => GameManager.Instance;
+
 
     private void Awake()
     {
@@ -68,8 +83,11 @@ public class PlayerController : MonoBehaviour
         if (animator == null) animator = GetComponentInChildren<Animator>();
         rb.constraints   = RigidbodyConstraints.FreezeRotation;
         rb.linearDamping = 0f;
-        _hitFlash = GetComponentInChildren<HitFlashHandler>();
+        _hitFlash    = GetComponentInChildren<HitFlashHandler>();
+        moveSpeed    = baseMoveSpeed;
+        _attackRange = baseAttackRange;
     }
+
 
     private void Start()
     {
@@ -88,20 +106,23 @@ public class PlayerController : MonoBehaviour
             Debug.LogWarning("[Player] enemyLayer not set — will hit ALL layers as fallback.");
     }
 
+
     private void OnDestroy()
     {
         GM?.OnPlayerDied.RemoveListener(HandlePlayerDied);
         GM?.OnPlayerHealthChanged.RemoveListener(HandlePlayerHit);
     }
 
+
     // ─── Input Callbacks ──────────────────────────────────────
+
 
     public void OnMove(InputValue value)
     {
-        // Block movement input while settings are open
         if (InGameSettings.Instance != null && InGameSettings.Instance.IsOpen) return;
         if (!isDead) inputDir = value.Get<Vector2>();
     }
+
 
     public void OnDash(InputValue value)
     {
@@ -110,6 +131,7 @@ public class PlayerController : MonoBehaviour
         if (value.isPressed && !isDashing && dashCooldownTimer <= 0f)
             StartDash();
     }
+
 
     public void OnAttack(InputValue value)
     {
@@ -121,7 +143,9 @@ public class PlayerController : MonoBehaviour
         PerformAttack();
     }
 
+
     // ─── Update / FixedUpdate ─────────────────────────────────
+
 
     private void Update()
     {
@@ -142,6 +166,7 @@ public class PlayerController : MonoBehaviour
         CameraShakeManager.Instance?.SetRunningShake(rb.linearVelocity.magnitude, moveSpeed);
     }
 
+
     private void FixedUpdate()
     {
         if (isDead) return;
@@ -159,11 +184,13 @@ public class PlayerController : MonoBehaviour
         rb.linearVelocity = new Vector3(newHorizontal.x, rb.linearVelocity.y, newHorizontal.z);
     }
 
+
     // ─── Combat ───────────────────────────────────────────────
+
 
     private void PerformAttack()
     {
-        float range  = GM != null ? GM.AttackRange : 3f;
+        float range  = _attackRange;
         float damage = GM != null ? GM.Player.Damage : 20f;
         int   mask   = enemyLayer.value != 0 ? enemyLayer.value : ~0;
 
@@ -215,7 +242,9 @@ public class PlayerController : MonoBehaviour
         Debug.LogWarning($"[Player] '{closest.name}' has no BaseEnemy component!");
     }
 
+
     // ─── Event Handlers ───────────────────────────────────────
+
 
     private void HandlePlayerHit(float currentHp, float maxHp)
     {
@@ -241,6 +270,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+
     private void HandlePlayerDied()
     {
         if (isDead) return;
@@ -250,6 +280,7 @@ public class PlayerController : MonoBehaviour
         Debug.Log("[Player] Died — playing death sequence.");
         StartCoroutine(DeathSequence());
     }
+
 
     private IEnumerator DeathSequence()
     {
@@ -280,7 +311,9 @@ public class PlayerController : MonoBehaviour
         Destroy(gameObject);
     }
 
+
     // ─── Animation Events ─────────────────────────────────────
+
 
     public void OnFootstep()
     {
@@ -288,7 +321,9 @@ public class PlayerController : MonoBehaviour
         AudioManager.Instance?.Play("Footstep");
     }
 
+
     // ─── Private Helpers ──────────────────────────────────────
+
 
     private void StartDash()
     {
@@ -298,6 +333,7 @@ public class PlayerController : MonoBehaviour
         if (animator != null) animator.SetTrigger(HashDash);
         CameraShakeManager.Instance?.ShakeImpulse(CameraShakeManager.Instance.dashShakeForce);
     }
+
 
     private void UpdateAnimator()
     {
@@ -309,6 +345,7 @@ public class PlayerController : MonoBehaviour
         animator.SetBool(HashFlipX,     spriteRenderer != null && spriteRenderer.flipX);
     }
 
+
     private void UpdateSpriteFlip()
     {
         if (spriteRenderer == null) return;
@@ -316,11 +353,13 @@ public class PlayerController : MonoBehaviour
         else if (lastMoveDir.x < -0.1f) spriteRenderer.flipX = false;
     }
 
+
     // ─── Gizmos ───────────────────────────────────────────────
+
 
     private void OnDrawGizmosSelected()
     {
-        float   range  = Application.isPlaying && GM != null ? GM.AttackRange : 3f;
+        float   range  = Application.isPlaying ? _attackRange : baseAttackRange;
         Vector3 origin = attackOrigin != null ? attackOrigin.position : transform.position;
 
         Gizmos.color = Color.yellow;
@@ -340,4 +379,24 @@ public class PlayerController : MonoBehaviour
             Gizmos.DrawLine(origin, origin + rightEdge * range);
         }
     }
+
+
+    // ─── Stat Modifiers ───────────────────────────────────────
+
+
+    public void AddMoveSpeed(float bonus)
+    {
+        moveSpeed = Mathf.Min(moveSpeed + bonus, maxMoveSpeed);
+        Debug.Log($"[PlayerController] Move speed → {moveSpeed:F1} (max {maxMoveSpeed})");
+    }
+
+    public void ResetMoveSpeed() => moveSpeed = baseMoveSpeed;
+
+    public void AddAttackRange(float bonus)
+    {
+        _attackRange = Mathf.Min(_attackRange + bonus, maxAttackRange);
+        Debug.Log($"[PlayerController] Attack range → {_attackRange:F1} (max {maxAttackRange})");
+    }
+
+    public void ResetAttackRange() => _attackRange = baseAttackRange;
 }
