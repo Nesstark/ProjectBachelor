@@ -4,24 +4,6 @@ using TMPro;
 
 // ============================================================
 //  GameHUD.cs  —  Dark Souls style HUD
-//
-//  CANVAS LAYOUT (anchor: top-left):
-//  ─────────────────────────────────────────────────────────
-//  Canvas (Screen Space Overlay)
-//   └─ HUD_Root  ← attach this script here
-//       ├─ LevelText         TMP  — "LEVEL 3"
-//       ├─ HealthBarBG       Image (dark bg)
-//       │   └─ HealthFill    Image (red, Fill Method: Horizontal)
-//       ├─ HealthValueText   TMP  — "75 / 100"
-//       ├─ XpBarBG           Image (dark bg)
-//       │   └─ XpFill        Image (gold, Fill Method: Horizontal)
-//       ├─ XpValueText       TMP  — "340 / 500"
-//       ├─ StaminaBarBG      Image (dark bg)
-//       │   └─ StaminaFill   Image (green, Fill Method: Horizontal)
-//       └─ StaminaReadyText  TMP  — "ready" / "recharging"
-//
-//  Anchor the HUD_Root panel to top-left in the Rect Transform.
-//  Set pivot to (0, 1) and position to e.g. (20, -20).
 // ============================================================
 
 public class GameHUD : MonoBehaviour
@@ -54,7 +36,7 @@ public class GameHUD : MonoBehaviour
     private void Start()
     {
         _gm     = GameManager.Instance;
-        _player = FindObjectOfType<PlayerController>();
+        _player = FindFirstObjectByType<PlayerController>();
 
         if (_gm == null) { Debug.LogError("[GameHUD] GameManager not found!"); return; }
 
@@ -80,7 +62,7 @@ public class GameHUD : MonoBehaviour
         // Stamina reads from PlayerController.DashReadyFraction each frame
         if (_player == null)
         {
-            _player = FindObjectOfType<PlayerController>();
+            _player = FindFirstObjectByType<PlayerController>();
             return;
         }
 
