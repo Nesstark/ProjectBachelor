@@ -13,9 +13,9 @@ public class RogueController : BaseEnemy
 
     [Header("Rogue Settings")]
     [Tooltip("Distance at which the Rogue stops flanking and just attacks")]
-    [SerializeField] private float assassinRange = 2.5f;
+    [SerializeField] private float assassinRange  = 2.5f;
     [Tooltip("How far behind the player the Rogue tries to position")]
-    [SerializeField] private float flankDistance = 3f;
+    [SerializeField] private float flankDistance  = 3f;
     [Tooltip("How close the Rogue needs to get to its flank position before attacking")]
     [SerializeField] private float flankTolerance = 1.2f;
 
@@ -24,7 +24,10 @@ public class RogueController : BaseEnemy
 
     private static readonly int HashAssassinate = Animator.StringToHash("Assassinate");
 
+
     // ─── Movement ─────────────────────────────────────────────
+
+
     protected override void HandleMovement()
     {
         float distToPlayer = Vector3.Distance(transform.position, PlayerTransform.position);
@@ -39,12 +42,14 @@ public class RogueController : BaseEnemy
         {
             // Still far — try to get behind the player
             _state = RogueState.Flanking;
-            Vector3 flankTarget = GetFlankPosition();
-            Agent.SetDestination(flankTarget);
+            Agent.SetDestination(GetFlankPosition());
         }
     }
 
+
     // ─── Attack ───────────────────────────────────────────────
+
+
     protected override void TryAttack()
     {
         float dist = Vector3.Distance(transform.position, PlayerTransform.position);
@@ -60,33 +65,44 @@ public class RogueController : BaseEnemy
         }
         else if (IsBehindPlayer())
         {
-            // Successfully flanked — backstab bonus
-            float backstabDamage = Stats.Damage * 1.5f;
-            Debug.Log($"[Rogue] BACKSTAB — {backstabDamage:F1} dmg (1.5x bonus)");
-            GM?.ApplyDamageToPlayer(backstabDamage);
-            if (animator != null) animator.SetTrigger(HashAttack);
+            Vector3 flankTarget = GetFlankPosition();
+            bool reachedFlank   = Vector3.Distance(transform.position, flankTarget) <= flankTolerance;
+
+            if (reachedFlank)
+            {
+                // Successfully flanked — backstab bonus
+                float backstabDamage = Stats.Damage * 1.5f;
+                Debug.Log($"[Rogue] BACKSTAB — {backstabDamage:F1} dmg (1.5x bonus)");
+                GM?.ApplyDamageToPlayer(backstabDamage);
+                if (animator != null) animator.SetTrigger(HashAttack);
+            }
+            else
+            {
+                // Behind player but not yet in position — regular hit
+                Debug.Log($"[Rogue] ATTACK — {Stats.Damage:F1} dmg");
+                GM?.ApplyDamageToPlayer(Stats.Damage);
+                if (animator != null) animator.SetTrigger(HashAttack);
+            }
         }
         else
         {
-            // Regular hit — still flanking but player turned around
+            // Frontal attack — still trying to flank but player is facing us
             Debug.Log($"[Rogue] ATTACK — {Stats.Damage:F1} dmg");
             GM?.ApplyDamageToPlayer(Stats.Damage);
             if (animator != null) animator.SetTrigger(HashAttack);
         }
     }
 
+
     // ─── Helpers ──────────────────────────────────────────────
+
 
     /// <summary>Returns a point directly behind the player.</summary>
     private Vector3 GetFlankPosition()
     {
-        // Get the player's forward direction and go to the opposite side
         Vector3 playerForward = PlayerTransform.forward;
         playerForward.y = 0f;
-
-        // Target = directly behind the player at flankDistance
-        Vector3 flankTarget = PlayerTransform.position - playerForward.normalized * flankDistance;
-        return flankTarget;
+        return PlayerTransform.position - playerForward.normalized * flankDistance;
     }
 
     /// <summary>Returns true if the Rogue is behind the player (dot product check).</summary>
@@ -103,7 +119,10 @@ public class RogueController : BaseEnemy
         return dot < -0.5f;
     }
 
+
     // ─── Gizmos ───────────────────────────────────────────────
+
+
     protected override void OnDrawGizmosSelected()
     {
         base.OnDrawGizmosSelected();
@@ -112,7 +131,7 @@ public class RogueController : BaseEnemy
         Gizmos.color = new Color(1f, 0.5f, 0f);
         Gizmos.DrawWireSphere(transform.position, assassinRange);
 
-        // Flank target — purple
+        // Flank target — magenta
         if (PlayerTransform != null)
         {
             Gizmos.color = Color.magenta;
