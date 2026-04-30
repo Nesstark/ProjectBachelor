@@ -8,6 +8,9 @@ public class RangePickup : PickupBase
     [Header("Range Pickup")]
     [SerializeField] private float rangeBonus = 0.75f;
 
+    public override string Description =>
+    $"Increase attack range by {rangeBonus} permanently.";
+
     protected override void OnPickedUp(GameObject player)
     {
         PlayerController controller = player.GetComponent<PlayerController>();

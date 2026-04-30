@@ -6,7 +6,10 @@ using UnityEngine;
 public class SpeedPickup : PickupBase
 {
     [Header("Speed Pickup")]
-    [SerializeField] private float speedBonus = 1.5f;  // small increment per pickup
+    [SerializeField] private float speedBonus = 1.5f;
+
+    public override string Description =>
+    $"Increase movement speed by {speedBonus} permanently.";
 
     protected override void OnPickedUp(GameObject player)
     {

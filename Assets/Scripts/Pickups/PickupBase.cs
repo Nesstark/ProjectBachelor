@@ -14,6 +14,8 @@ public abstract class PickupBase : MonoBehaviour
     [SerializeField] private float spinSpeed = 90f;
     [SerializeField] private GameObject collectVFXPrefab;
 
+    public abstract string Description { get; }
+
     // TreasureRoomController subscribes here to know when a choice is made.
     // Static event — no manual wiring between the room and the pickup needed.
     public static event System.Action<PickupBase> OnAnyPickupCollected;

@@ -13,7 +13,6 @@ GameObject:
   - component: {fileID: 4269787073561784021}
   - component: {fileID: 3093235922522741243}
   - component: {fileID: 7000691523098311662}
-  - component: {fileID: 3411990438109816675}
   m_Layer: 0
   m_Name: Armor pickup
   m_TagString: Untagged
@@ -131,20 +130,7 @@ MonoBehaviour:
   bobHeight: 0.2
   spinSpeed: 90
   collectVFXPrefab: {fileID: 0}
---- !u!114 &3411990438109816675
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6913587522309695809}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 92430cf7ef79ae344b1d39ff9f8ba69d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerArmor
-  flashDuration: 0.3
-  armorVFX: {fileID: 0}
+  damageReduction: 1
 --- !u!1001 &8300323968520527153
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -246,6 +232,10 @@ PrefabInstance:
       value: Armor
       objectReference: {fileID: 0}
     - target: {fileID: 5727184927712803423, guid: d10d7cef884d3fd9dab0214a35f68ef5, type: 3}
+      propertyPath: iconImage
+      value: 
+      objectReference: {fileID: 7234821160517646436}
+    - target: {fileID: 5727184927712803423, guid: d10d7cef884d3fd9dab0214a35f68ef5, type: 3}
       propertyPath: titleText
       value: 
       objectReference: {fileID: 1318282759059067266}
@@ -298,3 +288,14 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 3011548933895210158, guid: d10d7cef884d3fd9dab0214a35f68ef5, type: 3}
   m_PrefabInstance: {fileID: 8300323968520527153}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &7234821160517646436 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1681974818711381333, guid: d10d7cef884d3fd9dab0214a35f68ef5, type: 3}
+  m_PrefabInstance: {fileID: 8300323968520527153}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image

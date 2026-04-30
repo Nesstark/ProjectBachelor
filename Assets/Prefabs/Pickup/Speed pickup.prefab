@@ -13,7 +13,6 @@ GameObject:
   - component: {fileID: 5438310780150265421}
   - component: {fileID: 5263027101386214897}
   - component: {fileID: 1765987129439579251}
-  - component: {fileID: 3760992702775787596}
   m_Layer: 0
   m_Name: Speed pickup
   m_TagString: Untagged
@@ -132,19 +131,6 @@ MonoBehaviour:
   spinSpeed: 90
   collectVFXPrefab: {fileID: 0}
   speedBonus: 5
-  duration: 8
---- !u!114 &3760992702775787596
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 244169772258782996}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1be957591fa985e4d9f46b72b883751a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerSpeedBuff
 --- !u!1001 &8874890724545733047
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -246,6 +232,10 @@ PrefabInstance:
       value: Speed
       objectReference: {fileID: 0}
     - target: {fileID: 5727184927712803423, guid: d10d7cef884d3fd9dab0214a35f68ef5, type: 3}
+      propertyPath: iconImage
+      value: 
+      objectReference: {fileID: 7817792898027783394}
+    - target: {fileID: 5727184927712803423, guid: d10d7cef884d3fd9dab0214a35f68ef5, type: 3}
       propertyPath: titleText
       value: 
       objectReference: {fileID: 1896619713607920900}
@@ -298,3 +288,14 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 3011548933895210158, guid: d10d7cef884d3fd9dab0214a35f68ef5, type: 3}
   m_PrefabInstance: {fileID: 8874890724545733047}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &7817792898027783394 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1681974818711381333, guid: d10d7cef884d3fd9dab0214a35f68ef5, type: 3}
+  m_PrefabInstance: {fileID: 8874890724545733047}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image

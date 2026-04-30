@@ -232,6 +232,10 @@ PrefabInstance:
       value: Range
       objectReference: {fileID: 0}
     - target: {fileID: 5727184927712803423, guid: d10d7cef884d3fd9dab0214a35f68ef5, type: 3}
+      propertyPath: iconImage
+      value: 
+      objectReference: {fileID: 61872126328434219}
+    - target: {fileID: 5727184927712803423, guid: d10d7cef884d3fd9dab0214a35f68ef5, type: 3}
       propertyPath: titleText
       value: 
       objectReference: {fileID: 8572484183737436109}
@@ -252,6 +256,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: d10d7cef884d3fd9dab0214a35f68ef5, type: 3}
+--- !u!114 &61872126328434219 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1681974818711381333, guid: d10d7cef884d3fd9dab0214a35f68ef5, type: 3}
+  m_PrefabInstance: {fileID: 1696805313719323518}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
 --- !u!224 &4487670718778806224 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 3011548933895210158, guid: d10d7cef884d3fd9dab0214a35f68ef5, type: 3}
