@@ -68,7 +68,7 @@ public class GameManager : MonoBehaviour
     }
 
 
-    public EnemyStats GetEnemyStats(string enemyTypeName)
+    public EnemyStats GetEnemyStats(string enemyTypeName, int dungeonLevel)
     {
         string key = enemyTypeName.ToLower();
 
@@ -78,15 +78,15 @@ public class GameManager : MonoBehaviour
             data = FallbackType();
         }
 
-        float scale = 1f + (Player.Level - 1) * enemyScalePerLevel;
+        float scale = 1f + (dungeonLevel - 1) * enemyScalePerLevel;
 
         return new EnemyStats
         {
-            MaxHealth     = data.baseHealth   * scale,
-            CurrentHealth = data.baseHealth   * scale,
-            Speed         = data.baseSpeed    * scale,
-            Damage        = data.baseDamage   * scale,
-            XpReward      = data.baseXpReward * Mathf.Pow(1.1f, Player.Level - 1)
+        MaxHealth     = data.baseHealth   * scale,
+        CurrentHealth = data.baseHealth   * scale,
+        Speed         = data.baseSpeed    * scale,
+        Damage        = data.baseDamage   * scale,
+        XpReward      = data.baseXpReward * Mathf.Pow(1.1f, dungeonLevel - 1)
         };
     }
 
