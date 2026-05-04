@@ -3565,6 +3565,11 @@ MonoBehaviour:
   levelUpGroup: {fileID: 1617505196}
   levelUpText: {fileID: 1194349501}
   levelUpHoldDuration: 1.5
+  playerTransform: {fileID: 322880166}
+  teleportVFXPrefab: {fileID: 7761031033666763820, guid: 1eb833340b41fb444b576c4dced8d4dc, type: 3}
+  teleportVFXDelay: 0.6
+  teleportVFXHeightOffset: 0
+  teleportVFXLifetime: 2
 --- !u!114 &931346605
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7299,6 +7304,10 @@ PrefabInstance:
       propertyPath: playerTransform
       value: 
       objectReference: {fileID: 322880166}
+    - target: {fileID: 804607688440718242, guid: 3c673b3ddecd86ab0aaf750cc8e5f5e0, type: 3}
+      propertyPath: levelExitHeightOffset
+      value: 2
+      objectReference: {fileID: 0}
     - target: {fileID: 823207768997114195, guid: 3c673b3ddecd86ab0aaf750cc8e5f5e0, type: 3}
       propertyPath: m_Name
       value: DungeonManager

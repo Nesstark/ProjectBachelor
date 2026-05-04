@@ -21,6 +21,8 @@ public class RoomManager : MonoBehaviour
 
     [Header("Level Exit")]
     public GameObject levelExitPrefab;
+    [Tooltip("Vertical offset applied when spawning the level exit portal.")]
+    public float levelExitHeightOffset = 0f;
 
     GameObject currentRoomInstance;
     GameObject currentLevelExit;
@@ -87,7 +89,9 @@ public class RoomManager : MonoBehaviour
             return;
         }
         if (currentLevelExit != null) return;   // already exists — do nothing
-        currentLevelExit = Instantiate(levelExitPrefab, position, Quaternion.identity);
+        Vector3 spawnPos = position;
+        spawnPos.y += levelExitHeightOffset;
+        currentLevelExit = Instantiate(levelExitPrefab, spawnPos, Quaternion.identity);
     }
 
     public void TryMove(Direction dir)
