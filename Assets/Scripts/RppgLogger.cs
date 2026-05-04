@@ -17,9 +17,9 @@ public class RppgLogger : MonoBehaviour
     void Start()
     {
         filePath = Path.Combine(Application.persistentDataPath, "rppg_log.csv");
+        logLines.Add("Time,Phase,HeartRate,RMSSD,BreathingRate,Score,Label,SignalQuality");
 
-        // CSV header (updated to match receiver)
-        logLines.Add("Time,HeartRate,RMSSD,BreathingRate,Score,Label,SignalQuality");
+        StartLogging(); // Start immediately to capture baseline
     }
 
     void Update()
@@ -37,9 +37,19 @@ public class RppgLogger : MonoBehaviour
 
     private void LogData()
     {
+        // Determine current phase
+        string phase;
+        if (receiver.isCollectingBaseline)
+            phase = "Baseline";
+        else if (!receiver.baselineReady)
+            phase = "WaitingForBaseline";
+        else
+            phase = "Live";
+
         string line = string.Format(
-            "{0:F2},{1:F1},{2:F2},{3:F2},{4:F2},{5},{6:F2}",
+            "{0:F2},{1},{2:F1},{3:F2},{4:F2},{5:F2},{6},{7:F2}",
             Time.time,
+            phase,
             receiver.heartRate,
             receiver.hrv_rmssd,
             receiver.breathingRate,
@@ -54,7 +64,7 @@ public class RppgLogger : MonoBehaviour
     public void StartLogging()
     {
         logLines.Clear();
-        logLines.Add("Time,HeartRate,RMSSD,BreathingRate,Score,Label,SignalQuality");
+        logLines.Add("Time,Phase,HeartRate,RMSSD,BreathingRate,Score,Label,SignalQuality");
 
         isLogging = true;
         timer = 0f;
@@ -81,5 +91,11 @@ public class RppgLogger : MonoBehaviour
         {
             Debug.LogError("[RppgLogger] File write failed: " + e.Message);
         }
+    }
+
+    void OnApplicationQuit()
+    {
+        if (isLogging)
+            StopLogging(); // Auto-save if the app closes mid-session
     }
 }
