@@ -7288,6 +7288,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: DungeonManager
       objectReference: {fileID: 0}
+    - target: {fileID: 4251322413276067216, guid: 3c673b3ddecd86ab0aaf750cc8e5f5e0, type: 3}
+      propertyPath: maxRooms
+      value: 12
+      objectReference: {fileID: 0}
     - target: {fileID: 5764871965597002432, guid: 3c673b3ddecd86ab0aaf750cc8e5f5e0, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
