@@ -3567,7 +3567,7 @@ MonoBehaviour:
   levelUpHoldDuration: 1.5
   playerTransform: {fileID: 322880166}
   teleportVFXPrefab: {fileID: 7761031033666763820, guid: 1eb833340b41fb444b576c4dced8d4dc, type: 3}
-  teleportVFXDelay: 0.6
+  teleportVFXDelay: 0.4
   teleportVFXHeightOffset: 0
   teleportVFXLifetime: 2
 --- !u!114 &931346605
