@@ -49,6 +49,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Billboard
   mainCam: {fileID: 0}
   tiltMultiplier: 0.85
+  vfxTransform: {fileID: 0}
+  fireTipOffset: {x: 0, y: 0.5, z: 0}
 --- !u!212 &4686065913143481910
 SpriteRenderer:
   serializedVersion: 2
@@ -250,7 +252,13 @@ MonoBehaviour:
   spriteRenderer: {fileID: 4686065913143481910}
   assassinRange: 5
   flankDistance: 4
-  flankTolerance: 1.2
+  dashSpeedMultiplier: 12
+  dashMaxDuration: 2
+  alertPauseDuration: 0.7
+  dashBackstabMultiplier: 2
+  dashLandDistance: 1.8
+  exclamationPingPrefab: {fileID: 8062693777701903974, guid: 151eb94be5a4f438b996e1313a972d39, type: 3}
+  pingOffset: {x: 0, y: 2.2, z: 0}
 --- !u!1001 &5403172109253254480
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -15,7 +15,6 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float dashDuration  = 0.15f;
     [SerializeField] private float dashCooldown  = 0.6f;
 
-
     [Header("Attack")]
     [SerializeField] private float     attackCooldown  = 0.4f;
     [SerializeField] private float     attackAngle     = 90f;
@@ -24,16 +23,19 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private LayerMask enemyLayer;
     [SerializeField] private Transform attackOrigin;
 
+    [Header("Aim Cone Visual")]
+    [SerializeField] private Color   aimConeColor    = new Color(1f, 0.9f, 0.2f, 0.20f);
+    [SerializeField] private Color   aimConeEdgeColor = new Color(1f, 0.9f, 0.2f, 0.60f);
+    [SerializeField] private int     aimConeSegments = 32;   // arc smoothness
+    [SerializeField] private float   aimConeYOffset  = 0.05f; // lifts mesh off ground
 
     [Header("Visual")]
     [SerializeField] private SpriteRenderer spriteRenderer;
     [SerializeField] private Animator       animator;
 
-
     [Header("Hit VFX")]
     [SerializeField] private GameObject hitVFXPrefab;
     [SerializeField] private GameObject slashVFXPrefab;
-
 
     [Header("Death Animation")]
     [SerializeField] private float deathFadeDuration = 0.8f;
@@ -54,12 +56,22 @@ public class PlayerController : MonoBehaviour
     private float     _lastKnownHp = float.MaxValue;
     private HitFlashHandler _hitFlash;
 
+    // ─── Aim State ────────────────────────────────────────────
+    // aimDir is purely mouse-driven; lastMoveDir remains movement-only.
+    private Vector3 aimDir;
+    public Vector3 AimDir => aimDir;
+
+    // ─── Cone Visual ──────────────────────────────────────────
+    private GameObject    _coneGO;
+    private MeshFilter    _coneMeshFilter;
+    private MeshRenderer  _coneMeshRenderer;
+    private LineRenderer  _coneEdgeRenderer;
+    private Mesh          _coneMesh;
 
     // ─── Exposed for HUD ──────────────────────────────────────
     public float DashReadyFraction => dashCooldown > 0f
         ? Mathf.Clamp01(1f - Mathf.Max(0f, dashCooldownTimer) / dashCooldown)
         : 1f;
-
 
     private static readonly int HashSpeed     = Animator.StringToHash("Speed");
     private static readonly int HashDirX      = Animator.StringToHash("DirX");
@@ -71,7 +83,6 @@ public class PlayerController : MonoBehaviour
     private static readonly int HashHit       = Animator.StringToHash("Hit");
     private static readonly int HashDeath     = Animator.StringToHash("Death");
 
-
     private GameManager GM => GameManager.Instance;
 
 
@@ -79,6 +90,8 @@ public class PlayerController : MonoBehaviour
     {
         rb = GetComponent<Rigidbody>();
         lastMoveDir = Vector3.forward;
+        aimDir      = Vector3.forward;
+
         if (attackOrigin == null) attackOrigin = transform;
         if (animator == null) animator = GetComponentInChildren<Animator>();
         rb.constraints   = RigidbodyConstraints.FreezeRotation;
@@ -86,8 +99,9 @@ public class PlayerController : MonoBehaviour
         _hitFlash    = GetComponentInChildren<HitFlashHandler>();
         moveSpeed    = baseMoveSpeed;
         _attackRange = baseAttackRange;
-    }
 
+        BuildConeMeshObject();
+    }
 
     private void Start()
     {
@@ -106,7 +120,6 @@ public class PlayerController : MonoBehaviour
             Debug.LogWarning("[Player] enemyLayer not set — will hit ALL layers as fallback.");
     }
 
-
     private void OnDestroy()
     {
         GM?.OnPlayerDied.RemoveListener(HandlePlayerDied);
@@ -116,13 +129,11 @@ public class PlayerController : MonoBehaviour
 
     // ─── Input Callbacks ──────────────────────────────────────
 
-
     public void OnMove(InputValue value)
     {
         if (InGameSettings.Instance != null && InGameSettings.Instance.IsOpen) return;
         if (!isDead) inputDir = value.Get<Vector2>();
     }
-
 
     public void OnDash(InputValue value)
     {
@@ -131,7 +142,6 @@ public class PlayerController : MonoBehaviour
         if (value.isPressed && !isDashing && dashCooldownTimer <= 0f)
             StartDash();
     }
-
 
     public void OnAttack(InputValue value)
     {
@@ -146,10 +156,13 @@ public class PlayerController : MonoBehaviour
 
     // ─── Update / FixedUpdate ─────────────────────────────────
 
-
     private void Update()
     {
-        if (isDead) return;
+        if (isDead)
+        {
+            SetConeVisible(false);
+            return;
+        }
 
         dashTimer         -= Time.deltaTime;
         dashCooldownTimer -= Time.deltaTime;
@@ -160,12 +173,15 @@ public class PlayerController : MonoBehaviour
         moveDir = new Vector3(inputDir.x, 0f, inputDir.y).normalized;
         if (moveDir.magnitude > 0.1f) lastMoveDir = moveDir;
 
+        // Update aim direction from mouse every frame
+        UpdateAimDir();
+
         UpdateAnimator();
         UpdateSpriteFlip();
+        UpdateConeMesh();
 
         CameraShakeManager.Instance?.SetRunningShake(rb.linearVelocity.magnitude, moveSpeed);
     }
-
 
     private void FixedUpdate()
     {
@@ -185,8 +201,33 @@ public class PlayerController : MonoBehaviour
     }
 
 
-    // ─── Combat ───────────────────────────────────────────────
+    // ─── Mouse Aim ────────────────────────────────────────────
 
+    /// <summary>
+    /// Raycasts the mouse cursor onto a horizontal plane at the player's feet
+    /// and updates <see cref="aimDir"/> to face that point.
+    /// </summary>
+    private void UpdateAimDir()
+    {
+        if (Camera.main == null || Mouse.current == null) return;
+
+        Vector2 mouseScreen = Mouse.current.position.ReadValue();
+        Ray     ray         = Camera.main.ScreenPointToRay(mouseScreen);
+        // Horizontal plane at the player's Y position
+        var plane = new Plane(Vector3.up, new Vector3(0f, transform.position.y, 0f));
+
+        if (plane.Raycast(ray, out float dist))
+        {
+            Vector3 worldPoint = ray.GetPoint(dist);
+            Vector3 toMouse    = worldPoint - transform.position;
+            toMouse.y = 0f;
+            if (toMouse.sqrMagnitude > 0.01f)
+                aimDir = toMouse.normalized;
+        }
+    }
+
+
+    // ─── Combat ───────────────────────────────────────────────
 
     private void PerformAttack()
     {
@@ -199,7 +240,7 @@ public class PlayerController : MonoBehaviour
 
         if (slashVFXPrefab != null)
         {
-            float      yAngle   = Mathf.Atan2(lastMoveDir.x, lastMoveDir.z) * Mathf.Rad2Deg;
+            float      yAngle   = Mathf.Atan2(aimDir.x, aimDir.z) * Mathf.Rad2Deg;
             Quaternion slashRot = Quaternion.Euler(0f, yAngle, 0f);
             GameObject slash    = Instantiate(slashVFXPrefab, attackOrigin.position, slashRot, attackOrigin);
             Destroy(slash, 0.5f);
@@ -218,11 +259,9 @@ public class PlayerController : MonoBehaviour
             Vector3 toEnemy = hit.transform.position - transform.position;
             toEnemy.y = 0f;
 
-            if (lastMoveDir.magnitude > 0.1f)
-            {
-                float dot = Vector3.Dot(lastMoveDir.normalized, toEnemy.normalized);
-                if (dot < Mathf.Cos(attackAngle * 0.5f * Mathf.Deg2Rad)) continue;
-            }
+            // Use aimDir (mouse-driven) instead of lastMoveDir
+            float dot = Vector3.Dot(aimDir, toEnemy.normalized);
+            if (dot < Mathf.Cos(attackAngle * 0.5f * Mathf.Deg2Rad)) continue;
 
             float dist = toEnemy.magnitude;
             if (dist < bestDist) { bestDist = dist; closest = hit; }
@@ -244,7 +283,6 @@ public class PlayerController : MonoBehaviour
 
 
     // ─── Event Handlers ───────────────────────────────────────
-
 
     private void HandlePlayerHit(float currentHp, float maxHp)
     {
@@ -270,7 +308,6 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-
     private void HandlePlayerDied()
     {
         if (isDead) return;
@@ -280,7 +317,6 @@ public class PlayerController : MonoBehaviour
         Debug.Log("[Player] Died — playing death sequence.");
         StartCoroutine(DeathSequence());
     }
-
 
     private IEnumerator DeathSequence()
     {
@@ -314,7 +350,6 @@ public class PlayerController : MonoBehaviour
 
     // ─── Animation Events ─────────────────────────────────────
 
-
     public void OnFootstep()
     {
         if (moveDir.magnitude < 0.1f) return;
@@ -324,7 +359,6 @@ public class PlayerController : MonoBehaviour
 
     // ─── Private Helpers ──────────────────────────────────────
 
-
     private void StartDash()
     {
         isDashing         = true;
@@ -333,7 +367,6 @@ public class PlayerController : MonoBehaviour
         if (animator != null) animator.SetTrigger(HashDash);
         CameraShakeManager.Instance?.ShakeImpulse(CameraShakeManager.Instance.dashShakeForce);
     }
-
 
     private void UpdateAnimator()
     {
@@ -345,17 +378,132 @@ public class PlayerController : MonoBehaviour
         animator.SetBool(HashFlipX,     spriteRenderer != null && spriteRenderer.flipX);
     }
 
-
     private void UpdateSpriteFlip()
     {
         if (spriteRenderer == null) return;
-        if      (lastMoveDir.x >  0.1f) spriteRenderer.flipX = true;
-        else if (lastMoveDir.x < -0.1f) spriteRenderer.flipX = false;
+        // Flip based on aim direction so the sprite faces the mouse
+        if      (aimDir.x >  0.1f) spriteRenderer.flipX = true;
+        else if (aimDir.x < -0.1f) spriteRenderer.flipX = false;
+    }
+
+
+    // ─── Cone Mesh ────────────────────────────────────────────
+
+    /// <summary>
+    /// Creates the child GameObject that holds the procedural cone mesh
+    /// and an edge LineRenderer.  Called once in Awake.
+    /// </summary>
+    private void BuildConeMeshObject()
+    {
+        _coneGO = new GameObject("AimConeVisual");
+        _coneGO.transform.SetParent(transform, false);
+        _coneGO.layer = gameObject.layer;
+
+        // Filled fan mesh ─────────────────────────────────────
+        _coneMeshFilter   = _coneGO.AddComponent<MeshFilter>();
+        _coneMeshRenderer = _coneGO.AddComponent<MeshRenderer>();
+        _coneMesh         = new Mesh { name = "AimConeMesh" };
+        _coneMeshFilter.mesh = _coneMesh;
+
+        // Unlit transparent material created at runtime
+        // If you have a specific material, assign it via the Inspector by making
+        // _coneMeshRenderer serialized, or swap the shader name to match your project.
+        Material mat = new Material(Shader.Find("Sprites/Default"))
+        {
+            color        = aimConeColor,
+            renderQueue  = 3000
+        };
+        mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+        mat.SetInt("_ZWrite",   0);
+        mat.EnableKeyword("_ALPHABLEND_ON");
+        _coneMeshRenderer.material       = mat;
+        _coneMeshRenderer.shadowCastingMode  = UnityEngine.Rendering.ShadowCastingMode.Off;
+        _coneMeshRenderer.receiveShadows = false;
+
+        // Edge LineRenderer ────────────────────────────────────
+        _coneEdgeRenderer = _coneGO.AddComponent<LineRenderer>();
+        _coneEdgeRenderer.useWorldSpace     = false;
+        _coneEdgeRenderer.loop              = false;
+        _coneEdgeRenderer.startWidth        = 0.06f;
+        _coneEdgeRenderer.endWidth          = 0.06f;
+        _coneEdgeRenderer.positionCount     = 0;
+        _coneEdgeRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+
+        Material edgeMat = new Material(Shader.Find("Sprites/Default"))
+        {
+            color = aimConeEdgeColor
+        };
+        _coneEdgeRenderer.material = edgeMat;
+    }
+
+    /// <summary>
+    /// Rebuilds the cone mesh every frame to match the current aimDir and _attackRange.
+    /// The mesh lives in world-space Y = player.y + aimConeYOffset.
+    /// </summary>
+    private void UpdateConeMesh()
+    {
+        // Keep the child object at a fixed world-space offset so it lies flat
+        Vector3 origin = attackOrigin.position;
+        origin.y = transform.position.y + aimConeYOffset;
+        _coneGO.transform.position = origin;
+        _coneGO.transform.rotation = Quaternion.identity; // mesh is built in world-space directions
+
+        int   segments = Mathf.Max(3, aimConeSegments);
+        float range    = _attackRange;
+        float halfDeg  = attackAngle * 0.5f;
+
+        // ── Filled mesh ──────────────────────────────────────
+        // vertices: [0] = origin, [1..segments+1] = arc points
+        int      vCount   = segments + 2;
+        Vector3[] verts   = new Vector3[vCount];
+        int[]     tris    = new int[segments * 3];
+
+        verts[0] = Vector3.zero; // local origin
+
+        for (int i = 0; i <= segments; i++)
+        {
+            float t      = (float)i / segments;               // 0 → 1
+            float angleDeg = -halfDeg + t * attackAngle;      // -half → +half
+            // Rotate aimDir by angleDeg around Y axis
+            Vector3 dir = Quaternion.Euler(0f, angleDeg, 0f) * aimDir;
+            // Store in local space of _coneGO (which has no rotation, position = origin)
+            verts[i + 1] = dir * range;
+        }
+
+        for (int i = 0; i < segments; i++)
+        {
+            int base3 = i * 3;
+            tris[base3]     = 0;
+            tris[base3 + 1] = i + 1;
+            tris[base3 + 2] = i + 2;
+        }
+
+        _coneMesh.Clear();
+        _coneMesh.vertices  = verts;
+        _coneMesh.triangles = tris;
+        _coneMesh.RecalculateNormals();
+
+        // ── Edge line: left ray → arc → right ray → back to origin ──
+        int linePoints = segments + 3; // left edge + arc verts + right edge + origin
+        _coneEdgeRenderer.positionCount = linePoints;
+
+        // left edge ray
+        _coneEdgeRenderer.SetPosition(0, Vector3.zero);
+        // arc
+        for (int i = 0; i <= segments; i++)
+            _coneEdgeRenderer.SetPosition(i + 1, verts[i + 1]);
+        // close back to origin
+        _coneEdgeRenderer.SetPosition(linePoints - 1, Vector3.zero);
+    }
+
+    private void SetConeVisible(bool visible)
+    {
+        if (_coneGO != null) _coneGO.SetActive(visible);
     }
 
 
     // ─── Gizmos ───────────────────────────────────────────────
-
 
     private void OnDrawGizmosSelected()
     {
@@ -365,14 +513,15 @@ public class PlayerController : MonoBehaviour
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(origin, range);
 
-        Vector3 forward = Application.isPlaying ? lastMoveDir : transform.forward;
-        forward.y = 0f;
-        if (forward.magnitude > 0.01f)
+        // In play mode show the mouse-driven aim; in edit mode show forward
+        Vector3 dir = Application.isPlaying ? aimDir : transform.forward;
+        dir.y = 0f;
+        if (dir.magnitude > 0.01f)
         {
-            forward.Normalize();
+            dir.Normalize();
             float   halfAngle = attackAngle * 0.5f;
-            Vector3 leftEdge  = Quaternion.Euler(0f, -halfAngle, 0f) * forward;
-            Vector3 rightEdge = Quaternion.Euler(0f,  halfAngle, 0f) * forward;
+            Vector3 leftEdge  = Quaternion.Euler(0f, -halfAngle, 0f) * dir;
+            Vector3 rightEdge = Quaternion.Euler(0f,  halfAngle, 0f) * dir;
 
             Gizmos.color = Color.cyan;
             Gizmos.DrawLine(origin, origin + leftEdge  * range);
@@ -382,7 +531,6 @@ public class PlayerController : MonoBehaviour
 
 
     // ─── Stat Modifiers ───────────────────────────────────────
-
 
     public void AddMoveSpeed(float bonus)
     {
