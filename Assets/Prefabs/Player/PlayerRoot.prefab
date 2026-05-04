@@ -256,7 +256,7 @@ MonoBehaviour:
   aimConeColor: {r: 1, g: 0.9, b: 0.2, a: 0.2}
   aimConeEdgeColor: {r: 1, g: 0.9, b: 0.2, a: 0.6}
   aimConeSegments: 32
-  aimConeYOffset: -0.5
+  aimConeYOffset: -0.4
   spriteRenderer: {fileID: 5437596053719042642}
   animator: {fileID: 8225933335618507940}
   hitVFXPrefab: {fileID: 3042519775331041172, guid: 841004c4c6a39e244abe2257394de913, type: 3}

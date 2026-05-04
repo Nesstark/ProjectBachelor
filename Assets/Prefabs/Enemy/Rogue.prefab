@@ -242,7 +242,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 63abee52a2f21f243995af92945907ea, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RogueController
-  attackInterval: 1.5
+  attackInterval: 0.4
   meleeRange: 1.5
   hitVFXPrefab: {fileID: 3042519775331041172, guid: 841004c4c6a39e244abe2257394de913, type: 3}
   deathVFXPrefab: {fileID: 0}
@@ -250,12 +250,12 @@ MonoBehaviour:
   slashVFXPrefab: {fileID: 5503505460791601945, guid: d1d1ad8873cb54e8db68971b9d014d48, type: 3}
   animator: {fileID: 9072880873787584311}
   spriteRenderer: {fileID: 4686065913143481910}
-  assassinRange: 5
   flankDistance: 4
-  dashSpeedMultiplier: 12
-  dashMaxDuration: 2
-  alertPauseDuration: 0.7
-  dashBackstabMultiplier: 2
+  flankAggression: 0.85
+  dashTriggerRange: 10
+  dashSpeedMultiplier: 15
+  dashMaxDuration: 3
+  alertPauseDuration: 0.5
   dashLandDistance: 1.8
   exclamationPingPrefab: {fileID: 8062693777701903974, guid: 151eb94be5a4f438b996e1313a972d39, type: 3}
   pingOffset: {x: 0, y: 2.2, z: 0}
