@@ -55,6 +55,8 @@ public class PlayerController : MonoBehaviour
     private bool      isDead;
     private float     _lastKnownHp = float.MaxValue;
     private HitFlashHandler _hitFlash;
+    private bool    _lastInputWasGamepad = false;
+    private Vector2 _lastMousePosition   = Vector2.negativeInfinity;
 
     // ─── Aim State ────────────────────────────────────────────
     // aimDir is purely mouse-driven; lastMoveDir remains movement-only.
@@ -135,6 +137,23 @@ public class PlayerController : MonoBehaviour
         if (!isDead) inputDir = value.Get<Vector2>();
     }
 
+    public void OnLook(InputValue value)
+    {
+        if (isDead) return;
+        if (InGameSettings.Instance != null && InGameSettings.Instance.IsOpen) return;
+
+        if (Gamepad.current != null && Gamepad.current.rightStick.IsActuated())
+        {
+            Vector2 stick = value.Get<Vector2>();
+            if (stick.sqrMagnitude > 0.1f)
+            {
+                aimDir = new Vector3(stick.x, 0f, stick.y).normalized;
+                _lastInputWasGamepad = true;
+            }
+            // Stick released — do nothing, aimDir just holds its last value
+        }
+    }
+
     public void OnDash(InputValue value)
     {
         if (isDead) return;
@@ -201,31 +220,36 @@ public class PlayerController : MonoBehaviour
     }
 
 
-    // ─── Mouse Aim ────────────────────────────────────────────
+    // ─── Player Aim ────────────────────────────────────────────
 
-    /// <summary>
-    /// Raycasts the mouse cursor onto a horizontal plane at the player's feet
-    /// and updates <see cref="aimDir"/> to face that point.
-    /// </summary>
     private void UpdateAimDir()
     {
-        if (Camera.main == null || Mouse.current == null) return;
+        // Gamepad stick takes priority while it's being pushed
+        if (Gamepad.current != null && Gamepad.current.rightStick.IsActuated()) return;
 
+        if (Camera.main == null || Mouse.current == null) return;
         Vector2 mouseScreen = Mouse.current.position.ReadValue();
-        Ray     ray         = Camera.main.ScreenPointToRay(mouseScreen);
-        // Horizontal plane at the player's Y position
+
+        // If the mouse has physically moved, hand control back to it
+        if (_lastInputWasGamepad)
+        {
+            if (mouseScreen == _lastMousePosition) return; // mouse hasn't moved, keep gamepad aim
+            _lastInputWasGamepad = false;                  // mouse moved — switch back
+        }
+
+        _lastMousePosition = mouseScreen;
+
+        Ray ray   = Camera.main.ScreenPointToRay(mouseScreen);
         var plane = new Plane(Vector3.up, new Vector3(0f, transform.position.y, 0f));
 
         if (plane.Raycast(ray, out float dist))
         {
-            Vector3 worldPoint = ray.GetPoint(dist);
-            Vector3 toMouse    = worldPoint - transform.position;
+            Vector3 toMouse = ray.GetPoint(dist) - transform.position;
             toMouse.y = 0f;
             if (toMouse.sqrMagnitude > 0.01f)
                 aimDir = toMouse.normalized;
         }
     }
-
 
     // ─── Combat ───────────────────────────────────────────────
 

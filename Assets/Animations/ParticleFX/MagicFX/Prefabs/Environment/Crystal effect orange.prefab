@@ -223,7 +223,7 @@ ParticleSystem:
       serializedVersion: 2
       minMaxState: 0
       minColor: {r: 1, g: 1, b: 1, a: 1}
-      maxColor: {r: 0.070914894, g: 0.08172301, b: 0.11320752, a: 0.42745098}
+      maxColor: {r: 1, g: 0.5568628, b: 0.22352941, a: 0.42745098}
       maxGradient:
         serializedVersion: 2
         key0: {r: 1, g: 1, b: 1, a: 1}
@@ -4864,7 +4864,7 @@ GameObject:
   - component: {fileID: 6099667544800037612}
   - component: {fileID: 1056217447770598123}
   m_Layer: 0
-  m_Name: Crystal effect blue
+  m_Name: Crystal effect orange
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5078,7 +5078,7 @@ ParticleSystem:
       serializedVersion: 2
       minMaxState: 0
       minColor: {r: 1, g: 1, b: 1, a: 1}
-      maxColor: {r: 0.3820755, g: 0.61581624, b: 1, a: 1}
+      maxColor: {r: 1, g: 0.5582136, b: 0.2216981, a: 1}
       maxGradient:
         serializedVersion: 2
         key0: {r: 1, g: 1, b: 1, a: 1}
@@ -9972,7 +9972,7 @@ ParticleSystem:
       serializedVersion: 2
       minMaxState: 0
       minColor: {r: 1, g: 1, b: 1, a: 1}
-      maxColor: {r: 0, g: 0.2189455, b: 1, a: 1}
+      maxColor: {r: 1, g: 0.5568628, b: 0.22352941, a: 1}
       maxGradient:
         serializedVersion: 2
         key0: {r: 1, g: 1, b: 1, a: 1}
@@ -14878,7 +14878,7 @@ ParticleSystem:
       serializedVersion: 2
       minMaxState: 0
       minColor: {r: 1, g: 1, b: 1, a: 1}
-      maxColor: {r: 0.034585256, g: 0.09324881, b: 0.2735849, a: 0.4117647}
+      maxColor: {r: 1, g: 0.5568628, b: 0.22352941, a: 0.4117647}
       maxGradient:
         serializedVersion: 2
         key0: {r: 1, g: 1, b: 1, a: 1}
