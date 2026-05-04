@@ -55,8 +55,7 @@ public class PlayerController : MonoBehaviour
     private bool      isDead;
     private float     _lastKnownHp = float.MaxValue;
     private HitFlashHandler _hitFlash;
-    private bool    _lastInputWasGamepad = false;
-    private Vector2 _lastMousePosition   = Vector2.negativeInfinity;
+    private bool _lastInputWasGamepad = false;
 
     // ─── Aim State ────────────────────────────────────────────
     // aimDir is purely mouse-driven; lastMoveDir remains movement-only.
@@ -189,7 +188,10 @@ public class PlayerController : MonoBehaviour
 
         if (isDashing && dashTimer <= 0f) isDashing = false;
 
-        moveDir = new Vector3(inputDir.x, 0f, inputDir.y).normalized;
+        // Clamp to length 1 rather than normalizing so analogue sticks
+        // produce variable speed, while WASD still reaches full speed.
+        Vector3 rawDir = new Vector3(inputDir.x, 0f, inputDir.y);
+        moveDir = Vector3.ClampMagnitude(rawDir, 1f);
         if (moveDir.magnitude > 0.1f) lastMoveDir = moveDir;
 
         // Update aim direction from mouse every frame
@@ -224,30 +226,25 @@ public class PlayerController : MonoBehaviour
 
     private void UpdateAimDir()
     {
-        // Gamepad stick takes priority while it's being pushed
         if (Gamepad.current != null && Gamepad.current.rightStick.IsActuated()) return;
+
+        // Don't let mouse override aim if the player is using a gamepad
+        if (_lastInputWasGamepad) return;
 
         if (Camera.main == null || Mouse.current == null) return;
         Vector2 mouseScreen = Mouse.current.position.ReadValue();
-
-        // If the mouse has physically moved, hand control back to it
-        if (_lastInputWasGamepad)
-        {
-            if (mouseScreen == _lastMousePosition) return; // mouse hasn't moved, keep gamepad aim
-            _lastInputWasGamepad = false;                  // mouse moved — switch back
-        }
-
-        _lastMousePosition = mouseScreen;
-
-        Ray ray   = Camera.main.ScreenPointToRay(mouseScreen);
-        var plane = new Plane(Vector3.up, new Vector3(0f, transform.position.y, 0f));
+        Ray     ray         = Camera.main.ScreenPointToRay(mouseScreen);
+        var     plane       = new Plane(Vector3.up, new Vector3(0f, transform.position.y, 0f));
 
         if (plane.Raycast(ray, out float dist))
         {
             Vector3 toMouse = ray.GetPoint(dist) - transform.position;
             toMouse.y = 0f;
             if (toMouse.sqrMagnitude > 0.01f)
+            {
                 aimDir = toMouse.normalized;
+                _lastInputWasGamepad = false;
+            }
         }
     }
 
