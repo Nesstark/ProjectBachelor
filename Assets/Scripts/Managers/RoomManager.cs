@@ -63,6 +63,11 @@ public class RoomManager : MonoBehaviour
             cellPrefabMap.Clear();
             visitedCells.Clear();
             clearedCells.Clear();
+
+            // ── NEW: destroy all enemies from the previous floor before
+            //        generating the next one, so none bleed into the start room.
+            RoomController.CleanupForNextLevel();
+
             generator.Generate(CurrentLevel);
             if (currentRoomInstance != null) Destroy(currentRoomInstance);
             currentCell = 35;
@@ -72,6 +77,8 @@ public class RoomManager : MonoBehaviour
         isTransitioning = false;
     }
 
+    // ── NEW: guard prevents spawning a duplicate exit if UnlockDoors()
+    //        is called more than once on a cleared boss room (re-entry path).
     public void SpawnLevelExit(Vector3 position)
     {
         if (levelExitPrefab == null)
@@ -79,6 +86,7 @@ public class RoomManager : MonoBehaviour
             Debug.LogError("LevelExit prefab er ikke sat på RoomManager!");
             return;
         }
+        if (currentLevelExit != null) return;   // already exists — do nothing
         currentLevelExit = Instantiate(levelExitPrefab, position, Quaternion.identity);
     }
 
@@ -107,6 +115,10 @@ public class RoomManager : MonoBehaviour
 
         yield return StartCoroutine(TransitionManager.Instance.Transition(() =>
         {
+            // ── NEW: hide the level exit before the room swap so it cannot
+            //        appear floating in the middle of the next room.
+            if (currentLevelExit != null) currentLevelExit.SetActive(false);
+
             if (currentRoomInstance != null) Destroy(currentRoomInstance);
             currentCell = targetCell;
             LoadRoom(targetCell, fromDirection);
@@ -171,6 +183,11 @@ public class RoomManager : MonoBehaviour
         }
 
         CurrentRoom.StartEncounter();
+
+        // ── NEW: if the player re-enters a cleared boss room, re-show
+        //        the level exit that was hidden on the way out.
+        if (CurrentRoom.isBossRoom && IsRoomCleared(cell) && currentLevelExit != null)
+            currentLevelExit.SetActive(true);
     }
 
     public void MarkRoomCleared(int cell) => clearedCells.Add(cell);

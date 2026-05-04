@@ -12,6 +12,9 @@ public class HealthPickup : PickupBase
     [Header("Health Pickup")]
     [SerializeField] private float healAmount = 40f;
 
+    public override string Description =>
+    $"Restore {healAmount} HP.";
+
     protected override void OnPickedUp(GameObject player)
     {
         GameManager.Instance?.HealPlayer(healAmount);

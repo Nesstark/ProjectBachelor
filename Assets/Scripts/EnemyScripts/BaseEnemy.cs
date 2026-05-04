@@ -42,7 +42,8 @@ public abstract class BaseEnemy : MonoBehaviour
 
     protected virtual void Start()
     {
-        Stats = GM != null ? GM.GetEnemyStats(EnemyTypeName) : FallbackStats();
+        int dungeonLevel = RoomManager.Instance != null ? RoomManager.Instance.CurrentLevel : 1;
+        Stats = GM != null ? GM.GetEnemyStats(EnemyTypeName, dungeonLevel) : FallbackStats();
 
         Agent.speed            = Stats.Speed;
         Agent.stoppingDistance = meleeRange;
