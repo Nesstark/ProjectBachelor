@@ -2,18 +2,19 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-
 [RequireComponent(typeof(Rigidbody))]
 public class PlayerController : MonoBehaviour
 {
+    // ─── Inspector Fields ─────────────────────────────────────
+
     [Header("Movement")]
-    [SerializeField] private float baseMoveSpeed = 10f;
-    [SerializeField] private float maxMoveSpeed  = 20f;
-    [SerializeField] private float acceleration  = 80f;
-    [SerializeField] private float deceleration  = 120f;
-    [SerializeField] private float dashSpeed     = 18f;
-    [SerializeField] private float dashDuration  = 0.15f;
-    [SerializeField] private float dashCooldown  = 0.6f;
+    [SerializeField] private float baseMoveSpeed  = 10f;
+    [SerializeField] private float maxMoveSpeed   = 20f;
+    [SerializeField] private float acceleration   = 80f;
+    [SerializeField] private float deceleration   = 120f;
+    [SerializeField] private float dashSpeed      = 18f;
+    [SerializeField] private float dashDuration   = 0.15f;
+    [SerializeField] private float dashCooldown   = 0.6f;
 
     [Header("Attack")]
     [SerializeField] private float     attackCooldown  = 0.4f;
@@ -24,10 +25,26 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private Transform attackOrigin;
 
     [Header("Aim Cone Visual")]
-    [SerializeField] private Color   aimConeColor    = new Color(1f, 0.9f, 0.2f, 0.20f);
-    [SerializeField] private Color   aimConeEdgeColor = new Color(1f, 0.9f, 0.2f, 0.60f);
-    [SerializeField] private int     aimConeSegments = 32;   // arc smoothness
-    [SerializeField] private float   aimConeYOffset  = 0.05f; // lifts mesh off ground
+    [SerializeField] private int   aimConeSegments = 32;   // arc smoothness
+    [SerializeField] private float aimConeYOffset   = 0.05f; // lifts mesh off ground
+
+    [Header("Aim Cone – Idle (Mauve)")]
+    [SerializeField] private Color coneIdleFill = new Color(0.608f, 0.420f, 0.478f, 0.15f);
+    [SerializeField] private Color coneIdleEdge = new Color(0.608f, 0.420f, 0.478f, 0.65f);
+
+    [Header("Aim Cone – Active / Aiming (Sickly Gold)")]
+    [SerializeField] private Color coneActiveFill = new Color(0.784f, 0.588f, 0.165f, 0.18f);
+    [SerializeField] private Color coneActiveEdge = new Color(0.784f, 0.588f, 0.165f, 0.70f);
+
+    [Header("Aim Cone – Attack Flash (Blood Red)")]
+    [SerializeField] private Color coneAttackFill = new Color(0.784f, 0.196f, 0.169f, 0.25f);
+    [SerializeField] private Color coneAttackEdge = new Color(0.784f, 0.196f, 0.169f, 0.90f);
+    [SerializeField] private float attackFlashDuration = 0.18f; // how long the red flash lasts
+    [SerializeField] private float coneColorLerpSpeed  = 8f;    // transition smoothing speed
+
+    // How long the aim must be stationary before cone returns to Idle.
+    // Keeps the cone Active for a short moment after the player stops moving/aiming.
+    [SerializeField] private float aimActiveLingerTime = 0.35f;
 
     [Header("Visual")]
     [SerializeField] private SpriteRenderer spriteRenderer;
@@ -40,8 +57,8 @@ public class PlayerController : MonoBehaviour
     [Header("Death Animation")]
     [SerializeField] private float deathFadeDuration = 0.8f;
 
-
     // ─── Private State ────────────────────────────────────────
+
     private Rigidbody rb;
     private Vector2   inputDir;
     private Vector3   moveDir;
@@ -55,26 +72,38 @@ public class PlayerController : MonoBehaviour
     private bool      isDead;
     private float     _lastKnownHp = float.MaxValue;
     private HitFlashHandler _hitFlash;
-    private bool    _lastInputWasGamepad = false;
-    private Vector2 _lastMousePosition   = Vector2.negativeInfinity;
+    private bool      _lastInputWasGamepad = false;
+    private Vector2   _lastMousePosition   = Vector2.negativeInfinity;
 
     // ─── Aim State ────────────────────────────────────────────
-    // aimDir is purely mouse-driven; lastMoveDir remains movement-only.
+    // aimDir is purely aim-driven; lastMoveDir remains movement-only.
     private Vector3 aimDir;
-    public Vector3 AimDir => aimDir;
+    public  Vector3 AimDir => aimDir;
 
     // ─── Cone Visual ──────────────────────────────────────────
-    private GameObject    _coneGO;
-    private MeshFilter    _coneMeshFilter;
-    private MeshRenderer  _coneMeshRenderer;
-    private LineRenderer  _coneEdgeRenderer;
-    private Mesh          _coneMesh;
+    private GameObject   _coneGO;
+    private MeshFilter   _coneMeshFilter;
+    private MeshRenderer _coneMeshRenderer;
+    private LineRenderer _coneEdgeRenderer;
+    private Mesh         _coneMesh;
+
+    // ─── Cone Colour State ────────────────────────────────────
+    // Three states: Idle, Active, Attack
+    // "Active" triggers when the player moves OR when the aim direction changes (both M+KB and gamepad).
+    private enum ConeState { Idle, Active, Attack }
+    private ConeState _coneState          = ConeState.Idle;
+    private Color     _currentConeFill;
+    private Color     _currentConeEdge;
+    private float     _attackFlashTimer   = 0f;  // counts down after an attack
+    private float     _aimLingerTimer     = 0f;  // counts down after aim/movement stops
+    private Vector3   _lastAimDir;               // used to detect aim movement on gamepad
 
     // ─── Exposed for HUD ──────────────────────────────────────
     public float DashReadyFraction => dashCooldown > 0f
         ? Mathf.Clamp01(1f - Mathf.Max(0f, dashCooldownTimer) / dashCooldown)
         : 1f;
 
+    // ─── Animator Hashes ─────────────────────────────────────
     private static readonly int HashSpeed     = Animator.StringToHash("Speed");
     private static readonly int HashDirX      = Animator.StringToHash("DirX");
     private static readonly int HashDirZ      = Animator.StringToHash("DirZ");
@@ -87,22 +116,29 @@ public class PlayerController : MonoBehaviour
 
     private GameManager GM => GameManager.Instance;
 
+    // ─── Unity Lifecycle ──────────────────────────────────────
 
     private void Awake()
     {
-        rb = GetComponent<Rigidbody>();
-        lastMoveDir = Vector3.forward;
-        aimDir      = Vector3.forward;
+        rb           = GetComponent<Rigidbody>();
+        lastMoveDir  = Vector3.forward;
+        aimDir       = Vector3.forward;
+        _lastAimDir  = Vector3.forward;
 
         if (attackOrigin == null) attackOrigin = transform;
-        if (animator == null) animator = GetComponentInChildren<Animator>();
-        rb.constraints   = RigidbodyConstraints.FreezeRotation;
+        if (animator == null)    animator = GetComponentInChildren<Animator>();
+
+        rb.constraints  = RigidbodyConstraints.FreezeRotation;
         rb.linearDamping = 0f;
-        _hitFlash    = GetComponentInChildren<HitFlashHandler>();
-        moveSpeed    = baseMoveSpeed;
-        _attackRange = baseAttackRange;
+        _hitFlash       = GetComponentInChildren<HitFlashHandler>();
+        moveSpeed       = baseMoveSpeed;
+        _attackRange    = baseAttackRange;
 
         BuildConeMeshObject();
+
+        // Initialise colour to Idle
+        _currentConeFill = coneIdleFill;
+        _currentConeEdge = coneIdleEdge;
     }
 
     private void Start()
@@ -128,7 +164,6 @@ public class PlayerController : MonoBehaviour
         GM?.OnPlayerHealthChanged.RemoveListener(HandlePlayerHit);
     }
 
-
     // ─── Input Callbacks ──────────────────────────────────────
 
     public void OnMove(InputValue value)
@@ -150,7 +185,7 @@ public class PlayerController : MonoBehaviour
                 aimDir = new Vector3(stick.x, 0f, stick.y).normalized;
                 _lastInputWasGamepad = true;
             }
-            // Stick released — do nothing, aimDir just holds its last value
+            // Stick released — aimDir holds its last value; linger timer handles colour fade
         }
     }
 
@@ -168,10 +203,11 @@ public class PlayerController : MonoBehaviour
         if (InGameSettings.Instance != null && InGameSettings.Instance.IsOpen) return;
         if (value.Get<float>() < 0.5f) return;
         if (attackTimer > 0f) return;
-        attackTimer = attackCooldown;
+
+        attackTimer       = attackCooldown;
+        _attackFlashTimer = attackFlashDuration; // trigger Attack colour flash
         PerformAttack();
     }
-
 
     // ─── Update / FixedUpdate ─────────────────────────────────
 
@@ -186,6 +222,7 @@ public class PlayerController : MonoBehaviour
         dashTimer         -= Time.deltaTime;
         dashCooldownTimer -= Time.deltaTime;
         attackTimer       -= Time.deltaTime;
+        _attackFlashTimer -= Time.deltaTime;
 
         if (isDashing && dashTimer <= 0f) isDashing = false;
 
@@ -195,12 +232,11 @@ public class PlayerController : MonoBehaviour
         moveDir = Vector3.ClampMagnitude(rawDir, 1f);
         if (moveDir.magnitude > 0.1f) lastMoveDir = moveDir;
 
-        // Update aim direction from mouse every frame
         UpdateAimDir();
-
         UpdateAnimator();
         UpdateSpriteFlip();
         UpdateConeMesh();
+        UpdateConeColor();  // ← colour state machine
 
         CameraShakeManager.Instance?.SetRunningShake(rb.linearVelocity.magnitude, moveSpeed);
     }
@@ -219,11 +255,10 @@ public class PlayerController : MonoBehaviour
         Vector3 currentHorizontal = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
         float   accel             = moveDir.magnitude > 0.1f ? acceleration : deceleration;
         Vector3 newHorizontal     = Vector3.MoveTowards(currentHorizontal, targetVelocity, accel * Time.fixedDeltaTime);
-        rb.linearVelocity = new Vector3(newHorizontal.x, rb.linearVelocity.y, newHorizontal.z);
+        rb.linearVelocity         = new Vector3(newHorizontal.x, rb.linearVelocity.y, newHorizontal.z);
     }
 
-
-    // ─── Player Aim ────────────────────────────────────────────
+    // ─── Player Aim ───────────────────────────────────────────
 
     private void UpdateAimDir()
     {
@@ -286,7 +321,7 @@ public class PlayerController : MonoBehaviour
             Vector3 toEnemy = hit.transform.position - transform.position;
             toEnemy.y = 0f;
 
-            // Use aimDir (mouse-driven) instead of lastMoveDir
+            // Use aimDir (mouse/stick-driven) instead of lastMoveDir
             float dot = Vector3.Dot(aimDir, toEnemy.normalized);
             if (dot < Mathf.Cos(attackAngle * 0.5f * Mathf.Deg2Rad)) continue;
 
@@ -307,7 +342,6 @@ public class PlayerController : MonoBehaviour
 
         Debug.LogWarning($"[Player] '{closest.name}' has no BaseEnemy component!");
     }
-
 
     // ─── Event Handlers ───────────────────────────────────────
 
@@ -338,8 +372,8 @@ public class PlayerController : MonoBehaviour
     private void HandlePlayerDied()
     {
         if (isDead) return;
-        isDead   = true;
-        inputDir = Vector2.zero;
+        isDead = true;
+        inputDir          = Vector2.zero;
         rb.linearVelocity = Vector3.zero;
         Debug.Log("[Player] Died — playing death sequence.");
         StartCoroutine(DeathSequence());
@@ -374,7 +408,6 @@ public class PlayerController : MonoBehaviour
         Destroy(gameObject);
     }
 
-
     // ─── Animation Events ─────────────────────────────────────
 
     public void OnFootstep()
@@ -383,13 +416,12 @@ public class PlayerController : MonoBehaviour
         AudioManager.Instance?.Play("Footstep");
     }
 
-
     // ─── Private Helpers ──────────────────────────────────────
 
     private void StartDash()
     {
-        isDashing         = true;
-        dashTimer         = dashDuration;
+        isDashing      = true;
+        dashTimer      = dashDuration;
         dashCooldownTimer = dashCooldown;
         if (animator != null) animator.SetTrigger(HashDash);
         CameraShakeManager.Instance?.ShakeImpulse(CameraShakeManager.Instance.dashShakeForce);
@@ -398,27 +430,89 @@ public class PlayerController : MonoBehaviour
     private void UpdateAnimator()
     {
         if (animator == null) return;
-        animator.SetFloat(HashSpeed,    moveDir.magnitude);
-        animator.SetFloat(HashDirX,     lastMoveDir.x);
-        animator.SetFloat(HashDirZ,     lastMoveDir.z);
-        animator.SetBool(HashIsWalking, moveDir.magnitude > 0.1f);
-        animator.SetBool(HashFlipX,     spriteRenderer != null && spriteRenderer.flipX);
+        animator.SetFloat(HashSpeed,     moveDir.magnitude);
+        animator.SetFloat(HashDirX,      lastMoveDir.x);
+        animator.SetFloat(HashDirZ,      lastMoveDir.z);
+        animator.SetBool(HashIsWalking,  moveDir.magnitude > 0.1f);
+        animator.SetBool(HashFlipX,      spriteRenderer != null && spriteRenderer.flipX);
     }
 
     private void UpdateSpriteFlip()
     {
         if (spriteRenderer == null) return;
-        // Flip based on aim direction so the sprite faces the mouse
+        // Flip based on aim direction so the sprite faces the mouse/stick
         if      (aimDir.x >  0.1f) spriteRenderer.flipX = true;
         else if (aimDir.x < -0.1f) spriteRenderer.flipX = false;
     }
 
+    // ─── Cone Colour State Machine ────────────────────────────
+
+    /// <summary>
+    /// Determines the cone colour state each frame and smoothly lerps the
+    /// material colours toward the target. Works identically for M+KB and gamepad:
+    ///
+    ///   Attack  — Player just pressed attack (lasts attackFlashDuration seconds).
+    ///   Active  — Player is moving OR aim direction changed this frame.
+    ///             Also lingers for aimActiveLingerTime after movement/aim stops.
+    ///   Idle    — Player is completely still and not recently aiming.
+    /// </summary>
+    private void UpdateConeColor()
+    {
+        // ── Detect aim movement (works for both M+KB and gamepad) ──
+        // For M+KB: aimDir is updated every frame by UpdateAimDir() from the mouse.
+        // For gamepad: aimDir is updated in OnLook() when the stick is actuated.
+        // Either way, comparing aimDir to last frame's value catches all motion.
+        bool aimMoved   = Vector3.Angle(aimDir, _lastAimDir) > 0.5f;
+        bool isMoving   = moveDir.magnitude > 0.1f;
+        bool isActive   = isMoving || aimMoved;
+
+        _lastAimDir = aimDir;
+
+        // Reset linger timer whenever the player is actively doing something
+        if (isActive)
+            _aimLingerTimer = aimActiveLingerTime;
+        else
+            _aimLingerTimer -= Time.deltaTime;
+
+        // ── Resolve state priority: Attack > Active > Idle ──
+        if (_attackFlashTimer > 0f)
+            _coneState = ConeState.Attack;
+        else if (_aimLingerTimer > 0f)
+            _coneState = ConeState.Active;
+        else
+            _coneState = ConeState.Idle;
+
+        // ── Pick target colours ──
+        Color targetFill, targetEdge;
+        switch (_coneState)
+        {
+            case ConeState.Attack:
+                targetFill = coneAttackFill;
+                targetEdge = coneAttackEdge;
+                break;
+            case ConeState.Active:
+                targetFill = coneActiveFill;
+                targetEdge = coneActiveEdge;
+                break;
+            default: // Idle
+                targetFill = coneIdleFill;
+                targetEdge = coneIdleEdge;
+                break;
+        }
+
+        // ── Smooth lerp toward target ──
+        _currentConeFill = Color.Lerp(_currentConeFill, targetFill, Time.deltaTime * coneColorLerpSpeed);
+        _currentConeEdge = Color.Lerp(_currentConeEdge, targetEdge, Time.deltaTime * coneColorLerpSpeed);
+
+        _coneMeshRenderer.material.color = _currentConeFill;
+        _coneEdgeRenderer.material.color = _currentConeEdge;
+    }
 
     // ─── Cone Mesh ────────────────────────────────────────────
 
     /// <summary>
     /// Creates the child GameObject that holds the procedural cone mesh
-    /// and an edge LineRenderer.  Called once in Awake.
+    /// and an edge LineRenderer. Called once in Awake.
     /// </summary>
     private void BuildConeMeshObject()
     {
@@ -426,40 +520,38 @@ public class PlayerController : MonoBehaviour
         _coneGO.transform.SetParent(transform, false);
         _coneGO.layer = gameObject.layer;
 
-        // Filled fan mesh ─────────────────────────────────────
+        // ── Filled fan mesh ───────────────────────────────────
         _coneMeshFilter   = _coneGO.AddComponent<MeshFilter>();
         _coneMeshRenderer = _coneGO.AddComponent<MeshRenderer>();
         _coneMesh         = new Mesh { name = "AimConeMesh" };
         _coneMeshFilter.mesh = _coneMesh;
 
-        // Unlit transparent material created at runtime
-        // If you have a specific material, assign it via the Inspector by making
-        // _coneMeshRenderer serialized, or swap the shader name to match your project.
+        // Unlit transparent material — starts at Idle colour
         Material mat = new Material(Shader.Find("Sprites/Default"))
         {
-            color        = aimConeColor,
+            color        = coneIdleFill,
             renderQueue  = 3000
         };
         mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
         mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-        mat.SetInt("_ZWrite",   0);
+        mat.SetInt("_ZWrite", 0);
         mat.EnableKeyword("_ALPHABLEND_ON");
-        _coneMeshRenderer.material       = mat;
-        _coneMeshRenderer.shadowCastingMode  = UnityEngine.Rendering.ShadowCastingMode.Off;
-        _coneMeshRenderer.receiveShadows = false;
+        _coneMeshRenderer.material            = mat;
+        _coneMeshRenderer.shadowCastingMode   = UnityEngine.Rendering.ShadowCastingMode.Off;
+        _coneMeshRenderer.receiveShadows      = false;
 
-        // Edge LineRenderer ────────────────────────────────────
-        _coneEdgeRenderer = _coneGO.AddComponent<LineRenderer>();
-        _coneEdgeRenderer.useWorldSpace     = false;
-        _coneEdgeRenderer.loop              = false;
-        _coneEdgeRenderer.startWidth        = 0.06f;
-        _coneEdgeRenderer.endWidth          = 0.06f;
-        _coneEdgeRenderer.positionCount     = 0;
-        _coneEdgeRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        // ── Edge LineRenderer ─────────────────────────────────
+        _coneEdgeRenderer                     = _coneGO.AddComponent<LineRenderer>();
+        _coneEdgeRenderer.useWorldSpace       = false;
+        _coneEdgeRenderer.loop                = false;
+        _coneEdgeRenderer.startWidth          = 0.06f;
+        _coneEdgeRenderer.endWidth            = 0.06f;
+        _coneEdgeRenderer.positionCount       = 0;
+        _coneEdgeRenderer.shadowCastingMode   = UnityEngine.Rendering.ShadowCastingMode.Off;
 
         Material edgeMat = new Material(Shader.Find("Sprites/Default"))
         {
-            color = aimConeEdgeColor
+            color = coneIdleEdge   // starts at Idle colour
         };
         _coneEdgeRenderer.material = edgeMat;
     }
@@ -474,7 +566,7 @@ public class PlayerController : MonoBehaviour
         Vector3 origin = attackOrigin.position;
         origin.y = transform.position.y + aimConeYOffset;
         _coneGO.transform.position = origin;
-        _coneGO.transform.rotation = Quaternion.identity; // mesh is built in world-space directions
+        _coneGO.transform.rotation = Quaternion.identity; // mesh built in world-space directions
 
         int   segments = Mathf.Max(3, aimConeSegments);
         float range    = _attackRange;
@@ -482,28 +574,26 @@ public class PlayerController : MonoBehaviour
 
         // ── Filled mesh ──────────────────────────────────────
         // vertices: [0] = origin, [1..segments+1] = arc points
-        int      vCount   = segments + 2;
-        Vector3[] verts   = new Vector3[vCount];
-        int[]     tris    = new int[segments * 3];
+        int       vCount = segments + 2;
+        Vector3[] verts  = new Vector3[vCount];
+        int[]     tris   = new int[segments * 3];
 
         verts[0] = Vector3.zero; // local origin
 
         for (int i = 0; i <= segments; i++)
         {
-            float t      = (float)i / segments;               // 0 → 1
-            float angleDeg = -halfDeg + t * attackAngle;      // -half → +half
-            // Rotate aimDir by angleDeg around Y axis
-            Vector3 dir = Quaternion.Euler(0f, angleDeg, 0f) * aimDir;
-            // Store in local space of _coneGO (which has no rotation, position = origin)
-            verts[i + 1] = dir * range;
+            float   t        = (float)i / segments;              // 0 → 1
+            float   angleDeg = -halfDeg + t * attackAngle;       // -half → +half
+            Vector3 dir      = Quaternion.Euler(0f, angleDeg, 0f) * aimDir;
+            verts[i + 1]     = dir * range;
         }
 
         for (int i = 0; i < segments; i++)
         {
-            int base3 = i * 3;
-            tris[base3]     = 0;
-            tris[base3 + 1] = i + 1;
-            tris[base3 + 2] = i + 2;
+            int base3        = i * 3;
+            tris[base3]      = 0;
+            tris[base3 + 1]  = i + 1;
+            tris[base3 + 2]  = i + 2;
         }
 
         _coneMesh.Clear();
@@ -511,16 +601,12 @@ public class PlayerController : MonoBehaviour
         _coneMesh.triangles = tris;
         _coneMesh.RecalculateNormals();
 
-        // ── Edge line: left ray → arc → right ray → back to origin ──
-        int linePoints = segments + 3; // left edge + arc verts + right edge + origin
+        // ── Edge line: origin → left ray → arc → right ray → origin ──
+        int linePoints = segments + 3;
         _coneEdgeRenderer.positionCount = linePoints;
-
-        // left edge ray
         _coneEdgeRenderer.SetPosition(0, Vector3.zero);
-        // arc
         for (int i = 0; i <= segments; i++)
             _coneEdgeRenderer.SetPosition(i + 1, verts[i + 1]);
-        // close back to origin
         _coneEdgeRenderer.SetPosition(linePoints - 1, Vector3.zero);
     }
 
@@ -528,7 +614,6 @@ public class PlayerController : MonoBehaviour
     {
         if (_coneGO != null) _coneGO.SetActive(visible);
     }
-
 
     // ─── Gizmos ───────────────────────────────────────────────
 
@@ -540,22 +625,20 @@ public class PlayerController : MonoBehaviour
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(origin, range);
 
-        // In play mode show the mouse-driven aim; in edit mode show forward
         Vector3 dir = Application.isPlaying ? aimDir : transform.forward;
         dir.y = 0f;
         if (dir.magnitude > 0.01f)
         {
             dir.Normalize();
-            float   halfAngle = attackAngle * 0.5f;
-            Vector3 leftEdge  = Quaternion.Euler(0f, -halfAngle, 0f) * dir;
-            Vector3 rightEdge = Quaternion.Euler(0f,  halfAngle, 0f) * dir;
+            float   halfAngle  = attackAngle * 0.5f;
+            Vector3 leftEdge   = Quaternion.Euler(0f, -halfAngle, 0f) * dir;
+            Vector3 rightEdge  = Quaternion.Euler(0f,  halfAngle, 0f) * dir;
 
             Gizmos.color = Color.cyan;
             Gizmos.DrawLine(origin, origin + leftEdge  * range);
             Gizmos.DrawLine(origin, origin + rightEdge * range);
         }
     }
-
 
     // ─── Stat Modifiers ───────────────────────────────────────
 
