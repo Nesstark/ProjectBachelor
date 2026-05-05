@@ -39,7 +39,7 @@ public class RppgReceiver : MonoBehaviour
     [Header("Smoothing")]
     public int smoothingWindow = 5;
 
-    private const float SubsampleInterval = 15f;
+    private const float SubsampleInterval = 10f;
     private float baselineTimer   = 0f;
     private float subsampleTimer  = 0f;
 
