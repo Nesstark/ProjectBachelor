@@ -23,8 +23,8 @@ public class HintBar : MonoBehaviour
     public class HintSlot
     {
         public GameObject root;
-        public Image      icon;
-        public TMP_Text   label;
+        public Image icon;
+        public TMP_Text label;
     }
 
     // ── Hint Definition ───────────────────────────────────────────────────
@@ -49,7 +49,7 @@ public class HintBar : MonoBehaviour
     [SerializeField] private List<HintDefinition> sliderHints;
 
     // ── State ─────────────────────────────────────────────────────────────
-    private Context _currentContext  = Context.Menu;
+    private Context _currentContext = Context.Menu;
     private Context _previousContext = Context.Menu; // so slider can restore correctly
     private InputDeviceTracker.Device _currentDevice;
     private GameObject _lastSelected;
@@ -92,7 +92,6 @@ public class HintBar : MonoBehaviour
         {
             Debug.LogWarning("[HintBar] InputDeviceTracker not found in scene.");
         }
-
         Refresh();
     }
 
@@ -106,12 +105,12 @@ public class HintBar : MonoBehaviour
 
         // Check the selected object directly — Slider is the Selectable, not a child.
         bool sliderFocused = selected != null
-                        && selected.GetComponent<UnityEngine.UI.Slider>() != null;
+                             && selected.GetComponent<UnityEngine.UI.Slider>() != null;
 
         if (sliderFocused && _currentContext != Context.SliderFocused)
         {
             _previousContext = _currentContext;
-            _currentContext  = Context.SliderFocused;
+            _currentContext = Context.SliderFocused;
             Refresh();
         }
         else if (!sliderFocused && _currentContext == Context.SliderFocused)
@@ -132,9 +131,16 @@ public class HintBar : MonoBehaviour
     public void SetContext(Context context)
     {
         if (context == Context.SliderFocused) return;
-        _currentContext  = context;
+        _currentContext = context;
         _previousContext = context;
-        _lastSelected    = null;
+        _lastSelected = null;
+        
+        // FIX: Force device refresh when context changes
+        if (InputDeviceTracker.Instance != null)
+        {
+            _currentDevice = InputDeviceTracker.Instance.CurrentDevice;
+        }
+        
         Refresh();
     }
 
@@ -152,10 +158,10 @@ public class HintBar : MonoBehaviour
     {
         List<HintDefinition> hints = _currentContext switch
         {
-            Context.SliderFocused  => sliderHints,
-            Context.Settings       => settingsHints,
+            Context.SliderFocused => sliderHints,
+            Context.Settings => settingsHints,
             Context.InGameSettings => inGameSettingsHints,
-            _                      => menuHints
+            _ => menuHints
         };
 
         for (int i = 0; i < slots.Count; i++)

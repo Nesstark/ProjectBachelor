@@ -48,9 +48,9 @@ public class InGameSettings : MonoBehaviour
 
     private InputAction _settingsAction;
 
-    private const string MasterKey   = "vol_master";
+    private const string MasterKey = "vol_master";
     private const string AmbianceKey = "vol_ambiance";
-    private const string SFXKey      = "vol_sfx";
+    private const string SFXKey = "vol_sfx";
 
     // ─────────────────────────────────────────────────────────────────────
     // Lifecycle
@@ -134,23 +134,33 @@ public class InGameSettings : MonoBehaviour
 
         if (settingsSubPanel != null) settingsSubPanel.SetActive(true);
         if (controlsSubPanel != null) controlsSubPanel.SetActive(false);
-        if (settingsPanel    != null) settingsPanel.SetActive(true);
+        if (settingsPanel != null) settingsPanel.SetActive(true);
 
-        if (masterSlider   != null) masterSlider.value   = PlayerPrefs.GetFloat(MasterKey,   1f);
+        if (masterSlider != null) masterSlider.value = PlayerPrefs.GetFloat(MasterKey, 1f);
         if (ambianceSlider != null) ambianceSlider.value = PlayerPrefs.GetFloat(AmbianceKey, 1f);
-        if (sfxSlider      != null) sfxSlider.value      = PlayerPrefs.GetFloat(SFXKey,      1f);
+        if (sfxSlider != null) sfxSlider.value = PlayerPrefs.GetFloat(SFXKey, 1f);
 
         RefreshLabels();
         ApplyAll();
 
-        // Show hint bar when settings opens.
+        // FIX: Enable hint bar FIRST, THEN set context to force device refresh
         if (hintBar != null)
         {
             hintBar.gameObject.SetActive(true);
-            hintBar.SetContext(HintBar.Context.InGameSettings);
+            // Wait one frame to ensure OnEnable has completed
+            StartCoroutine(SetHintBarContextNextFrame());
         }
 
         StartCoroutine(SelectNextFrame(settingsFirstSelected));
+    }
+
+    private IEnumerator SetHintBarContextNextFrame()
+    {
+        yield return null; // Wait one frame for OnEnable to complete
+        if (hintBar != null)
+        {
+            hintBar.SetContext(HintBar.Context.InGameSettings);
+        }
     }
 
     public void CloseSettings()
@@ -236,18 +246,18 @@ public class InGameSettings : MonoBehaviour
 
     private void RefreshLabels()
     {
-        if (masterValueLabel   != null && masterSlider   != null)
-            masterValueLabel.text   = Mathf.RoundToInt(masterSlider.value   * 100).ToString();
+        if (masterValueLabel != null && masterSlider != null)
+            masterValueLabel.text = Mathf.RoundToInt(masterSlider.value * 100).ToString();
         if (ambianceValueLabel != null && ambianceSlider != null)
             ambianceValueLabel.text = Mathf.RoundToInt(ambianceSlider.value * 100).ToString();
-        if (sfxValueLabel      != null && sfxSlider      != null)
-            sfxValueLabel.text      = Mathf.RoundToInt(sfxSlider.value      * 100).ToString();
+        if (sfxValueLabel != null && sfxSlider != null)
+            sfxValueLabel.text = Mathf.RoundToInt(sfxSlider.value * 100).ToString();
     }
 
     private void ApplyAll()
     {
-        if (masterSlider   != null) AudioManager.Instance.SetMasterVolume(masterSlider.value);
+        if (masterSlider != null) AudioManager.Instance.SetMasterVolume(masterSlider.value);
         if (ambianceSlider != null) AudioManager.Instance.SetAmbianceVolume(ambianceSlider.value);
-        if (sfxSlider      != null) AudioManager.Instance.SetSFXVolume(sfxSlider.value);
+        if (sfxSlider != null) AudioManager.Instance.SetSFXVolume(sfxSlider.value);
     }
 }
