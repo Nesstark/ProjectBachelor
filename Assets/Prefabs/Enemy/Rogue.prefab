@@ -242,7 +242,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 63abee52a2f21f243995af92945907ea, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RogueController
-  attackInterval: 0.4
+  attackInterval: 1.5
   meleeRange: 1.5
   hitVFXPrefab: {fileID: 3042519775331041172, guid: 841004c4c6a39e244abe2257394de913, type: 3}
   deathVFXPrefab: {fileID: 0}
