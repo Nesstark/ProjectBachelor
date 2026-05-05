@@ -34,6 +34,8 @@ public class RogueController : BaseEnemy
     [SerializeField] private GameObject exclamationPingPrefab;
     [Tooltip("Offset above the Rogue's transform where the ping spawns")]
     [SerializeField] private Vector3 pingOffset = new Vector3(0f, 2.2f, 0f);
+    [Tooltip("Uniform scale multiplier applied to the ping — 1 = prefab default, 2 = double size")]
+    [SerializeField] private float pingScale = 1f;
 
     private enum RogueState { Flanking, DashTelegraph, Dashing }
     private RogueState _state = RogueState.Flanking;
@@ -46,7 +48,6 @@ public class RogueController : BaseEnemy
     private static readonly int HashAssassinate = Animator.StringToHash("Assassinate");
 
     // ─── Init ─────────────────────────────────────────────────
-
     protected override void Start()
     {
         base.Start();
@@ -60,7 +61,6 @@ public class RogueController : BaseEnemy
     }
 
     // ─── Tick ─────────────────────────────────────────────────
-
     protected override void TickAttackCycle()
     {
         if (_state == RogueState.DashTelegraph || _state == RogueState.Dashing)
@@ -70,7 +70,6 @@ public class RogueController : BaseEnemy
     }
 
     // ─── Movement ─────────────────────────────────────────────
-
     protected override void HandleMovement()
     {
         if (_state == RogueState.Dashing || _state == RogueState.DashTelegraph)
@@ -78,16 +77,12 @@ public class RogueController : BaseEnemy
 
         if (PlayerTransform == null) return;
 
-        float distToPlayer = Vector3.Distance(transform.position, PlayerTransform.position);
-
         if (IsBehindPlayer())
         {
-            // Already behind — run straight at the player to close the gap
             Agent.SetDestination(PlayerTransform.position);
         }
         else
         {
-            // Not behind yet — circle toward the flank position
             Vector3 flankPos    = GetFlankPosition();
             Vector3 directPos   = PlayerTransform.position;
             Vector3 destination = Vector3.Lerp(directPos, flankPos, flankAggression);
@@ -98,7 +93,6 @@ public class RogueController : BaseEnemy
     }
 
     // ─── Attack ───────────────────────────────────────────────
-
     protected override void TryAttack()
     {
         if (_dashCoroutine != null) return;
@@ -107,7 +101,6 @@ public class RogueController : BaseEnemy
 
         float distToPlayer = Vector3.Distance(transform.position, PlayerTransform.position);
 
-        // Dash whenever within range — behind the player or not
         if (distToPlayer <= dashTriggerRange)
         {
             Debug.Log($"[Rogue] Within dash range ({distToPlayer:F2}) — DASHING!");
@@ -115,13 +108,11 @@ public class RogueController : BaseEnemy
         }
         else
         {
-            // Too far — keep running in, do nothing until close enough
             Debug.Log($"[Rogue] Closing gap — DistToPlayer: {distToPlayer:F2}");
         }
     }
 
     // ─── Dash Attack Sequence ─────────────────────────────────
-
     private IEnumerator DashAttackSequence()
     {
         Debug.Log("[Rogue] DashAttackSequence STARTED");
@@ -129,19 +120,20 @@ public class RogueController : BaseEnemy
 
         // ── Step 1: Hard stop + face the player ───────────────
         Agent.isStopped = true;
-        Agent.velocity = Vector3.zero;
+        Agent.velocity  = Vector3.zero;
 
         Vector3 lookDir = (PlayerTransform.position - transform.position);
         lookDir.y = 0f;
         if (lookDir != Vector3.zero)
             transform.rotation = Quaternion.LookRotation(lookDir);
 
-        // ── Step 2: Spawn the ! ping ───────────────────────────
+        // ── Step 2: Spawn and scale the ! ping ─────────────────
         GameObject ping = null;
         if (exclamationPingPrefab != null)
         {
             ping = Instantiate(exclamationPingPrefab, transform.position + pingOffset, Quaternion.identity);
             ping.transform.SetParent(transform, worldPositionStays: true);
+            ping.transform.localScale = Vector3.one * pingScale;
             Debug.Log("[Rogue] Ping spawned!");
         }
         else
@@ -155,15 +147,15 @@ public class RogueController : BaseEnemy
         if (ping != null) Destroy(ping);
 
         // ── Step 4: Burst dash toward the player ──────────────
-        _state = RogueState.Dashing;
+        _state          = RogueState.Dashing;
         Agent.isStopped = false;
-        Agent.speed = _baseAgentSpeed * dashSpeedMultiplier;
+        Agent.speed     = _baseAgentSpeed * dashSpeedMultiplier;
         Agent.SetDestination(PlayerTransform.position);
 
         Debug.Log($"[Rogue] DASHING — speed: {Agent.speed:F1}");
 
         float elapsed = 0f;
-        bool landed = false;
+        bool  landed  = false;
 
         while (elapsed < dashMaxDuration)
         {
@@ -179,7 +171,6 @@ public class RogueController : BaseEnemy
             if (distNow <= dashLandDistance)
             {
                 landed = true;
-                // Base damage only — high damage, no multiplier
                 Debug.Log($"[Rogue] DASH HIT — {Stats.Damage:F1} dmg");
                 GM?.ApplyDamageToPlayer(Stats.Damage);
                 if (animator != null) animator.SetTrigger(HashAssassinate);
@@ -194,14 +185,13 @@ public class RogueController : BaseEnemy
             Debug.Log("[Rogue] Dash timed out — missed!");
 
         // ── Reset ──────────────────────────────────────────────
-        Agent.speed = _baseAgentSpeed;
+        Agent.speed     = _baseAgentSpeed;
         Agent.isStopped = false;
-        _state = RogueState.Flanking;
-        _dashCoroutine = null;
+        _state          = RogueState.Flanking;
+        _dashCoroutine  = null;
     }
 
     // ─── Animator Override ────────────────────────────────────
-
     protected override void UpdateAnimator()
     {
         if (animator == null) return;
@@ -210,7 +200,6 @@ public class RogueController : BaseEnemy
     }
 
     // ─── Helpers ──────────────────────────────────────────────
-
     private Vector3 GetPlayerAimDir()
     {
         if (_playerController != null)
@@ -239,7 +228,6 @@ public class RogueController : BaseEnemy
     }
 
     // ─── Gizmos ───────────────────────────────────────────────
-
     protected override void OnDrawGizmosSelected()
     {
         base.OnDrawGizmosSelected();

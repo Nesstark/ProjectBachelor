@@ -43,6 +43,10 @@ public class MainMenuManager : MonoBehaviour
     [SerializeField] private GameObject settingsFirstSelected;
     [SerializeField] private GameObject controlsFirstSelected;
 
+    // ── Hint Bar ──────────────────────────────────────────────────────────
+    [Header("Hint Bar")]
+    [SerializeField] private HintBar hintBar;
+
     // ── PlayerPrefs keys ──────────────────────────────────────────────────
     private const string MasterKey   = "vol_master";
     private const string AmbianceKey = "vol_ambiance";
@@ -55,7 +59,6 @@ public class MainMenuManager : MonoBehaviour
 
     private void Awake()
     {
-        // Only hook listeners if the slider/toggle is actually assigned.
         if (masterSlider != null)
         {
             masterSlider.onValueChanged.RemoveListener(OnMasterChanged);
@@ -78,13 +81,26 @@ public class MainMenuManager : MonoBehaviour
         }
     }
 
+    private void OnEnable()
+    {
+        if (InputDeviceTracker.Instance != null)
+            InputDeviceTracker.Instance.OnDeviceChanged += OnDeviceChanged;
+    }
+
+    private void OnDisable()
+    {
+        if (InputDeviceTracker.Instance != null)
+            InputDeviceTracker.Instance.OnDeviceChanged -= OnDeviceChanged;
+    }
+
     private IEnumerator Start()
     {
-        if (settingsPanel != null) settingsPanel.SetActive(false);
-        if (menuRoot      != null) menuRoot.SetActive(true);
-            
+        // Menu never locks the cursor.
         if (InputDeviceTracker.Instance != null)
             InputDeviceTracker.Instance.LockCursorOnGamepad = false;
+
+        if (settingsPanel != null) settingsPanel.SetActive(false);
+        if (menuRoot      != null) menuRoot.SetActive(true);
 
         if (menuGroup != null)
         {
@@ -99,7 +115,41 @@ public class MainMenuManager : MonoBehaviour
             menuGroup.alpha = 1f;
         }
 
+        // Set initial hint context.
+        if (hintBar != null)
+            hintBar.SetContext(HintBar.Context.Menu);
+
         SetSelected(menuFirstSelected);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Device switching
+    // ─────────────────────────────────────────────────────────────────────
+
+    private void OnDeviceChanged(InputDeviceTracker.Device device)
+    {
+        if (device == InputDeviceTracker.Device.Gamepad)
+        {
+            GameObject target;
+
+            if (settingsPanel != null && settingsPanel.activeSelf)
+            {
+                target = (controlsSubPanel != null && controlsSubPanel.activeSelf)
+                    ? controlsFirstSelected
+                    : settingsFirstSelected;
+            }
+            else
+            {
+                target = menuFirstSelected;
+            }
+
+            StartCoroutine(SelectNextFrame(target));
+        }
+        else
+        {
+            if (EventSystem.current != null)
+                EventSystem.current.SetSelectedGameObject(null);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -116,6 +166,10 @@ public class MainMenuManager : MonoBehaviour
     {
         AudioManager.Instance.Play("Click");
         if (menuRoot != null) menuRoot.SetActive(false);
+
+        if (hintBar != null)
+            hintBar.SetContext(HintBar.Context.Settings);
+
         OpenSettingsView();
     }
 
@@ -137,8 +191,13 @@ public class MainMenuManager : MonoBehaviour
     {
         AudioManager.Instance.Play("Click");
         PlayerPrefs.Save();
+
         if (settingsPanel != null) settingsPanel.SetActive(false);
         if (menuRoot      != null) menuRoot.SetActive(true);
+
+        if (hintBar != null)
+            hintBar.SetContext(HintBar.Context.Menu);
+
         StartCoroutine(SelectNextFrame(menuFirstSelected));
     }
 
@@ -147,6 +206,11 @@ public class MainMenuManager : MonoBehaviour
         AudioManager.Instance.Play("Click");
         if (settingsSubPanel != null) settingsSubPanel.SetActive(false);
         if (controlsSubPanel != null) controlsSubPanel.SetActive(true);
+
+        // Controls panel is view-only — no sliders — reuse Settings context.
+        if (hintBar != null)
+            hintBar.SetContext(HintBar.Context.Settings);
+
         StartCoroutine(SelectNextFrame(controlsFirstSelected));
     }
 
@@ -155,6 +219,10 @@ public class MainMenuManager : MonoBehaviour
         AudioManager.Instance.Play("Click");
         if (controlsSubPanel != null) controlsSubPanel.SetActive(false);
         if (settingsSubPanel != null) settingsSubPanel.SetActive(true);
+
+        if (hintBar != null)
+            hintBar.SetContext(HintBar.Context.Settings);
+
         StartCoroutine(SelectNextFrame(settingsFirstSelected));
     }
 
@@ -188,7 +256,6 @@ public class MainMenuManager : MonoBehaviour
 
     public void OnCRTToggled(bool enabled)
     {
-        // crtVolume.weight = enabled ? 1f : 0f;
         PlayerPrefs.SetInt(CRTKey, enabled ? 1 : 0);
         Debug.Log($"CRT filter: {(enabled ? "on" : "off")}");
     }
@@ -197,47 +264,6 @@ public class MainMenuManager : MonoBehaviour
     // Helpers
     // ─────────────────────────────────────────────────────────────────────
 
-    private void OnEnable()
-    {
-        if (InputDeviceTracker.Instance != null)
-            InputDeviceTracker.Instance.OnDeviceChanged += OnDeviceChanged;
-    }
-
-    private void OnDisable()
-    {
-        if (InputDeviceTracker.Instance != null)
-            InputDeviceTracker.Instance.OnDeviceChanged -= OnDeviceChanged;
-    }
-
-    private void OnDeviceChanged(InputDeviceTracker.Device device)
-    {
-        if (device == InputDeviceTracker.Device.Gamepad)
-        {
-            // Always re-select the correct first button for whichever panel is showing.
-            // This fires even if the mouse was mid-hover — restores controller navigation.
-            GameObject target;
-
-            if (settingsPanel != null && settingsPanel.activeSelf)
-            {
-                target = (controlsSubPanel != null && controlsSubPanel.activeSelf)
-                    ? controlsFirstSelected
-                    : settingsFirstSelected;
-            }
-            else
-            {
-                target = menuFirstSelected;
-            }
-
-            StartCoroutine(SelectNextFrame(target));
-        }
-        else
-        {
-            // Mouse took over — drop selection so no button stays highlighted.
-            if (EventSystem.current != null)
-                EventSystem.current.SetSelectedGameObject(null);
-        }
-    }
-    
     private void OpenSettingsView()
     {
         if (settingsSubPanel != null) settingsSubPanel.SetActive(true);
@@ -270,9 +296,12 @@ public class MainMenuManager : MonoBehaviour
 
     private void RefreshLabels()
     {
-        if (masterValueLabel   != null && masterSlider   != null) masterValueLabel.text   = Mathf.RoundToInt(masterSlider.value   * 100).ToString();
-        if (ambianceValueLabel != null && ambianceSlider != null) ambianceValueLabel.text = Mathf.RoundToInt(ambianceSlider.value * 100).ToString();
-        if (sfxValueLabel      != null && sfxSlider      != null) sfxValueLabel.text      = Mathf.RoundToInt(sfxSlider.value      * 100).ToString();
+        if (masterValueLabel   != null && masterSlider   != null)
+            masterValueLabel.text   = Mathf.RoundToInt(masterSlider.value   * 100).ToString();
+        if (ambianceValueLabel != null && ambianceSlider != null)
+            ambianceValueLabel.text = Mathf.RoundToInt(ambianceSlider.value * 100).ToString();
+        if (sfxValueLabel      != null && sfxSlider      != null)
+            sfxValueLabel.text      = Mathf.RoundToInt(sfxSlider.value      * 100).ToString();
     }
 
     private void ApplyAll()

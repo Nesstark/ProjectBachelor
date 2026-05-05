@@ -7,39 +7,57 @@ using UnityEngine;
 // • Runs a randomised "moveset" of attack patterns:
 //     Normal  — single aimed projectile
 //     Burst   — N fast shots at the player
-//     Circle  — 360° spray of projectiles
+//     Circle  — 360° spray (with ! warning ping)
+// • Each attack has its own projectile speed variable
 // • Melee charges when the player gets too close
-// • Two independent timers — moveset and melee run simultaneously
 // ============================================================
 
 public class BossController : BaseEnemy
 {
     protected override string EnemyTypeName => "Boss";
 
-    // ─── Attack Pattern Enum ──────────────────────────────
     private enum AttackPattern { Normal, Burst, Circle }
 
     // ─── Ranged (shared) ─────────────────────────────────
     [Header("Ranged Attack")]
     [SerializeField] private GameObject projectilePrefab;
-    [SerializeField] private Transform firePoint;
-    [SerializeField] private float maxShootRange = 20f;
+    [SerializeField] private Transform  firePoint;
+    [SerializeField] private float      maxShootRange = 20f;
 
     // ─── Normal Shot ──────────────────────────────────────
     [Header("Normal Shot")]
-    [SerializeField] private float normalShootInterval = 0.8f;
+    [Tooltip("Seconds between each normal shot")]
+    [SerializeField] private float normalShootInterval   = 0.8f;
+    [Tooltip("Speed of the normal shot projectile")]
+    [SerializeField] public  float normalProjectileSpeed = 10f;
 
     // ─── Burst Shot ───────────────────────────────────────
     [Header("Burst Shot")]
     [SerializeField] public int   burstShotCount       = 4;
-    [SerializeField] public float burstInterval        = 0.15f;   // seconds between burst shots
-    [SerializeField] public float burstCooldown        = 2f;      // wait before next pattern pick
+    [SerializeField] public float burstInterval        = 0.15f;
+    [Tooltip("Speed of each burst projectile")]
+    [SerializeField] public float burstProjectileSpeed = 10f;
+    [Tooltip("Cooldown after the burst finishes before the next pattern is picked")]
+    [SerializeField] public float burstCooldown        = 2f;
 
     // ─── Circle Shot ──────────────────────────────────────
     [Header("Circle Shot")]
-    [SerializeField] public int   circleShotsPerDegree = 1;       // shots per degree step (raises density)
-    [SerializeField] public float circleDegreeStep     = 20f;     // degrees between each shot
-    [SerializeField] public float circleCooldown       = 3f;      // wait before next pattern pick
+    [SerializeField] public int   circleShotsPerDegree  = 1;
+    [SerializeField] public float circleDegreeStep      = 20f;
+    [Tooltip("Speed of each circle projectile — lower = slower ring, easier to dodge outward")]
+    [SerializeField] public float circleProjectileSpeed = 5f;
+    [Tooltip("Cooldown after the circle fires before the next pattern is picked")]
+    [SerializeField] public float circleCooldown        = 3f;
+
+    [Header("Circle Shot Warning Ping")]
+    [Tooltip("Same ! ping prefab used on the Rogue — assign the same asset here")]
+    [SerializeField] private GameObject exclamationPingPrefab;
+    [Tooltip("Offset above the Boss's transform where the ping spawns")]
+    [SerializeField] private Vector3    pingOffset         = new Vector3(0f, 2.2f, 0f);
+    [Tooltip("Uniform scale multiplier applied to the ping — 1 = prefab default, 2 = double size")]
+    [SerializeField] private float      pingScale          = 1f;
+    [Tooltip("How long the ! ping is shown before the circle fires")]
+    [SerializeField] private float      circlePingDuration = 0.8f;
 
     // ─── Melee ────────────────────────────────────────────
     [Header("Melee Attack")]
@@ -50,15 +68,13 @@ public class BossController : BaseEnemy
     [SerializeField] private float chargeRange = 5f;
     [SerializeField] private float chargeSpeed = 8f;
 
-    // ─── Moveset weights (must sum to 100) ────────────────
-    [Header("Moveset Weights (0–100, must sum to 100)")]
+    // ─── Moveset Weights ──────────────────────────────────
+    [Header("Moveset Weights (any ratio works)")]
     [SerializeField] [Range(0, 100)] private int weightNormal = 60;
     [SerializeField] [Range(0, 100)] private int weightBurst  = 25;
     [SerializeField] [Range(0, 100)] private int weightCircle = 15;
 
     // ─── Private ──────────────────────────────────────────
-    private bool _attackRoutineRunning;
-
     private static readonly int HashShoot  = Animator.StringToHash("Shoot");
     private static readonly int HashCharge = Animator.StringToHash("Charge");
 
@@ -75,18 +91,17 @@ public class BossController : BaseEnemy
         StartCoroutine(AttackMovesetRoutine());
     }
 
-    // ─── Update ───────────────────────────────────────────
     protected override void Update()
     {
         if (IsDead || PlayerTransform == null) return;
 
         HandleMovement();
-        TickAttackCycle();   // melee — inherited timer
+        TickAttackCycle();
         UpdateAnimator();
         UpdateSpriteFlip();
     }
 
-    // ─── Movement — charge when close, otherwise approach ─
+    // ─── Movement ─────────────────────────────────────────
     protected override void HandleMovement()
     {
         float dist = Vector3.Distance(transform.position, PlayerTransform.position);
@@ -105,7 +120,7 @@ public class BossController : BaseEnemy
         Agent.SetDestination(PlayerTransform.position);
     }
 
-    // ─── Melee — hits harder than base ────────────────────
+    // ─── Melee ────────────────────────────────────────────
     protected override void TryAttack()
     {
         float dist = Vector3.Distance(transform.position, PlayerTransform.position);
@@ -118,10 +133,8 @@ public class BossController : BaseEnemy
     }
 
     // ─── Moveset Coroutine ────────────────────────────────
-    // Picks a weighted random pattern, executes it, then repeats.
     private IEnumerator AttackMovesetRoutine()
     {
-        // Small startup delay so the boss doesn't fire on frame 1
         yield return new WaitForSeconds(0.5f);
 
         while (!IsDead)
@@ -146,7 +159,7 @@ public class BossController : BaseEnemy
 
                 case AttackPattern.Circle:
                     Debug.Log("[Boss] MOVESET → 360° Shot");
-                    DoCircleShot();
+                    yield return StartCoroutine(DoCircleShot());
                     yield return new WaitForSeconds(circleCooldown);
                     break;
             }
@@ -157,12 +170,12 @@ public class BossController : BaseEnemy
     private AttackPattern PickPattern()
     {
         int total = weightNormal + weightBurst + weightCircle;
-        if (total <= 0) return AttackPattern.Normal; // safe fallback
+        if (total <= 0) return AttackPattern.Normal;
 
         int roll = Random.Range(0, total);
 
-        if (roll < weightNormal)                         return AttackPattern.Normal;
-        if (roll < weightNormal + weightBurst)           return AttackPattern.Burst;
+        if (roll < weightNormal)               return AttackPattern.Normal;
+        if (roll < weightNormal + weightBurst) return AttackPattern.Burst;
         return AttackPattern.Circle;
     }
 
@@ -172,9 +185,8 @@ public class BossController : BaseEnemy
         if (!ValidatePrefab()) return;
         if (animator != null) animator.SetTrigger(HashShoot);
 
-        Vector3 dir = AimAtPlayer();
-        SpawnProjectile(dir, Stats.Damage);
-        Debug.Log($"[Boss] SHOT (Normal) — DMG:{Stats.Damage:F1}");
+        SpawnProjectile(AimAtPlayer(), Stats.Damage, normalProjectileSpeed);
+        Debug.Log($"[Boss] SHOT (Normal) — DMG:{Stats.Damage:F1}  SPD:{normalProjectileSpeed}");
     }
 
     // ─── Burst: N fast shots aimed at the player ──────────
@@ -188,39 +200,53 @@ public class BossController : BaseEnemy
 
             if (animator != null) animator.SetTrigger(HashShoot);
 
-            Vector3 dir = AimAtPlayer();
-            SpawnProjectile(dir, Stats.Damage);
-            Debug.Log($"[Boss] SHOT (Burst {i + 1}/{burstShotCount}) — DMG:{Stats.Damage:F1}");
+            SpawnProjectile(AimAtPlayer(), Stats.Damage, burstProjectileSpeed);
+            Debug.Log($"[Boss] SHOT (Burst {i + 1}/{burstShotCount}) — DMG:{Stats.Damage:F1}  SPD:{burstProjectileSpeed}");
 
             yield return new WaitForSeconds(burstInterval);
         }
     }
 
-    // ─── Circle: 360° ring of projectiles ─────────────────
-    private void DoCircleShot()
+    // ─── Circle: ! ping → 360° ring ───────────────────────
+    private IEnumerator DoCircleShot()
     {
-        if (!ValidatePrefab()) return;
+        // ── Step 1: Spawn and scale the ! ping ─────────────
+        GameObject ping = null;
+        if (exclamationPingPrefab != null)
+        {
+            ping = Instantiate(exclamationPingPrefab, transform.position + pingOffset, Quaternion.identity);
+            ping.transform.SetParent(transform, worldPositionStays: true);
+            ping.transform.localScale = Vector3.one * pingScale;
+            Debug.Log("[Boss] Circle ping spawned!");
+        }
+        else
+        {
+            Debug.LogWarning("[Boss] exclamationPingPrefab is NULL — assign it in the Inspector!");
+        }
+
+        // ── Step 2: Hold while ping is visible ─────────────
+        yield return new WaitForSeconds(circlePingDuration);
+        if (ping != null) Destroy(ping);
+
+        // ── Step 3: Fire the ring ──────────────────────────
+        if (!ValidatePrefab()) yield break;
         if (animator != null) animator.SetTrigger(HashShoot);
 
-        // circleShotsPerDegree controls density.
-        // e.g. step=20°, shotsPerDegree=1 → 18 projectiles
-        //      step=20°, shotsPerDegree=2 → 36 projectiles (two per position)
         int shotsFired = 0;
         for (float angle = 0f; angle < 360f; angle += circleDegreeStep)
         {
             for (int s = 0; s < Mathf.Max(1, circleShotsPerDegree); s++)
             {
-                // Offset repeated shots slightly so they don't stack exactly
                 float offsetAngle = angle + (s * (circleDegreeStep / Mathf.Max(1, circleShotsPerDegree)));
-                float rad = offsetAngle * Mathf.Deg2Rad;
-                Vector3 dir = new Vector3(Mathf.Cos(rad), 0f, Mathf.Sin(rad));
+                float rad         = offsetAngle * Mathf.Deg2Rad;
+                Vector3 dir       = new Vector3(Mathf.Cos(rad), 0f, Mathf.Sin(rad));
 
-                SpawnProjectile(dir, Stats.Damage);
+                SpawnProjectile(dir, Stats.Damage, circleProjectileSpeed);
                 shotsFired++;
             }
         }
 
-        Debug.Log($"[Boss] SHOT (Circle) — {shotsFired} projectiles fired");
+        Debug.Log($"[Boss] SHOT (Circle) — {shotsFired} projectiles  SPD:{circleProjectileSpeed}");
     }
 
     // ─── Helpers ──────────────────────────────────────────
@@ -231,12 +257,12 @@ public class BossController : BaseEnemy
         return dir.normalized;
     }
 
-    private void SpawnProjectile(Vector3 direction, float damage)
+    private void SpawnProjectile(Vector3 direction, float damage, float speed)
     {
-        GameObject proj = Instantiate(projectilePrefab, firePoint.position, Quaternion.identity);
+        GameObject proj       = Instantiate(projectilePrefab, firePoint.position, Quaternion.identity);
         ArrowProjectile arrow = proj.GetComponent<ArrowProjectile>();
         if (arrow != null)
-            arrow.Init(direction, damage, gameObject);
+            arrow.Init(direction, damage, gameObject, speed);
     }
 
     private bool ValidatePrefab()
@@ -251,11 +277,9 @@ public class BossController : BaseEnemy
     {
         base.OnDrawGizmosSelected();
 
-        // Charge range — orange
         Gizmos.color = new Color(1f, 0.4f, 0f);
         Gizmos.DrawWireSphere(transform.position, chargeRange);
 
-        // Max shoot range — red
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, maxShootRange);
     }

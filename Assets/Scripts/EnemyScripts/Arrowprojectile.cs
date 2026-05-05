@@ -1,13 +1,13 @@
 ﻿using UnityEngine;
 
 // ============================================================
-//  ArrowProjectile.cs
-//  ── Prefab Setup ──────────────────────────────────────────
-//   1. GameObject → 3D Object → Sphere
-//   2. Remove MeshCollider
-//   3. Add Rigidbody  →  Use Gravity: OFF, Freeze Rotation XYZ
-//   4. Add SphereCollider  →  Is Trigger: ON
-//   5. Attach this script
+// ArrowProjectile.cs
+// ── Prefab Setup ──────────────────────────────────────────
+// 1. GameObject → 3D Object → Sphere
+// 2. Remove MeshCollider
+// 3. Add Rigidbody → Use Gravity: OFF, Freeze Rotation XYZ
+// 4. Add SphereCollider → Is Trigger: ON
+// 5. Attach this script
 // ============================================================
 
 [RequireComponent(typeof(Rigidbody))]
@@ -15,41 +15,50 @@
 public class ArrowProjectile : MonoBehaviour
 {
     [Header("Settings")]
-    [SerializeField] private float speed = 12f;
+    [SerializeField] private float speed    = 12f;
     [SerializeField] private float lifetime = 4f;
 
-    private Rigidbody _rb;
-    private float _damage;
-    private bool _hasHit;
-    private GameObject _spawner;   // the archer that fired this — ignored on collision
+    // Exposed so BossController can read how long to wait after firing
+    public float Lifetime => lifetime;
+
+    private Rigidbody  _rb;
+    private float      _damage;
+    private bool       _hasHit;
+    private GameObject _spawner; // the archer that fired this — ignored on collision
 
     // ─────────────────────────────────────────────────────────
     private void Awake()
     {
-        _rb = GetComponent<Rigidbody>();
-        _rb.useGravity = false;
-        _rb.isKinematic = false;
-        _rb.constraints = RigidbodyConstraints.FreezeRotationX
-                        | RigidbodyConstraints.FreezeRotationY
-                        | RigidbodyConstraints.FreezeRotationZ;
+        _rb              = GetComponent<Rigidbody>();
+        _rb.useGravity   = false;
+        _rb.isKinematic  = false;
+        _rb.constraints  = RigidbodyConstraints.FreezeRotationX
+                         | RigidbodyConstraints.FreezeRotationY
+                         | RigidbodyConstraints.FreezeRotationZ;
 
         GetComponent<SphereCollider>().isTrigger = true;
     }
 
     // ─────────────────────────────────────────────────────────
-    /// <summary>
-    /// Call immediately after Instantiate.
-    /// Pass the Archer's GameObject so the projectile ignores it.
-    /// </summary>
+    /// Standard Init — uses the prefab's own speed value.
+    /// Called by any enemy that doesn't override speed.
     public void Init(Vector3 direction, float damage, GameObject spawner)
     {
-        _damage = damage;
+        Init(direction, damage, spawner, speed);
+    }
+
+    // ─────────────────────────────────────────────────────────
+    /// Speed-override Init — called by BossController to allow
+    /// per-attack-pattern projectile speeds (normal / burst / circle).
+    public void Init(Vector3 direction, float damage, GameObject spawner, float overrideSpeed)
+    {
+        _damage  = damage;
         _spawner = spawner;
 
         Vector3 flatDir = new Vector3(direction.x, 0f, direction.z).normalized;
-        _rb.linearVelocity = flatDir * speed;
+        _rb.linearVelocity = flatDir * overrideSpeed;
 
-        Debug.Log($"[Arrow] Launched — dir:{flatDir}  dmg:{damage}  ignoring:{spawner.name}");
+        Debug.Log($"[Arrow] Launched — dir:{flatDir} dmg:{damage} spd:{overrideSpeed} ignoring:{spawner.name}");
         Destroy(gameObject, lifetime);
     }
 
