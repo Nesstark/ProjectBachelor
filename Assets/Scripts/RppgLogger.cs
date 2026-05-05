@@ -23,19 +23,32 @@ public class RppgLogger : MonoBehaviour
     private bool   baselineEndLogged   = false;
     private int    dataEntryCount      = 0;
 
+    // ── Singleton ─────────────────────────────────
+    private static RppgLogger instance;
+
     // Column widths — must match the session file layout exactly
-    private const int COL_TIME      = 11;   // "00:00:00   "
-    private const int COL_EVENT     = 19;   // "BASELINE END       "
-    private const int COL_AROUSAL   = 11;   // "Low        "
-    private const int COL_SCORE     = 9;    // "0.145    "
-    private const int COL_HR        = 9;    // "78.1     "
-    private const int COL_IBI       = 9;    // "769.3    "
-    private const int COL_RMSSD     = 9;    // "43.8     "
-    private const int COL_LFHF      = 9;    // "1.14     "
-    private const int COL_BREATHING = 13;   // "0.108        "
-    // SQI is the last column — no padding needed
+    private const int COL_TIME      = 11;
+    private const int COL_EVENT     = 19;
+    private const int COL_AROUSAL   = 11;
+    private const int COL_SCORE     = 9;
+    private const int COL_HR        = 9;
+    private const int COL_IBI       = 9;
+    private const int COL_RMSSD     = 9;
+    private const int COL_LFHF      = 9;
+    private const int COL_BREATHING = 13;
 
     // ─────────────────────────────────────────────
+
+    void Awake()
+    {
+        if (instance != null)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        instance = this;
+        DontDestroyOnLoad(gameObject);
+    }
 
     void Start()
     {
@@ -47,7 +60,6 @@ public class RppgLogger : MonoBehaviour
         if (!Directory.Exists(folder))
             Directory.CreateDirectory(folder);
 
-        // Auto-number sessions by counting existing files in the folder
         string[] existing = Directory.GetFiles(folder, "Session_*.txt");
         sessionNumber = existing.Length + 1;
 
@@ -109,7 +121,6 @@ public class RppgLogger : MonoBehaviour
         string breath  = $"{receiver.breathingRate:F3}";
         string sqi     = $"{receiver.signalQuality:F3}";
 
-        // Log arousal level transition before DATA row (same timestamp, same values)
         if (previousLabel != "" && previousLabel != arousal)
         {
             string evt = $"LEVEL {previousLabel}>{arousal}";
@@ -162,15 +173,13 @@ public class RppgLogger : MonoBehaviour
         timer                = 0f;
         isLogging            = true;
 
-        // ── Header block ──────────────────────────────
         string eqLine = new string('=', 46);
         logLines.Add(eqLine);
         logLines.Add($"  Session: Session {sessionNumber:D2}");
         logLines.Add($"  Started: {sessionStartDateTime:yyyy-MM-dd HH:mm:ss}");
         logLines.Add(eqLine);
-        logLines.Add("");  // blank line
+        logLines.Add("");
 
-        // ── Column headers ────────────────────────────
         logLines.Add(
             "Time".PadRight(COL_TIME)      +
             "Event".PadRight(COL_EVENT)    +
