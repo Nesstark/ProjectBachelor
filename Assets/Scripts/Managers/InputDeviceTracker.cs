@@ -42,7 +42,7 @@ public class InputDeviceTracker : MonoBehaviour
             return;
         }
 
-        if (Mouse.current != null && 
+        if (Mouse.current != null &&
             Mouse.current.delta.ReadValue().sqrMagnitude > MouseDeltaThreshold)
         {
             SwitchTo(Device.KeyboardMouse);
@@ -53,7 +53,13 @@ public class InputDeviceTracker : MonoBehaviour
     {
         if (change != InputActionChange.ActionPerformed) return;
 
-        var device = (obj as InputAction)?.activeControl?.device;
+        var action = obj as InputAction;
+        if (action == null) return;
+
+        // ── Ignore anything the EventSystem fires internally ─────────────────
+        if (action.actionMap?.name == "UI") return;
+
+        var device = action.activeControl?.device;
         if (device == null) return;
 
         if (device is Gamepad || device is Joystick)
