@@ -34,9 +34,6 @@ public class MainMenuManager : MonoBehaviour
     [SerializeField] private TMP_Text ambianceValueLabel;
     [SerializeField] private TMP_Text sfxValueLabel;
 
-    [Header("CRT Toggle")]
-    [SerializeField] private Toggle crtToggle;
-
     // ── Controller Navigation ─────────────────────────────────────────────
     [Header("First Selected")]
     [SerializeField] private GameObject menuFirstSelected;
@@ -51,7 +48,6 @@ public class MainMenuManager : MonoBehaviour
     private const string MasterKey   = "vol_master";
     private const string AmbianceKey = "vol_ambiance";
     private const string SFXKey      = "vol_sfx";
-    private const string CRTKey      = "crt_enabled";
 
     // ─────────────────────────────────────────────────────────────────────
     // Lifecycle
@@ -74,11 +70,6 @@ public class MainMenuManager : MonoBehaviour
             sfxSlider.onValueChanged.RemoveListener(OnSFXChanged);
             sfxSlider.onValueChanged.AddListener(OnSFXChanged);
         }
-        if (crtToggle != null)
-        {
-            crtToggle.onValueChanged.RemoveListener(OnCRTToggled);
-            crtToggle.onValueChanged.AddListener(OnCRTToggled);
-        }
     }
 
     private void OnEnable()
@@ -95,7 +86,6 @@ public class MainMenuManager : MonoBehaviour
 
     private IEnumerator Start()
     {
-        // Menu never locks the cursor.
         if (InputDeviceTracker.Instance != null)
             InputDeviceTracker.Instance.LockCursorOnGamepad = false;
 
@@ -115,7 +105,6 @@ public class MainMenuManager : MonoBehaviour
             menuGroup.alpha = 1f;
         }
 
-        // Set initial hint context.
         if (hintBar != null)
             hintBar.SetContext(HintBar.Context.Menu);
 
@@ -207,7 +196,6 @@ public class MainMenuManager : MonoBehaviour
         if (settingsSubPanel != null) settingsSubPanel.SetActive(false);
         if (controlsSubPanel != null) controlsSubPanel.SetActive(true);
 
-        // Controls panel is view-only — no sliders — reuse Settings context.
         if (hintBar != null)
             hintBar.SetContext(HintBar.Context.Settings);
 
@@ -227,7 +215,7 @@ public class MainMenuManager : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────────────
-    // Slider / Toggle callbacks
+    // Slider callbacks
     // ─────────────────────────────────────────────────────────────────────
 
     public void OnMasterChanged(float value)
@@ -254,12 +242,6 @@ public class MainMenuManager : MonoBehaviour
         PlayerPrefs.SetFloat(SFXKey, value);
     }
 
-    public void OnCRTToggled(bool enabled)
-    {
-        PlayerPrefs.SetInt(CRTKey, enabled ? 1 : 0);
-        Debug.Log($"CRT filter: {(enabled ? "on" : "off")}");
-    }
-
     // ─────────────────────────────────────────────────────────────────────
     // Helpers
     // ─────────────────────────────────────────────────────────────────────
@@ -273,7 +255,6 @@ public class MainMenuManager : MonoBehaviour
         if (masterSlider   != null) masterSlider.value   = PlayerPrefs.GetFloat(MasterKey,   1f);
         if (ambianceSlider != null) ambianceSlider.value = PlayerPrefs.GetFloat(AmbianceKey, 1f);
         if (sfxSlider      != null) sfxSlider.value      = PlayerPrefs.GetFloat(SFXKey,      1f);
-        if (crtToggle      != null) crtToggle.isOn       = PlayerPrefs.GetInt(CRTKey, 1) == 1;
 
         RefreshLabels();
         ApplyAll();

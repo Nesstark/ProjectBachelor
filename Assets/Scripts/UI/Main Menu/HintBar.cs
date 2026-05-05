@@ -16,7 +16,7 @@ using System.Collections.Generic;
 public class HintBar : MonoBehaviour
 {
     // ── Context ───────────────────────────────────────────────────────────
-    public enum Context { Menu, Settings, SliderFocused }
+    public enum Context { Menu, Settings, SliderFocused, InGameSettings }
 
     // ── Hint Slot ─────────────────────────────────────────────────────────
     [System.Serializable]
@@ -39,6 +39,9 @@ public class HintBar : MonoBehaviour
     // ── Inspector ─────────────────────────────────────────────────────────
     [Header("Slots (left to right in the bar)")]
     [SerializeField] private List<HintSlot> slots;
+
+    [Tooltip("Hints shown in the in-game settings overlay.")]
+    [SerializeField] private List<HintDefinition> inGameSettingsHints;
 
     [Header("Hints per context")]
     [SerializeField] private List<HintDefinition> menuHints;
@@ -98,13 +101,12 @@ public class HintBar : MonoBehaviour
         if (EventSystem.current == null) return;
 
         var selected = EventSystem.current.currentSelectedGameObject;
-
-        // Only re-evaluate when selection actually changes — avoids stale frames.
         if (selected == _lastSelected) return;
         _lastSelected = selected;
 
+        // Check the selected object directly — Slider is the Selectable, not a child.
         bool sliderFocused = selected != null
-                        && selected.GetComponentInParent<UnityEngine.UI.Slider>() != null;
+                        && selected.GetComponent<UnityEngine.UI.Slider>() != null;
 
         if (sliderFocused && _currentContext != Context.SliderFocused)
         {
@@ -150,9 +152,10 @@ public class HintBar : MonoBehaviour
     {
         List<HintDefinition> hints = _currentContext switch
         {
-            Context.SliderFocused => sliderHints,
-            Context.Settings      => settingsHints,
-            _                     => menuHints
+            Context.SliderFocused  => sliderHints,
+            Context.Settings       => settingsHints,
+            Context.InGameSettings => inGameSettingsHints,
+            _                      => menuHints
         };
 
         for (int i = 0; i < slots.Count; i++)

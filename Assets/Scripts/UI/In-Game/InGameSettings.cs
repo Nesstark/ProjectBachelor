@@ -16,16 +16,15 @@ public class InGameSettings : MonoBehaviour
 
     // ── Input ─────────────────────────────────────────────────────────────
     [Header("Input")]
-    [Tooltip("Assign your InputSystem_Actions asset.")]
     [SerializeField] private InputActionAsset inputActions;
+
+    [Header("Hint Bar")]
+    [SerializeField] private HintBar hintBar;
 
     // ── Panels ────────────────────────────────────────────────────────────
     [Header("Panels")]
-    [Tooltip("The outer SettingsPanel wrapper GameObject.")]
     [SerializeField] private GameObject settingsPanel;
-    [Tooltip("ContentGroup inside SettingsPanel — sliders/toggles view.")]
     [SerializeField] private GameObject settingsSubPanel;
-    [Tooltip("ControlsPanel inside SettingsPanel — keybinds view.")]
     [SerializeField] private GameObject controlsSubPanel;
 
     // ── Sliders ───────────────────────────────────────────────────────────
@@ -39,14 +38,9 @@ public class InGameSettings : MonoBehaviour
     [SerializeField] private TMP_Text ambianceValueLabel;
     [SerializeField] private TMP_Text sfxValueLabel;
 
-    [Header("CRT Toggle")]
-    [SerializeField] private Toggle crtToggle;
-
     // ── Controller Navigation ─────────────────────────────────────────────
     [Header("Controller Navigation")]
-    [Tooltip("First element focused when settings opens. E.g. RowMaster.")]
     [SerializeField] private GameObject settingsFirstSelected;
-    [Tooltip("First element focused when controls panel opens. E.g. BtnBack in ControlsPanel.")]
     [SerializeField] private GameObject controlsFirstSelected;
 
     // ── State ─────────────────────────────────────────────────────────────
@@ -57,7 +51,6 @@ public class InGameSettings : MonoBehaviour
     private const string MasterKey   = "vol_master";
     private const string AmbianceKey = "vol_ambiance";
     private const string SFXKey      = "vol_sfx";
-    private const string CRTKey      = "crt_enabled";
 
     // ─────────────────────────────────────────────────────────────────────
     // Lifecycle
@@ -68,7 +61,6 @@ public class InGameSettings : MonoBehaviour
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
 
-        // Keep the Settings toggle action alive regardless of action-map switches.
         _settingsAction = inputActions.FindAction("Player/Settings");
         if (_settingsAction != null)
         {
@@ -80,20 +72,27 @@ public class InGameSettings : MonoBehaviour
             Debug.LogWarning("[InGameSettings] Could not find 'Player/Settings' action.");
         }
 
-        masterSlider.onValueChanged.RemoveListener(OnMasterChanged);
-        masterSlider.onValueChanged.AddListener(OnMasterChanged);
-        ambianceSlider.onValueChanged.RemoveListener(OnAmbianceChanged);
-        ambianceSlider.onValueChanged.AddListener(OnAmbianceChanged);
-        sfxSlider.onValueChanged.RemoveListener(OnSFXChanged);
-        sfxSlider.onValueChanged.AddListener(OnSFXChanged);
-        crtToggle.onValueChanged.RemoveListener(OnCRTToggled);
-        crtToggle.onValueChanged.AddListener(OnCRTToggled);
+        if (masterSlider != null)
+        {
+            masterSlider.onValueChanged.RemoveListener(OnMasterChanged);
+            masterSlider.onValueChanged.AddListener(OnMasterChanged);
+        }
+        if (ambianceSlider != null)
+        {
+            ambianceSlider.onValueChanged.RemoveListener(OnAmbianceChanged);
+            ambianceSlider.onValueChanged.AddListener(OnAmbianceChanged);
+        }
+        if (sfxSlider != null)
+        {
+            sfxSlider.onValueChanged.RemoveListener(OnSFXChanged);
+            sfxSlider.onValueChanged.AddListener(OnSFXChanged);
+        }
     }
 
     private void Start()
     {
-        // Ensure panel is hidden at game start.
-        settingsPanel.SetActive(false);
+        if (settingsPanel != null)
+            settingsPanel.SetActive(false);
     }
 
     private void OnDestroy()
@@ -103,14 +102,13 @@ public class InGameSettings : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────────────
-    // Input callback — Settings button / ESC
+    // Input callback
     // ─────────────────────────────────────────────────────────────────────
 
     private void OnSettingsPerformed(InputAction.CallbackContext ctx)
     {
         if (IsOpen)
         {
-            // If controls sub-panel is showing, go back to settings view first.
             if (controlsSubPanel != null && controlsSubPanel.activeSelf)
                 OnControlsBackPressed();
             else
@@ -134,63 +132,70 @@ public class InGameSettings : MonoBehaviour
         if (InputDeviceTracker.Instance != null)
             InputDeviceTracker.Instance.LockCursorOnGamepad = false;
 
-        settingsSubPanel.SetActive(true);
-        controlsSubPanel.SetActive(false);
-        settingsPanel.SetActive(true);
+        if (settingsSubPanel != null) settingsSubPanel.SetActive(true);
+        if (controlsSubPanel != null) controlsSubPanel.SetActive(false);
+        if (settingsPanel    != null) settingsPanel.SetActive(true);
 
-        masterSlider.value   = PlayerPrefs.GetFloat(MasterKey,   1f);
-        ambianceSlider.value = PlayerPrefs.GetFloat(AmbianceKey, 1f);
-        sfxSlider.value      = PlayerPrefs.GetFloat(SFXKey,      1f);
-        crtToggle.isOn       = PlayerPrefs.GetInt(CRTKey, 1) == 1;
+        if (masterSlider   != null) masterSlider.value   = PlayerPrefs.GetFloat(MasterKey,   1f);
+        if (ambianceSlider != null) ambianceSlider.value = PlayerPrefs.GetFloat(AmbianceKey, 1f);
+        if (sfxSlider      != null) sfxSlider.value      = PlayerPrefs.GetFloat(SFXKey,      1f);
 
         RefreshLabels();
         ApplyAll();
 
+        // Show hint bar when settings opens.
+        if (hintBar != null)
+        {
+            hintBar.gameObject.SetActive(true);
+            hintBar.SetContext(HintBar.Context.InGameSettings);
+        }
+
         StartCoroutine(SelectNextFrame(settingsFirstSelected));
     }
 
-    // Wire to BtnBack inside the settings (ContentGroup) view.
     public void CloseSettings()
     {
         AudioManager.Instance.Play("Click");
         PlayerPrefs.Save();
 
+        IsOpen = false;
+
         if (InputDeviceTracker.Instance != null)
             InputDeviceTracker.Instance.LockCursorOnGamepad = true;
 
-        IsOpen = false;
-        settingsPanel.SetActive(false);
+        if (settingsPanel != null) settingsPanel.SetActive(false);
         Time.timeScale = 1f;
 
-        // Clear selection so no ghost highlight lingers on the game UI.
+        // Hide hint bar when settings closes.
+        if (hintBar != null)
+            hintBar.gameObject.SetActive(false);
+
         if (EventSystem.current != null)
             EventSystem.current.SetSelectedGameObject(null);
     }
 
     // ─────────────────────────────────────────────────────────────────────
-    // Panel navigation  (wire OnClick to these on Canvas)
+    // Panel navigation
     // ─────────────────────────────────────────────────────────────────────
 
-    // Wire to the SectionControls / "View Controls" button.
     public void OnControlsPressed()
     {
         AudioManager.Instance.Play("Click");
-        settingsSubPanel.SetActive(false);
-        controlsSubPanel.SetActive(true);
+        if (settingsSubPanel != null) settingsSubPanel.SetActive(false);
+        if (controlsSubPanel != null) controlsSubPanel.SetActive(true);
         StartCoroutine(SelectNextFrame(controlsFirstSelected));
     }
 
-    // Wire to BtnBack inside ControlsPanel.
     public void OnControlsBackPressed()
     {
         AudioManager.Instance.Play("Click");
-        controlsSubPanel.SetActive(false);
-        settingsSubPanel.SetActive(true);
+        if (controlsSubPanel != null) controlsSubPanel.SetActive(false);
+        if (settingsSubPanel != null) settingsSubPanel.SetActive(true);
         StartCoroutine(SelectNextFrame(settingsFirstSelected));
     }
 
     // ─────────────────────────────────────────────────────────────────────
-    // Slider / Toggle callbacks
+    // Slider callbacks
     // ─────────────────────────────────────────────────────────────────────
 
     public void OnMasterChanged(float value)
@@ -217,24 +222,13 @@ public class InGameSettings : MonoBehaviour
         PlayerPrefs.SetFloat(SFXKey, value);
     }
 
-    public void OnCRTToggled(bool enabled)
-    {
-        // crtVolume.weight = enabled ? 1f : 0f;
-        PlayerPrefs.SetInt(CRTKey, enabled ? 1 : 0);
-        Debug.Log($"CRT filter: {(enabled ? "on" : "off")}");
-    }
-
     // ─────────────────────────────────────────────────────────────────────
     // Helpers
     // ─────────────────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Waits one frame before selecting so the target is fully active.
-    /// Uses unscaled time because Time.timeScale is 0 while settings is open.
-    /// </summary>
     private IEnumerator SelectNextFrame(GameObject target)
     {
-        yield return null; // WaitForEndOfFrame also works; yield null is fine with timeScale 0
+        yield return null;
         if (target == null || EventSystem.current == null) yield break;
         EventSystem.current.SetSelectedGameObject(null);
         EventSystem.current.SetSelectedGameObject(target);
@@ -242,15 +236,18 @@ public class InGameSettings : MonoBehaviour
 
     private void RefreshLabels()
     {
-        if (masterValueLabel   != null) masterValueLabel.text   = Mathf.RoundToInt(masterSlider.value   * 100).ToString();
-        if (ambianceValueLabel != null) ambianceValueLabel.text = Mathf.RoundToInt(ambianceSlider.value * 100).ToString();
-        if (sfxValueLabel      != null) sfxValueLabel.text      = Mathf.RoundToInt(sfxSlider.value      * 100).ToString();
+        if (masterValueLabel   != null && masterSlider   != null)
+            masterValueLabel.text   = Mathf.RoundToInt(masterSlider.value   * 100).ToString();
+        if (ambianceValueLabel != null && ambianceSlider != null)
+            ambianceValueLabel.text = Mathf.RoundToInt(ambianceSlider.value * 100).ToString();
+        if (sfxValueLabel      != null && sfxSlider      != null)
+            sfxValueLabel.text      = Mathf.RoundToInt(sfxSlider.value      * 100).ToString();
     }
 
     private void ApplyAll()
     {
-        AudioManager.Instance.SetMasterVolume(masterSlider.value);
-        AudioManager.Instance.SetAmbianceVolume(ambianceSlider.value);
-        AudioManager.Instance.SetSFXVolume(sfxSlider.value);
+        if (masterSlider   != null) AudioManager.Instance.SetMasterVolume(masterSlider.value);
+        if (ambianceSlider != null) AudioManager.Instance.SetAmbianceVolume(ambianceSlider.value);
+        if (sfxSlider      != null) AudioManager.Instance.SetSFXVolume(sfxSlider.value);
     }
 }

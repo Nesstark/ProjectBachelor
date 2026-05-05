@@ -14,7 +14,7 @@ public class InputDeviceTracker : MonoBehaviour
 
     public enum Device { KeyboardMouse, Gamepad }
 
-    public Device CurrentDevice { get; private set; } = Device.KeyboardMouse;
+    public Device CurrentDevice { get; private set; } = Device.Gamepad;
 
     /// <summary>Fired whenever the active input device changes.</summary>
     public event System.Action<Device> OnDeviceChanged;
@@ -29,6 +29,10 @@ public class InputDeviceTracker : MonoBehaviour
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
         DontDestroyOnLoad(gameObject);
+
+        // Start in gamepad mode — cursor hidden and free by default.
+        Cursor.visible   = false;
+        Cursor.lockState = CursorLockMode.None;
     }
 
     private void OnEnable()  => InputSystem.onActionChange += HandleActionChange;
@@ -42,13 +46,20 @@ public class InputDeviceTracker : MonoBehaviour
             return;
         }
 
+        // Real physical mouse movement
         if (Mouse.current != null &&
             Mouse.current.delta.ReadValue().sqrMagnitude > MouseDeltaThreshold)
         {
             SwitchTo(Device.KeyboardMouse);
+            return;
         }
+
+        // Real physical key press
+        if (Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame)
+            SwitchTo(Device.KeyboardMouse);
     }
 
+    // Replace HandleActionChange entirely
     private void HandleActionChange(object obj, InputActionChange change)
     {
         if (change != InputActionChange.ActionPerformed) return;
@@ -56,16 +67,16 @@ public class InputDeviceTracker : MonoBehaviour
         var action = obj as InputAction;
         if (action == null) return;
 
-        // ── Ignore anything the EventSystem fires internally ─────────────────
+        // Ignore UI map — EventSystem fires these internally.
         if (action.actionMap?.name == "UI") return;
 
         var device = action.activeControl?.device;
         if (device == null) return;
 
+        // Only switch TO gamepad here — PlayerInput scheme switching causes
+        // false KB/Mouse positives so we handle that direction in Update only.
         if (device is Gamepad || device is Joystick)
             SwitchTo(Device.Gamepad);
-        else if (device is Keyboard || device is Mouse)
-            SwitchTo(Device.KeyboardMouse);
     }
 
     private void SwitchTo(Device next)
