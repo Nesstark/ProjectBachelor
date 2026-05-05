@@ -751,6 +751,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MenuButton
   label: {fileID: 1205305086}
   underline: {fileID: 1226380563}
+  mouseHint: {fileID: 0}
+  gamepadHint: {fileID: 0}
 --- !u!114 &105190128
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -797,7 +799,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 931346609}
         m_TargetAssemblyTypeName: InGameSettings, Assembly-CSharp
-        m_MethodName: ButtonBack
+        m_MethodName: OnControlsBackPressed
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}

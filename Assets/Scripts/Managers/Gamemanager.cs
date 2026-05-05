@@ -46,6 +46,9 @@ public class GameManager : MonoBehaviour
 
     private void Awake()
     {
+        if (InputDeviceTracker.Instance != null)
+            InputDeviceTracker.Instance.LockCursorOnGamepad = true;
+        
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
         DontDestroyOnLoad(gameObject);

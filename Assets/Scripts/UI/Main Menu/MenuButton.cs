@@ -58,11 +58,6 @@ public class MenuButton : MonoBehaviour,
     public void OnPointerEnter(PointerEventData _)
     {
         _isPointerOver = true;
-
-        // Mouse took over — clear any controller selection on OTHER buttons.
-        if (EventSystem.current != null)
-            EventSystem.current.SetSelectedGameObject(null);
-
         RefreshVisuals();
     }
 

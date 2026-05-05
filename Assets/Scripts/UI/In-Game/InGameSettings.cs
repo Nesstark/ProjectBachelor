@@ -131,6 +131,9 @@ public class InGameSettings : MonoBehaviour
         IsOpen = true;
         Time.timeScale = 0f;
 
+        if (InputDeviceTracker.Instance != null)
+            InputDeviceTracker.Instance.LockCursorOnGamepad = false;
+
         settingsSubPanel.SetActive(true);
         controlsSubPanel.SetActive(false);
         settingsPanel.SetActive(true);
@@ -151,6 +154,9 @@ public class InGameSettings : MonoBehaviour
     {
         AudioManager.Instance.Play("Click");
         PlayerPrefs.Save();
+
+        if (InputDeviceTracker.Instance != null)
+            InputDeviceTracker.Instance.LockCursorOnGamepad = true;
 
         IsOpen = false;
         settingsPanel.SetActive(false);

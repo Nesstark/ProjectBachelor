@@ -10,6 +10,7 @@ using UnityEngine.InputSystem;
 public class InputDeviceTracker : MonoBehaviour
 {
     public static InputDeviceTracker Instance { get; private set; }
+    public bool LockCursorOnGamepad { get; set; } = false;
 
     public enum Device { KeyboardMouse, Gamepad }
 
@@ -17,6 +18,11 @@ public class InputDeviceTracker : MonoBehaviour
 
     /// <summary>Fired whenever the active input device changes.</summary>
     public event System.Action<Device> OnDeviceChanged;
+
+    private float _deviceSwitchCooldown = 0f;
+    private const float CooldownDuration = 0.2f;
+    private const float MouseDeltaThreshold = 25f; // sqrMagnitude — raise this to reduce jitter sensitivity
+
 
     private void Awake()
     {
@@ -30,9 +36,17 @@ public class InputDeviceTracker : MonoBehaviour
 
     private void Update()
     {
-        // Mouse movement is not an "action", so we poll it here.
-        if (Mouse.current != null && Mouse.current.delta.ReadValue().sqrMagnitude > 1f)
+        if (_deviceSwitchCooldown > 0f)
+        {
+            _deviceSwitchCooldown -= Time.unscaledDeltaTime;
+            return;
+        }
+
+        if (Mouse.current != null && 
+            Mouse.current.delta.ReadValue().sqrMagnitude > MouseDeltaThreshold)
+        {
             SwitchTo(Device.KeyboardMouse);
+        }
     }
 
     private void HandleActionChange(object obj, InputActionChange change)
@@ -51,13 +65,22 @@ public class InputDeviceTracker : MonoBehaviour
     private void SwitchTo(Device next)
     {
         if (next == CurrentDevice) return;
+
         CurrentDevice = next;
+        _deviceSwitchCooldown = CooldownDuration; // prevent immediate ping-pong back
         OnDeviceChanged?.Invoke(CurrentDevice);
 
-        // Show/hide hardware cursor automatically.
-        Cursor.visible   = (next == Device.KeyboardMouse);
-        Cursor.lockState = (next == Device.Gamepad)
-            ? CursorLockMode.Locked
-            : CursorLockMode.None;
+        if (LockCursorOnGamepad)
+        {
+            Cursor.visible   = (next == Device.KeyboardMouse);
+            Cursor.lockState = (next == Device.Gamepad)
+                ? CursorLockMode.Locked
+                : CursorLockMode.None;
+        }
+        else
+        {
+            Cursor.visible   = true;
+            Cursor.lockState = CursorLockMode.None;
+        }
     }
 }

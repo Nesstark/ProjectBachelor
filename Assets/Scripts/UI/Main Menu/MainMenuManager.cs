@@ -82,6 +82,9 @@ public class MainMenuManager : MonoBehaviour
     {
         if (settingsPanel != null) settingsPanel.SetActive(false);
         if (menuRoot      != null) menuRoot.SetActive(true);
+            
+        if (InputDeviceTracker.Instance != null)
+            InputDeviceTracker.Instance.LockCursorOnGamepad = false;
 
         if (menuGroup != null)
         {
@@ -208,22 +211,28 @@ public class MainMenuManager : MonoBehaviour
 
     private void OnDeviceChanged(InputDeviceTracker.Device device)
     {
-        // When the player grabs a controller, auto-focus the correct first button.
         if (device == InputDeviceTracker.Device.Gamepad)
         {
-            // Pick the right first-selected depending on which panel is showing.
-            GameObject target = (settingsPanel != null && settingsPanel.activeSelf)
-                ? (controlsSubPanel != null && controlsSubPanel.activeSelf
+            // Always re-select the correct first button for whichever panel is showing.
+            // This fires even if the mouse was mid-hover — restores controller navigation.
+            GameObject target;
+
+            if (settingsPanel != null && settingsPanel.activeSelf)
+            {
+                target = (controlsSubPanel != null && controlsSubPanel.activeSelf)
                     ? controlsFirstSelected
-                    : settingsFirstSelected)
-                : menuFirstSelected;
+                    : settingsFirstSelected;
+            }
+            else
+            {
+                target = menuFirstSelected;
+            }
 
             StartCoroutine(SelectNextFrame(target));
         }
         else
         {
-            // Mouse took over — drop the EventSystem selection so no button
-            // stays highlighted while the cursor is moving.
+            // Mouse took over — drop selection so no button stays highlighted.
             if (EventSystem.current != null)
                 EventSystem.current.SetSelectedGameObject(null);
         }
