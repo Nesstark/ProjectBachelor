@@ -3,42 +3,23 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
 /// <summary>
-/// Drives the URP Vignette intensity from the RppgReceiver cognitiveLoadScore (range 0–1).
+/// Drives the URP Vignette intensity from RppgReceiver.cognitiveLoadScore (range 0–1).
+/// 
+/// Mapping is a single linear lerp:
+///   score = 0  →  minVignetteIntensity
+///   score = 1  →  maxVignetteIntensity
 ///
-/// The mapping is V-shaped:
-///   score ≤ lowSatPoint    →  lowArousalIntensity    (strong – understimulated)
-///   score == neutralScore   →  neutralIntensity        (barely visible – calm)
-///   score ≥ highSatPoint   →  highArousalIntensity   (strong – overstimulated)
-///
-/// Between those anchor points the intensity is linearly interpolated.
 /// All transitions are smoothed with a configurable lerp speed.
 /// </summary>
-public class ArousalVignetteController : MonoBehaviour
+public class CognitiveLoadVignetteController : MonoBehaviour
 {
-    // ── Intensity Sliders ────────────────────────────────────────────────────
+    // ── Intensity ────────────────────────────────────────────────────────────
     [Header("Vignette Intensity")]
-    [Tooltip("Intensity at the calm/neutral score (~0.275). Keep this very low.")]
-    [Range(0f, 1f)] [SerializeField] private float neutralIntensity = 0.04f;
+    [Tooltip("Intensity when cognitiveLoadScore is 0 (lowest cognitive load).")]
+    [Range(0f, 1f)] [SerializeField] private float minVignetteIntensity = 0.0f;
 
-    [Tooltip("Maximum intensity when cognitive load is very LOW (≤ low saturation point). " +
-             "This is the understimulated / disengaged state.")]
-    [Range(0f, 1f)] [SerializeField] private float lowArousalIntensity = 0.50f;
-
-    [Tooltip("Maximum intensity when cognitive load is very HIGH (≥ high saturation point). " +
-             "This is the overstimulated / stressed state.")]
-    [Range(0f, 1f)] [SerializeField] private float highArousalIntensity = 0.55f;
-
-    // ── Score Thresholds (cognitiveLoadScore is always 0–1) ──────────────────
-    [Header("Score Thresholds  (score range: 0 – 1)")]
-    [Tooltip("Score at which the vignette is at its minimum (the calm midpoint).")]
-    [SerializeField] private float neutralScore = 0.275f;
-
-    [Tooltip("Scores at or below this value are treated as fully low-arousal (understimulated).")]
-    [SerializeField] private float lowSatPoint = 0.15f;
-
-    [Tooltip("Scores at or above this value are treated as fully high-arousal (overstimulated). " +
-             "cognitiveLoadScore maxes out at 1.0, so keep this below 1.")]
-    [SerializeField] private float highSatPoint = 0.75f;
+    [Tooltip("Intensity when cognitiveLoadScore is 1 (highest cognitive load).")]
+    [Range(0f, 1f)] [SerializeField] private float maxVignetteIntensity = 0.55f;
 
     // ── Transition ───────────────────────────────────────────────────────────
     [Header("Transition")]
@@ -56,40 +37,37 @@ public class ArousalVignetteController : MonoBehaviour
     {
         bio = FindFirstObjectByType<RppgReceiver>();
         if (bio == null)
-            Debug.LogError("ArousalVignetteController: No RppgReceiver found in scene.");
+            Debug.LogError("CognitiveLoadVignetteController: No RppgReceiver found in scene.");
 
         Volume volume = GetComponent<Volume>();
         if (volume == null)
         {
-            Debug.LogError("ArousalVignetteController: No Volume component found on this GameObject.");
+            Debug.LogError("CognitiveLoadVignetteController: No Volume component found on this GameObject.");
             return;
         }
 
         // Clone the shared profile so we write to a runtime instance, not the asset on disk.
-        // This also ensures a clean override state every time the scene loads.
         volume.profile = Instantiate(volume.sharedProfile);
 
         if (!volume.profile.TryGet(out vignette))
         {
-            Debug.LogError("ArousalVignetteController: No Vignette override found on the Global Volume profile.");
+            Debug.LogError("CognitiveLoadVignetteController: No Vignette override found on the Global Volume profile.");
             return;
         }
 
-        // Explicitly enable the override — this is what makes the vignette
-        // actually visible after a scene reload. Without it the value is set
-        // but URP ignores it because overrideState is false.
+        // Explicitly enable the override so URP actually applies the value.
         vignette.intensity.overrideState = true;
-        vignette.intensity.value = neutralIntensity;
+        vignette.intensity.value = minVignetteIntensity;
     }
 
     void Update()
     {
         if (bio == null || vignette == null) return;
 
-        // Before baseline is ready or signal is invalid, sit quietly at neutral.
+        // Before baseline is ready or signal is invalid, sit quietly at min intensity.
         targetIntensity = (bio.signalValid && bio.baselineReady)
-            ? ScoreToIntensity(bio.cognitiveLoadScore)
-            : neutralIntensity;
+            ? Mathf.Lerp(minVignetteIntensity, maxVignetteIntensity, bio.cognitiveLoadScore)
+            : minVignetteIntensity;
 
         // Gradual lerp — never snaps instantly.
         vignette.intensity.value = Mathf.Lerp(
@@ -99,45 +77,10 @@ public class ArousalVignetteController : MonoBehaviour
         );
     }
 
-    /// <summary>
-    /// Maps a 0–1 cognitive-load score to a vignette intensity using a V-curve.
-    ///
-    ///   score ≤ lowSatPoint          →  lowArousalIntensity   (left plateau)
-    ///   lowSatPoint → neutralScore   →  lerp up to neutralIntensity
-    ///   neutralScore → highSatPoint  →  lerp up to highArousalIntensity
-    ///   score ≥ highSatPoint         →  highArousalIntensity  (right plateau)
-    ///
-    /// </summary>
-    private float ScoreToIntensity(float score)
-    {
-        // Left plateau — fully understimulated
-        if (score <= lowSatPoint)
-            return lowArousalIntensity;
-
-        // Left arm — rising from low extreme toward calm centre
-        if (score < neutralScore)
-        {
-            float t = Mathf.InverseLerp(lowSatPoint, neutralScore, score);
-            return Mathf.Lerp(lowArousalIntensity, neutralIntensity, t);
-        }
-
-        // Right plateau — fully overstimulated
-        if (score >= highSatPoint)
-            return highArousalIntensity;
-
-        // Right arm — rising from calm centre toward high extreme
-        float t2 = Mathf.InverseLerp(neutralScore, highSatPoint, score);
-        return Mathf.Lerp(neutralIntensity, highArousalIntensity, t2);
-    }
-
 // ── Editor live-preview ──────────────────────────────────────────────────
 #if UNITY_EDITOR
     void OnValidate()
     {
-        // Guard against inverted or nonsensical thresholds.
-        lowSatPoint  = Mathf.Clamp(lowSatPoint,  0f, neutralScore - 0.01f);
-        highSatPoint = Mathf.Clamp(highSatPoint, neutralScore + 0.01f, 1f);
-
         if (!Application.isPlaying || vignette == null) return;
         vignette.intensity.value = targetIntensity;
     }
