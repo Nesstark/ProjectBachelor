@@ -463,7 +463,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArousalVignetteController
   minVignetteIntensity: 0
   maxVignetteIntensity: 0.55
-  lerpSpeed: 0.2
+  lerpSpeed: 3
 --- !u!1 &105814159
 GameObject:
   m_ObjectHideFlags: 0
