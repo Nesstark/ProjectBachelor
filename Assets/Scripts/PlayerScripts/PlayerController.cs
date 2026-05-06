@@ -147,11 +147,14 @@ public class PlayerController : MonoBehaviour
         _currentConeEdge = coneIdleEdge;
     }
 
-    private void Start()
+    private IEnumerator Start()
     {
+        // Wait one frame so RoomManager.Start() has time to call RestoreFromSave()
+        yield return null;
+
         if (GM != null)
         {
-            _lastKnownHp = GM.Player.CurrentHealth;
+            _lastKnownHp = GM.Player.CurrentHealth;  // now reads the restored value
             GM.OnPlayerDied.AddListener(HandlePlayerDied);
             GM.OnPlayerHealthChanged.AddListener(HandlePlayerHit);
         }

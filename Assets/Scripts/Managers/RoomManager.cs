@@ -54,10 +54,16 @@ public class RoomManager : MonoBehaviour
             CurrentLevel = save.Current.dungeonLevel;
             generator.GenerateWithSeed(CurrentLevel, save.Current.dungeonSeed);
 
+            // Restore all PlayerStats values
             GameManager.Instance?.Player.RestoreFromSave(save.Current);
+
+            // Fire HUD update events once so health bar and XP bar refresh
             GameManager.Instance?.OnPlayerHealthChanged.Invoke(
                 save.Current.currentHealth, save.Current.maxHealth);
+            GameManager.Instance?.OnXpChanged.Invoke(
+                save.Current.playerLevel, save.Current.currentXp, save.Current.xpToNextLevel);
 
+            // Restore PlayerController stats (move speed and attack range)
             var controller = playerTransform.GetComponent<PlayerController>();
             if (controller != null)
             {
@@ -65,6 +71,7 @@ public class RoomManager : MonoBehaviour
                 if (save.Current.attackRange > 0f) controller.SetAttackRange(save.Current.attackRange);
             }
 
+            // Reapply permanent pickup effects silently
             PickupTracker.Instance?.ClearAll();
             if (PickupTracker.Instance != null)
             {
