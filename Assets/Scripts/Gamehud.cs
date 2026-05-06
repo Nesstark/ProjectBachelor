@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
 using TMPro;
 
 // ============================================================
@@ -33,12 +34,11 @@ public class GameHUD : MonoBehaviour
     private GameManager      _gm;
     private PlayerController _player;
 
-    private void Start()
+    private IEnumerator Start()
     {
         _gm     = GameManager.Instance;
-        _player = FindFirstObjectByType<PlayerController>();
 
-        if (_gm == null) { Debug.LogError("[GameHUD] GameManager not found!"); return; }
+        if (_gm == null) { Debug.LogError("[GameHUD] GameManager not found!"); yield break; }
 
         if (healthFill  != null) healthFill .color = healthColor;
         if (xpFill      != null) xpFill     .color = xpColor;
@@ -47,6 +47,10 @@ public class GameHUD : MonoBehaviour
         _gm.OnPlayerHealthChanged.AddListener(OnHealthChanged);
         _gm.OnXpChanged          .AddListener(OnXpChanged);
 
+        // Wait one frame so RoomManager.Start() has time to call RestoreFromSave()
+        yield return null;
+
+        _player = FindFirstObjectByType<PlayerController>();
         RefreshAll();
     }
 

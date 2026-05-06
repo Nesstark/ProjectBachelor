@@ -14,6 +14,7 @@ public class ArmorPickup : PickupBase
     protected override void OnPickedUp(GameObject player)
     {
         GameManager.Instance?.AddDamageReduction(damageReduction);
+        PickupTracker.Instance?.Register($"Armor:{damageReduction}");
         Debug.Log($"[ArmorPickup] Damage reduction +{damageReduction}");
         AudioManager.Instance?.Play("PickupArmor");
     }

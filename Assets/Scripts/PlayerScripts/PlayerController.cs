@@ -103,6 +103,12 @@ public class PlayerController : MonoBehaviour
         ? Mathf.Clamp01(1f - Mathf.Max(0f, dashCooldownTimer) / dashCooldown)
         : 1f;
 
+    public float CurrentMoveSpeed   => moveSpeed;
+    public float CurrentAttackRange => _attackRange;
+
+    public void SetMoveSpeed(float value)   => moveSpeed    = value;
+    public void SetAttackRange(float value) => _attackRange = value;
+
     // ─── Animator Hashes ─────────────────────────────────────
     private static readonly int HashSpeed     = Animator.StringToHash("Speed");
     private static readonly int HashDirX      = Animator.StringToHash("DirX");

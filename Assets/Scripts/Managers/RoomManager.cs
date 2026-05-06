@@ -29,7 +29,8 @@ public class RoomManager : MonoBehaviour
 
     public RoomController CurrentRoom { get; private set; }
     public int CurrentCellPublic => currentCell;
-    public int CurrentLevel { get; private set; } = 1;
+    public int CurrentLevel { get; set; } = 1;
+    public int CurrentSeed => generator.seed;
 
     int currentCell = 35;
     bool isTransitioning = false;
@@ -37,12 +38,50 @@ public class RoomManager : MonoBehaviour
     Dictionary<int, string> cellPrefabMap = new();
     HashSet<int> visitedCells = new();
     HashSet<int> clearedCells = new();
+    
 
     void Awake() => Instance = this;
 
     void Start()
     {
-        generator.Generate(CurrentLevel);
+        // Always clear stale event listeners first — prevents invincibility bug
+        GameManager.Instance?.PrepareForSceneLoad();
+
+        var save = RunSaveManager.Instance;
+
+        if (save != null && save.HasActiveSave)
+        {
+            CurrentLevel = save.Current.dungeonLevel;
+            generator.GenerateWithSeed(CurrentLevel, save.Current.dungeonSeed);
+
+            GameManager.Instance?.Player.RestoreFromSave(save.Current);
+            GameManager.Instance?.OnPlayerHealthChanged.Invoke(
+                save.Current.currentHealth, save.Current.maxHealth);
+
+            var controller = playerTransform.GetComponent<PlayerController>();
+            if (controller != null)
+            {
+                if (save.Current.moveSpeed   > 0f) controller.SetMoveSpeed(save.Current.moveSpeed);
+                if (save.Current.attackRange > 0f) controller.SetAttackRange(save.Current.attackRange);
+            }
+
+            PickupTracker.Instance?.ClearAll();
+            if (PickupTracker.Instance != null)
+            {
+                PickupTracker.Instance.ApplySavedPickups(
+                    playerTransform.gameObject, save.Current.collectedPickupIds);
+                foreach (var id in save.Current.collectedPickupIds)
+                    PickupTracker.Instance.Register(id);
+            }
+
+            Debug.Log($"[RoomManager] Run restored — Level {CurrentLevel}, Seed {save.Current.dungeonSeed}");
+        }
+        else
+        {
+            CurrentLevel = 1;
+            generator.Generate(CurrentLevel);
+        }
+
         LoadRoom(35, Direction.South);
     }
 

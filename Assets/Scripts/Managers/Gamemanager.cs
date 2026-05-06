@@ -108,11 +108,23 @@ public class GameManager : MonoBehaviour
         };
     }
 
+    public void PrepareForSceneLoad()
+    {
+        // Wipe stale listeners so newly spawned PlayerController starts clean
+        OnPlayerDied.RemoveAllListeners();
+        OnPlayerHealthChanged.RemoveAllListeners();
+        OnXpChanged.RemoveAllListeners();
+    }
+
 
     // ─── Reset for human game ─────────────────────────────────
     public void ResetForNewGame()
     {
         InitPlayer();
+
+        // Clear stale death listeners from the previous scene's PlayerController
+        OnPlayerDied.RemoveAllListeners();
+        OnPlayerHealthChanged.RemoveAllListeners();
 
         PlayerController pc = FindFirstObjectByType<PlayerController>();
         pc?.ResetAttackRange();
@@ -223,6 +235,18 @@ public class PlayerStats
     public float CurrentHealth;
     public float Damage;
     public float DamageReduction;
+
+    // ── Added for save/restore ─────────────────────────────
+    public void RestoreFromSave(RunSaveManager.RunSaveData data)
+    {
+        MaxHealth       = data.maxHealth;
+        CurrentHealth   = data.currentHealth;
+        Damage          = data.damage;
+        DamageReduction = data.damageReduction; // see Fix 2
+        Level           = data.playerLevel;
+        CurrentXp       = data.currentXp;
+        XpToNextLevel   = data.xpToNextLevel;
+    }
 }
 
 

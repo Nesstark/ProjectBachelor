@@ -23,6 +23,11 @@ public class MainMenuManager : MonoBehaviour
     [SerializeField] private GameObject settingsSubPanel;
     [SerializeField] private GameObject controlsSubPanel;
 
+    // ── Save State Buttons ────────────────────────────────────────────────
+    [Header("Save State Buttons")]
+    [SerializeField] private Button continueButton;   // ← Button, not GameObject
+    [SerializeField] private float  disabledAlpha = 0.35f;
+
     // ── Sliders & Labels ──────────────────────────────────────────────────
     [Header("Volume Sliders")]
     [SerializeField] private Slider masterSlider;
@@ -108,7 +113,11 @@ public class MainMenuManager : MonoBehaviour
         if (hintBar != null)
             hintBar.SetContext(HintBar.Context.Menu);
 
-        SetSelected(menuFirstSelected);
+        // Refresh continue button state after everything is ready
+        RefreshContinueButton();
+
+        bool hasSave = RunSaveManager.Instance != null && RunSaveManager.Instance.HasActiveSave;
+        SetSelected(hasSave && continueButton != null ? continueButton.gameObject : menuFirstSelected);
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -145,9 +154,18 @@ public class MainMenuManager : MonoBehaviour
     // Main menu buttons
     // ─────────────────────────────────────────────────────────────────────
 
-    public void OnPlayPressed()
+    public void OnContinuePressed()
     {
         AudioManager.Instance.Play("Click");
+        SceneManager.LoadScene(gameSceneName);
+    }
+
+    public void OnNewGamePressed()
+    {
+        AudioManager.Instance.Play("Click");
+        RunSaveManager.Instance?.ClearSave();
+        GameManager.Instance?.ResetForNewGame();
+        PickupTracker.Instance?.ClearAll();
         SceneManager.LoadScene(gameSceneName);
     }
 
@@ -245,6 +263,21 @@ public class MainMenuManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────
     // Helpers
     // ─────────────────────────────────────────────────────────────────────
+
+    private void RefreshContinueButton()
+    {
+        if (continueButton == null) return;
+
+        bool hasSave = RunSaveManager.Instance != null && RunSaveManager.Instance.HasActiveSave;
+
+        // Enable or disable click interaction
+        continueButton.interactable = hasSave;
+
+        // Add a CanvasGroup if not already present, then set alpha
+        CanvasGroup cg = continueButton.GetComponent<CanvasGroup>();
+        if (cg == null) cg = continueButton.gameObject.AddComponent<CanvasGroup>();
+        cg.alpha = hasSave ? 1f : disabledAlpha;
+    }
 
     private void OpenSettingsView()
     {

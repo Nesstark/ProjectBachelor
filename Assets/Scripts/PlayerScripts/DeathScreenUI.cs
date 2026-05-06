@@ -80,7 +80,7 @@ public class DeathScreenUI : MonoBehaviour
     public void RestartGame()
     {
         Time.timeScale = 1f;
-        GameManager.Instance?.ResetForNewGame();
+        SaveCurrentRun();
         SceneManager.LoadScene(gameSceneName);
     }
 
@@ -88,8 +88,24 @@ public class DeathScreenUI : MonoBehaviour
     public void ExitToMenu()
     {
         Time.timeScale = 1f;
-        GameManager.Instance?.ResetForNewGame();
+        SaveCurrentRun();
         SceneManager.LoadScene(menuSceneName);
+    }
+
+    private void SaveCurrentRun()
+    {
+        var rm  = RoomManager.Instance;
+        var gm  = GameManager.Instance;
+        var rsm = RunSaveManager.Instance;
+        if (rm == null || gm == null || rsm == null) return;
+
+        var controller = FindFirstObjectByType<PlayerController>();
+
+        var pickupIds = PickupTracker.Instance != null
+            ? PickupTracker.Instance.CollectedIds
+            : new System.Collections.Generic.List<string>();
+
+        rsm.SaveRun(rm.CurrentLevel, rm.CurrentSeed, gm.Player, controller, pickupIds);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

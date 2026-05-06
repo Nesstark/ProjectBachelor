@@ -17,6 +17,7 @@ public class RangePickup : PickupBase
         if (controller == null) return;
 
         controller.AddAttackRange(rangeBonus);
+        PickupTracker.Instance?.Register($"Range:{rangeBonus}");
         Debug.Log($"[RangePickup] Attack range increased by {rangeBonus}");
         AudioManager.Instance?.Play("PickupRange");
     }

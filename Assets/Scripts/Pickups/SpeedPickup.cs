@@ -17,6 +17,7 @@ public class SpeedPickup : PickupBase
         if (controller == null) return;
 
         controller.AddMoveSpeed(speedBonus);
+        PickupTracker.Instance?.Register($"Speed:{speedBonus}");
         Debug.Log($"[SpeedPickup] Move speed permanently increased by {speedBonus}");
         AudioManager.Instance?.Play("PickupSpeed");
     }
