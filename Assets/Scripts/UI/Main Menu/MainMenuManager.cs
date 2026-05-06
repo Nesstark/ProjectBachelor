@@ -270,13 +270,20 @@ public class MainMenuManager : MonoBehaviour
 
         bool hasSave = RunSaveManager.Instance != null && RunSaveManager.Instance.HasActiveSave;
 
-        // Enable or disable click interaction
+        // Enable or disable click interaction on the Button itself
         continueButton.interactable = hasSave;
 
-        // Add a CanvasGroup if not already present, then set alpha
+        // Disable the MenuButton hover/select behaviour when no save exists
+        MenuButton menuBtn = continueButton.GetComponent<MenuButton>();
+        if (menuBtn != null) menuBtn.enabled = hasSave;
+
+        // Add a CanvasGroup if not already present
         CanvasGroup cg = continueButton.GetComponent<CanvasGroup>();
         if (cg == null) cg = continueButton.gameObject.AddComponent<CanvasGroup>();
-        cg.alpha = hasSave ? 1f : disabledAlpha;
+
+        cg.alpha          = hasSave ? 1f : disabledAlpha;
+        cg.blocksRaycasts = hasSave;  // prevents mouse hover entirely when greyed out
+        cg.interactable   = hasSave;  // prevents gamepad/keyboard navigation targeting it
     }
 
     private void OpenSettingsView()
