@@ -240,9 +240,9 @@ public class PlayerStats
     public void RestoreFromSave(RunSaveManager.RunSaveData data)
     {
         MaxHealth       = data.maxHealth;
-        CurrentHealth   = data.currentHealth;
+        CurrentHealth   = data.currentHealth > 0f ? data.currentHealth : data.maxHealth;
         Damage          = data.damage;
-        DamageReduction = data.damageReduction; // see Fix 2
+        DamageReduction = data.damageReduction;
         Level           = data.playerLevel;
         CurrentXp       = data.currentXp;
         XpToNextLevel   = data.xpToNextLevel;

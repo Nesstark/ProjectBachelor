@@ -101,6 +101,10 @@ public class DeathScreenUI : MonoBehaviour
 
         var controller = FindFirstObjectByType<PlayerController>();
 
+        // On death, restore current health to max so the next run is playable.
+        // Keep MaxHealth, level, XP, pickups, etc.
+        gm.Player.CurrentHealth = gm.Player.MaxHealth;
+
         var pickupIds = PickupTracker.Instance != null
             ? PickupTracker.Instance.CollectedIds
             : new System.Collections.Generic.List<string>();
