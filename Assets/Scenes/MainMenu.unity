@@ -567,6 +567,19 @@ MonoBehaviour:
     playOnAwake: 0
     mixerGroup: {fileID: 2132725367027035467, guid: 3c3e18d2feacc42849f558351a3801e8, type: 2}
     source: {fileID: 0}
+  - id: BossAlert
+    clips:
+    - {fileID: 8300000, guid: 79dc5c5c75cde8c0f97270876a32e79b, type: 3}
+    volume: 0.5
+    pitch: 1
+    randomizePitch: 1
+    pitchVariance: 0
+    randomizeVolume: 0
+    volumeVariance: 0
+    loop: 0
+    playOnAwake: 0
+    mixerGroup: {fileID: 2132725367027035467, guid: 3c3e18d2feacc42849f558351a3801e8, type: 2}
+    source: {fileID: 0}
   uiSounds:
   - id: Click
     clips:
@@ -1953,7 +1966,6 @@ MonoBehaviour:
   masterValueLabel: {fileID: 948689068}
   ambianceValueLabel: {fileID: 189126620}
   sfxValueLabel: {fileID: 354962709}
-  crtToggle: {fileID: 0}
   menuFirstSelected: {fileID: 1524875754}
   settingsFirstSelected: {fileID: 1309289020}
   controlsFirstSelected: {fileID: 1360236189}
@@ -5978,6 +5990,7 @@ MonoBehaviour:
   - root: {fileID: 65627581}
     icon: {fileID: 226741477}
     label: {fileID: 1885931443}
+  inGameSettingsHints: []
   menuHints:
   - actionLabel: Confirm
     gamepadIcon: {fileID: 21300000, guid: e465edfa59824470c962199d2ddac799, type: 3}

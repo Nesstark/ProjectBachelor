@@ -28,7 +28,6 @@ public class TestDummyController : BaseEnemy
         // Disable NavMesh so the dummy stays rooted to the spot
         if (Agent != null)
         {
-            Agent.ResetPath();
             Agent.enabled = false;
         }
 
