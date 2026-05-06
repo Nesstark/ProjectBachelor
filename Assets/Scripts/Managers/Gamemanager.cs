@@ -110,10 +110,8 @@ public class GameManager : MonoBehaviour
 
     public void PrepareForSceneLoad()
     {
-        // Wipe stale listeners so newly spawned PlayerController starts clean
-        OnPlayerDied.RemoveAllListeners();
-        OnPlayerHealthChanged.RemoveAllListeners();
-        OnXpChanged.RemoveAllListeners();
+        // No-op: scene-bound listeners (PlayerController, GameHUD, DeathScreenUI)
+        // unsubscribe themselves in OnDestroy, so we don't need to wipe here.
     }
 
 
