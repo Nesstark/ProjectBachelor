@@ -254,11 +254,13 @@ MonoBehaviour:
   flankAggression: 0.85
   dashTriggerRange: 10
   dashSpeedMultiplier: 15
-  dashMaxDuration: 3
+  dashMaxDuration: 2
   alertPauseDuration: 0.5
   dashLandDistance: 1.8
+  dashCooldown: 3
   exclamationPingPrefab: {fileID: 8062693777701903974, guid: 151eb94be5a4f438b996e1313a972d39, type: 3}
   pingOffset: {x: 0, y: 2.2, z: 0}
+  pingScale: 1
 --- !u!1001 &5403172109253254480
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -4,9 +4,9 @@ using UnityEngine;
 // ============================================================
 // RogueController.cs — Rogue enemy type
 // ── Behaviour ─────────────────────────────────────────────
-// Tries to get behind the player, then closes to dash range
-// and fires a dash attack. Pure dash attacker — no melee.
-// High damage, squishy.
+// Flanks behind the player, dashes in to attack once,
+// then waits on cooldown before repeating.
+// Pure dash attacker — no melee outside of dash.
 // ============================================================
 
 public class RogueController : BaseEnemy
@@ -30,6 +30,8 @@ public class RogueController : BaseEnemy
     [SerializeField] private float alertPauseDuration = 0.7f;
     [Tooltip("How close the Rogue must get to the player for the dash to land")]
     [SerializeField] private float dashLandDistance = 1.8f;
+    [Tooltip("Cooldown after a dash attempt before the Rogue can dash again")]
+    [SerializeField] private float dashCooldown = 3.0f;
     [Tooltip("Prefab for the ! exclamation ping (world-space UI or sprite)")]
     [SerializeField] private GameObject exclamationPingPrefab;
     [Tooltip("Offset above the Rogue's transform where the ping spawns")]
@@ -37,17 +39,17 @@ public class RogueController : BaseEnemy
     [Tooltip("Uniform scale multiplier applied to the ping — 1 = prefab default, 2 = double size")]
     [SerializeField] private float pingScale = 1f;
 
-    private enum RogueState { Flanking, DashTelegraph, Dashing }
+    private enum RogueState { Flanking, DashTelegraph, Dashing, Cooldown }
     private RogueState _state = RogueState.Flanking;
 
     private float _baseAgentSpeed;
     private Coroutine _dashCoroutine = null;
-
     private PlayerController _playerController;
 
     private static readonly int HashAssassinate = Animator.StringToHash("Assassinate");
 
     // ─── Init ─────────────────────────────────────────────────
+
     protected override void Start()
     {
         base.Start();
@@ -57,21 +59,31 @@ public class RogueController : BaseEnemy
             _playerController = PlayerTransform.GetComponent<PlayerController>();
 
         if (_playerController == null)
-            Debug.LogWarning("[Rogue] Could not find PlayerController — falling back to transform.forward for aim.");
+            Debug.LogWarning("[Rogue] Could not find PlayerController — falling back to transform.forward.");
     }
 
     // ─── Tick ─────────────────────────────────────────────────
+    // Completely block BaseEnemy's melee attack cycle —
+    // the Rogue only ever attacks inside DashAttackSequence.
+
     protected override void TickAttackCycle()
     {
-        if (_state == RogueState.DashTelegraph || _state == RogueState.Dashing)
-            return;
+        // Only tick the timer when ready to attack (Flanking state)
+        if (_state != RogueState.Flanking) return;
 
-        base.TickAttackCycle();
+        AttackTimer += Time.deltaTime;
+        if (AttackTimer >= attackInterval)
+        {
+            AttackTimer = 0f;
+            TryAttack();
+        }
     }
 
     // ─── Movement ─────────────────────────────────────────────
+
     protected override void HandleMovement()
     {
+        // Frozen during telegraph and dash; free to walk during cooldown and flanking
         if (_state == RogueState.Dashing || _state == RogueState.DashTelegraph)
             return;
 
@@ -88,37 +100,33 @@ public class RogueController : BaseEnemy
             Vector3 destination = Vector3.Lerp(directPos, flankPos, flankAggression);
             Agent.SetDestination(destination);
         }
-
-        _state = RogueState.Flanking;
     }
 
     // ─── Attack ───────────────────────────────────────────────
+    // Only triggers a dash — never calls base.TryAttack().
+
     protected override void TryAttack()
     {
+        // Block all attacks outside of Flanking state
+        if (_state != RogueState.Flanking) return;
         if (_dashCoroutine != null) return;
-        if (_state == RogueState.DashTelegraph || _state == RogueState.Dashing) return;
         if (PlayerTransform == null) return;
 
         float distToPlayer = Vector3.Distance(transform.position, PlayerTransform.position);
 
         if (distToPlayer <= dashTriggerRange)
         {
-            Debug.Log($"[Rogue] Within dash range ({distToPlayer:F2}) — DASHING!");
+            Debug.Log($"[Rogue] Within dash range ({distToPlayer:F2}) — starting dash!");
             _dashCoroutine = StartCoroutine(DashAttackSequence());
-        }
-        else
-        {
-            Debug.Log($"[Rogue] Closing gap — DistToPlayer: {distToPlayer:F2}");
         }
     }
 
     // ─── Dash Attack Sequence ─────────────────────────────────
+
     private IEnumerator DashAttackSequence()
     {
-        Debug.Log("[Rogue] DashAttackSequence STARTED");
-        _state = RogueState.DashTelegraph;
-
-        // ── Step 1: Hard stop + face the player ───────────────
+        // ── Step 1: Telegraph — hard stop, face player ────────
+        _state          = RogueState.DashTelegraph;
         Agent.isStopped = true;
         Agent.velocity  = Vector3.zero;
 
@@ -127,14 +135,14 @@ public class RogueController : BaseEnemy
         if (lookDir != Vector3.zero)
             transform.rotation = Quaternion.LookRotation(lookDir);
 
-        // ── Step 2: Spawn and scale the ! ping ─────────────────
+        // ── Step 2: Spawn ! ping ───────────────────────────────
         GameObject ping = null;
         if (exclamationPingPrefab != null)
         {
-            ping = Instantiate(exclamationPingPrefab, transform.position + pingOffset, Quaternion.identity);
+            ping = Instantiate(exclamationPingPrefab,
+                transform.position + pingOffset, Quaternion.identity);
             ping.transform.SetParent(transform, worldPositionStays: true);
             ping.transform.localScale = Vector3.one * pingScale;
-            Debug.Log("[Rogue] Ping spawned!");
         }
         else
         {
@@ -143,63 +151,68 @@ public class RogueController : BaseEnemy
 
         // ── Step 3: Wind-up pause ──────────────────────────────
         yield return new WaitForSeconds(alertPauseDuration);
-
         if (ping != null) Destroy(ping);
 
-        // ── Step 4: Burst dash toward the player ──────────────
+        // ── Step 4: Dash toward the player ────────────────────
         _state          = RogueState.Dashing;
         Agent.isStopped = false;
         Agent.speed     = _baseAgentSpeed * dashSpeedMultiplier;
         Agent.SetDestination(PlayerTransform.position);
 
-        Debug.Log($"[Rogue] DASHING — speed: {Agent.speed:F1}");
-
-        float elapsed = 0f;
-        bool  landed  = false;
+        float elapsed  = 0f;
+        bool  hasHit   = false;  // only one hit allowed per dash
 
         while (elapsed < dashMaxDuration)
         {
-            if (PlayerTransform == null)
-            {
-                Debug.Log("[Rogue] Player destroyed during dash — aborting.");
-                break;
-            }
+            if (PlayerTransform == null) break;
 
             Agent.SetDestination(PlayerTransform.position);
 
-            float distNow = Vector3.Distance(transform.position, PlayerTransform.position);
-            if (distNow <= dashLandDistance)
+            // Only deal damage once per dash, the moment we're close enough
+            if (!hasHit)
             {
-                landed = true;
-                Debug.Log($"[Rogue] DASH HIT — {Stats.Damage:F1} dmg");
-                GM?.ApplyDamageToPlayer(Stats.Damage);
-                if (animator != null) animator.SetTrigger(HashAssassinate);
-                break;
+                float distNow = Vector3.Distance(transform.position, PlayerTransform.position);
+                if (distNow <= dashLandDistance)
+                {
+                    hasHit = true;
+                    Debug.Log($"[Rogue] DASH HIT — {Stats.Damage:F1} dmg");
+                    GM?.ApplyDamageToPlayer(Stats.Damage);
+                    if (animator != null) animator.SetTrigger(HashAssassinate);
+                    // Don't break — let the dash finish its momentum naturally
+                }
             }
 
             elapsed += Time.deltaTime;
             yield return null;
         }
 
-        if (!landed)
-            Debug.Log("[Rogue] Dash timed out — missed!");
+        if (!hasHit)
+            Debug.Log("[Rogue] Dash timed out — missed.");
 
-        // ── Reset ──────────────────────────────────────────────
+        // ── Step 5: Reset speed, enter cooldown ───────────────
         Agent.speed     = _baseAgentSpeed;
         Agent.isStopped = false;
-        _state          = RogueState.Flanking;
-        _dashCoroutine  = null;
+        _state          = RogueState.Cooldown;
+
+        Debug.Log($"[Rogue] Cooldown — {dashCooldown:F1}s before next dash.");
+        yield return new WaitForSeconds(dashCooldown);
+
+        // ── Step 6: Ready to dash again ───────────────────────
+        _state         = RogueState.Flanking;
+        _dashCoroutine = null;
+        Debug.Log("[Rogue] Cooldown done — back to flanking.");
     }
 
     // ─── Animator Override ────────────────────────────────────
+
     protected override void UpdateAnimator()
     {
         if (animator == null) return;
         animator.SetFloat(HashSpeed, Agent.velocity.magnitude);
-        // AttackCharge skipped — not in Rogue's Animator
     }
 
     // ─── Helpers ──────────────────────────────────────────────
+
     private Vector3 GetPlayerAimDir()
     {
         if (_playerController != null)
@@ -220,30 +233,25 @@ public class RogueController : BaseEnemy
     {
         Vector3 toRogue = (transform.position - PlayerTransform.position).normalized;
         toRogue.y = 0f;
-
-        Vector3 aimDir = GetPlayerAimDir();
-
-        float dot = Vector3.Dot(aimDir, toRogue);
+        float dot = Vector3.Dot(GetPlayerAimDir(), toRogue);
         return dot < -0.5f;
     }
 
     // ─── Gizmos ───────────────────────────────────────────────
+
     protected override void OnDrawGizmosSelected()
     {
         base.OnDrawGizmosSelected();
 
-        // Flank target — magenta
         if (PlayerTransform != null)
         {
             Gizmos.color = Color.magenta;
             Gizmos.DrawSphere(GetFlankPosition(), 0.3f);
         }
 
-        // Dash trigger range — yellow
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, dashTriggerRange);
 
-        // Dash land distance — cyan
         Gizmos.color = Color.cyan;
         Gizmos.DrawWireSphere(transform.position, dashLandDistance);
     }
