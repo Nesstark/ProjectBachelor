@@ -185,6 +185,7 @@ public class BossController : BaseEnemy
         if (!ValidatePrefab()) return;
         if (animator != null) animator.SetTrigger(HashShoot);
 
+        AudioManager.Instance.Play("EnemyFireball");
         SpawnProjectile(AimAtPlayer(), Stats.Damage, normalProjectileSpeed);
         Debug.Log($"[Boss] SHOT (Normal) — DMG:{Stats.Damage:F1}  SPD:{normalProjectileSpeed}");
     }
@@ -200,6 +201,7 @@ public class BossController : BaseEnemy
 
             if (animator != null) animator.SetTrigger(HashShoot);
 
+            AudioManager.Instance.Play("EnemyFireball");
             SpawnProjectile(AimAtPlayer(), Stats.Damage, burstProjectileSpeed);
             Debug.Log($"[Boss] SHOT (Burst {i + 1}/{burstShotCount}) — DMG:{Stats.Damage:F1}  SPD:{burstProjectileSpeed}");
 
@@ -217,6 +219,9 @@ public class BossController : BaseEnemy
             ping = Instantiate(exclamationPingPrefab, transform.position + pingOffset, Quaternion.identity);
             ping.transform.SetParent(transform, worldPositionStays: true);
             ping.transform.localScale = Vector3.one * pingScale;
+
+            AudioManager.Instance.Play("BossAlert");
+
             Debug.Log("[Boss] Circle ping spawned!");
         }
         else
@@ -235,6 +240,8 @@ public class BossController : BaseEnemy
         int shotsFired = 0;
         for (float angle = 0f; angle < 360f; angle += circleDegreeStep)
         {
+            AudioManager.Instance.Play("EnemyFireball");
+            
             for (int s = 0; s < Mathf.Max(1, circleShotsPerDegree); s++)
             {
                 float offsetAngle = angle + (s * (circleDegreeStep / Mathf.Max(1, circleShotsPerDegree)));
