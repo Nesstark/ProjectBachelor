@@ -236,10 +236,13 @@ public class RoomManager : MonoBehaviour
             }
         }
 
-        CurrentRoom.StartEncounter();
+        // Only auto-trigger the start room (baseline lock).
+        // All other rooms wait for the player to hit EncounterTrigger.
+        if (CurrentRoom.roomType == RoomType.Start)
+            CurrentRoom.StartEncounter();
 
-        // ── NEW: if the player re-enters a cleared boss room, re-show
-        //        the level exit that was hidden on the way out.
+        // If the player re-enters a cleared boss room, re-show
+        // the level exit that was hidden on the way out.
         if (CurrentRoom.isBossRoom && IsRoomCleared(cell) && currentLevelExit != null)
             currentLevelExit.SetActive(true);
     }

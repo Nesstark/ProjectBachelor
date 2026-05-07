@@ -68,12 +68,14 @@ public class RoomController : MonoBehaviour
     [Tooltip("Two empty child GameObjects placed where the items should appear (e.g. on pedestals).")]
     public Transform[] treasureSpawnPoints;
 
+    [Header("Baseline Lock")]
+    [Tooltip("How long the start room stays locked for baseline collection (seconds). Set to 0 to skip during development.")]
+    public float baselineLockDuration = 120f;
+
     // ── Private state ─────────────────────────────────────────
     private GameObject _treasureA;
     private GameObject _treasureB;
     private bool _treasureChosen = false;
-
-    private bool _baselineLockHandled = false;
 
     private static readonly List<GameObject> _allSpawnedEnemies = new List<GameObject>();
 
@@ -112,52 +114,37 @@ public class RoomController : MonoBehaviour
             return;
         }
 
-        // One-time baseline lock
-        if (roomType == RoomType.Start && !_baselineLockHandled)
+        if (roomType == RoomType.Start)
         {
-            _baselineLockHandled = true;
-
-            RppgReceiver rppg = FindAnyObjectByType<RppgReceiver>();
-
-            // No receiver in scene = no Python/camera = skip baseline entirely
-            if (rppg == null)
-            {
-                UnlockDoors();
-                return;
-            }
-
-            if (!rppg.baselineReady && !rppg.baselineSkipped)
+            if (baselineLockDuration > 0f)
             {
                 LockDoors();
-                StartCoroutine(WaitForBaselineThenUnlock(rppg));
-                return;
+                StartCoroutine(BaselineLockCoroutine());
             }
-
-            // Baseline already done or skipped — unlock immediately
-            UnlockDoors();
+            else
+            {
+                // baselineLockDuration = 0 → skip lock entirely (dev shortcut)
+                UnlockDoors();
+            }
             return;
         }
+
+        // All other room types — spawn enemies
+        TriggerEncounter();
     }
 
-    private IEnumerator WaitForBaselineThenUnlock(RppgReceiver rppg)
+    private IEnumerator BaselineLockCoroutine()
     {
-        Debug.Log("[StartRoom] Doors locked — waiting for baseline...");
-
-        while (!rppg.baselineReady && !rppg.baselineSkipped)
-        {
-            yield return null;
-        }
-
-        if (rppg.baselineSkipped)
-            Debug.Log("[StartRoom] Baseline skipped (no signal) — unlocking doors anyway.");
-        else
-            Debug.Log("[StartRoom] Baseline complete — unlocking doors.");
-
+        Debug.Log($"[StartRoom] Doors locked for baseline ({baselineLockDuration}s).");
+        yield return new WaitForSeconds(baselineLockDuration);
+        Debug.Log("[StartRoom] Baseline window complete — unlocking doors.");
         UnlockDoors();
     }
 
     public void TriggerEncounter()
     {
+        if (encounterActive) return;
+
         GameObject[] prefabsToUse = isBossRoom ? bossPrefabs : enemyPrefabs;
 
         if (prefabsToUse == null || prefabsToUse.Length == 0 ||

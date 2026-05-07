@@ -356,6 +356,7 @@ MonoBehaviour:
   roomType: 0
   pickupPrefabs: []
   treasureSpawnPoints: []
+  baselineLockDuration: 120
 --- !u!1 &377165796267291294
 GameObject:
   m_ObjectHideFlags: 0
