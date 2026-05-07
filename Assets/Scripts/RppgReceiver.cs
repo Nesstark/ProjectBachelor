@@ -51,6 +51,7 @@ public class RppgReceiver : MonoBehaviour
     private List<float> baselineSQISamples       = new List<float>();
 
     private float baselineRMSSD_mean, baselineRMSSD_std;
+    private float baselineHR_std;
     private Queue<float> scoreHistory = new Queue<float>();
 
     private UdpClient  udpClient;
@@ -128,10 +129,18 @@ public class RppgReceiver : MonoBehaviour
 
         UpdateLive(payload);
 
-        signalValid = payload.sqi > 0.3f;
+        signalValid = payload.sqi > 0.3f || (heartRate > 0 && (payload.hrv == null || payload.hrv.rmssd <= 0));
         if (!signalValid) return;
 
-        float rawScore = CalculateCognitiveLoad(payload.hrv);
+        float rawScore;
+        if (payload.hrv != null && payload.hrv.rmssd > 0f)
+        {
+            rawScore = CalculateCognitiveLoad(payload.hrv);
+        }
+        else
+        {
+            rawScore = CalculatePseudoCognitiveLoad(heartRate);
+        }
 
         scoreHistory.Enqueue(rawScore);
         if (scoreHistory.Count > smoothingWindow)
@@ -172,6 +181,12 @@ public class RppgReceiver : MonoBehaviour
 
         baselineRMSSD_std = Mathf.Sqrt(variance);
 
+        // Calculate HR std
+        float hr_variance = baselineHRSamples
+            .Select(v => (v - baseline_HR) * (v - baseline_HR))
+            .Average();
+        baselineHR_std = Mathf.Sqrt(hr_variance);
+
         // Store averages so RppgLogger can write BASELINE END row
         baseline_HR        = baselineHRSamples.Average();
         baseline_IBI       = baselineIBISamples.Average();
@@ -190,6 +205,14 @@ public class RppgReceiver : MonoBehaviour
     {
         float delta = baselineRMSSD_mean - hrv.rmssd;
         float std   = Mathf.Max(baselineRMSSD_std, baselineRMSSD_mean * 0.05f);
+        float z     = delta / std;
+        return Mathf.Clamp01(Mathf.Max(0f, z) / 2f);
+    }
+
+    private float CalculatePseudoCognitiveLoad(float hr)
+    {
+        float delta = hr - baseline_HR;
+        float std   = Mathf.Max(baselineHR_std, baseline_HR * 0.05f);
         float z     = delta / std;
         return Mathf.Clamp01(Mathf.Max(0f, z) / 2f);
     }
