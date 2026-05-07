@@ -31,11 +31,6 @@ public class RoomManager : MonoBehaviour
     public int CurrentCellPublic => currentCell;
     public int CurrentLevel { get; set; } = 1;
     public int CurrentSeed => generator.seed;
-    
-    [Header("Baseline Door Locker")]
-    private bool _baselineDone = false;
-    public bool BaselineDone => _baselineDone;
-    public void MarkBaselineDone() => _baselineDone = true;
 
     int currentCell = 35;
     bool isTransitioning = false;
@@ -43,7 +38,6 @@ public class RoomManager : MonoBehaviour
     Dictionary<int, string> cellPrefabMap = new();
     HashSet<int> visitedCells = new();
     HashSet<int> clearedCells = new();
-    
 
     void Awake()
     {
@@ -94,7 +88,6 @@ public class RoomManager : MonoBehaviour
         }
         else
         {
-            _baselineDone = false;
             CurrentLevel = 1;
             generator.Generate(CurrentLevel);
         }
@@ -122,8 +115,6 @@ public class RoomManager : MonoBehaviour
             visitedCells.Clear();
             clearedCells.Clear();
 
-            // ── NEW: destroy all enemies from the previous floor before
-            //        generating the next one, so none bleed into the start room.
             RoomController.CleanupForNextLevel();
 
             generator.Generate(CurrentLevel);
@@ -135,8 +126,6 @@ public class RoomManager : MonoBehaviour
         isTransitioning = false;
     }
 
-    // ── NEW: guard prevents spawning a duplicate exit if UnlockDoors()
-    //        is called more than once on a cleared boss room (re-entry path).
     public void SpawnLevelExit(Vector3 position)
     {
         if (levelExitPrefab == null)
@@ -144,7 +133,7 @@ public class RoomManager : MonoBehaviour
             Debug.LogError("LevelExit prefab er ikke sat på RoomManager!");
             return;
         }
-        if (currentLevelExit != null) return;   // already exists — do nothing
+        if (currentLevelExit != null) return;
         Vector3 spawnPos = position;
         spawnPos.y += levelExitHeightOffset;
         currentLevelExit = Instantiate(levelExitPrefab, spawnPos, Quaternion.identity);
@@ -175,8 +164,6 @@ public class RoomManager : MonoBehaviour
 
         yield return StartCoroutine(TransitionManager.Instance.Transition(() =>
         {
-            // ── NEW: hide the level exit before the room swap so it cannot
-            //        appear floating in the middle of the next room.
             if (currentLevelExit != null) currentLevelExit.SetActive(false);
 
             if (currentRoomInstance != null) Destroy(currentRoomInstance);
@@ -242,13 +229,9 @@ public class RoomManager : MonoBehaviour
             }
         }
 
-        // Only auto-trigger the start room (baseline lock).
-        // All other rooms wait for the player to hit EncounterTrigger.
         if (CurrentRoom.roomType == RoomType.Start)
             CurrentRoom.StartEncounter();
 
-        // If the player re-enters a cleared boss room, re-show
-        // the level exit that was hidden on the way out.
         if (CurrentRoom.isBossRoom && IsRoomCleared(cell) && currentLevelExit != null)
             currentLevelExit.SetActive(true);
     }

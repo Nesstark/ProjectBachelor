@@ -116,26 +116,24 @@ public class RoomController : MonoBehaviour
 
         if (roomType == RoomType.Start)
         {
-            // Skip baseline if already collected this run
-            if (RoomManager.Instance.BaselineDone)
+            // RppgReceiver is the single source of truth for baseline state.
+            // It persists across scene loads via DontDestroyOnLoad, so
+            // baselineReady stays true through restarts, continues, level-ups,
+            // and new games — until the app is rebooted.
+            var rppg = FindFirstObjectByType<RppgReceiver>();
+            bool baselineDone = rppg != null && (rppg.baselineReady || rppg.baselineSkipped);
+
+            if (baselineDone || baselineLockDuration <= 0f)
             {
                 UnlockDoors();
                 return;
             }
 
-            if (baselineLockDuration > 0f)
-            {
-                LockDoors();
-                StartCoroutine(BaselineLockCoroutine());
-            }
-            else
-            {
-                UnlockDoors();
-            }
+            LockDoors();
+            StartCoroutine(BaselineLockCoroutine());
             return;
         }
 
-        // All other room types — spawn enemies
         TriggerEncounter();
     }
 
@@ -144,7 +142,6 @@ public class RoomController : MonoBehaviour
         Debug.Log($"[StartRoom] Doors locked for baseline ({baselineLockDuration}s).");
         yield return new WaitForSeconds(baselineLockDuration);
         Debug.Log("[StartRoom] Baseline window complete — unlocking doors.");
-        RoomManager.Instance.MarkBaselineDone(); 
         UnlockDoors();
     }
 
