@@ -108,6 +108,11 @@ public class GameManager : MonoBehaviour
         };
     }
 
+    public void RestorePlayerFromSave(RunSaveManager.RunSaveData data)
+    {
+        Player.RestoreFromSave(data, basePlayerHealth);
+    }
+
     public void PrepareForSceneLoad()
     {
         // No-op: scene-bound listeners (PlayerController, GameHUD, DeathScreenUI)
@@ -235,10 +240,10 @@ public class PlayerStats
     public float DamageReduction;
 
     // ── Added for save/restore ─────────────────────────────
-    public void RestoreFromSave(RunSaveManager.RunSaveData data)
+    public void RestoreFromSave(RunSaveManager.RunSaveData data, float defaultMaxHealth)
     {
-        MaxHealth       = data.maxHealth;
-        CurrentHealth   = data.currentHealth > 0f ? data.currentHealth : data.maxHealth;
+        MaxHealth       = data.maxHealth > 0f ? data.maxHealth : defaultMaxHealth;
+        CurrentHealth   = data.currentHealth > 0f ? data.currentHealth : MaxHealth;
         Damage          = data.damage;
         DamageReduction = data.damageReduction;
         Level           = data.playerLevel;

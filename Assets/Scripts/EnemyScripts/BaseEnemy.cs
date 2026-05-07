@@ -112,6 +112,8 @@ public abstract class BaseEnemy : MonoBehaviour
         if (IsDead) return;
 
         Stats.CurrentHealth -= amount;
+        Stats.CurrentHealth  = Mathf.Max(0f, Stats.CurrentHealth);
+        
         Debug.Log($"[{name}] Took {amount:F1} — HP:{Stats.CurrentHealth:F1}/{Stats.MaxHealth:F1}");
 
         _healthBar?.SetHealth(Stats.CurrentHealth, Stats.MaxHealth);

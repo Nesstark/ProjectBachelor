@@ -116,7 +116,7 @@ public class DungeonGenerator : MonoBehaviour
 
                 if (DungeonMap.ContainsKey(neighbour)) continue;   // already visited
                 if (CountNeighbours(neighbour) > 1)    continue;   // would create a loop
-                if (Random.value < expansionChance)    continue;   // stochastic branching
+                if (Random.value >= expansionChance)   continue;   // stochastic branching
 
                 DungeonMap[neighbour] = RoomType.Normal;
                 queue.Enqueue(neighbour);

@@ -119,26 +119,40 @@ public class RoomController : MonoBehaviour
 
             RppgReceiver rppg = FindAnyObjectByType<RppgReceiver>();
 
-            if (rppg != null && !rppg.baselineReady)
+            // No receiver in scene = no Python/camera = skip baseline entirely
+            if (rppg == null)
             {
-                LockDoors(); // 👈 lock immediately, synchronously
+                UnlockDoors();
+                return;
+            }
+
+            if (!rppg.baselineReady && !rppg.baselineSkipped)
+            {
+                LockDoors();
                 StartCoroutine(WaitForBaselineThenUnlock(rppg));
                 return;
             }
+
+            // Baseline already done or skipped — unlock immediately
+            UnlockDoors();
+            return;
         }
     }
 
     private IEnumerator WaitForBaselineThenUnlock(RppgReceiver rppg)
     {
-        // LockDoors() removed from here — already called above
         Debug.Log("[StartRoom] Doors locked — waiting for baseline...");
 
-        while (!rppg.baselineReady)
+        while (!rppg.baselineReady && !rppg.baselineSkipped)
         {
             yield return null;
         }
 
-        Debug.Log("[StartRoom] Baseline complete — unlocking doors.");
+        if (rppg.baselineSkipped)
+            Debug.Log("[StartRoom] Baseline skipped (no signal) — unlocking doors anyway.");
+        else
+            Debug.Log("[StartRoom] Baseline complete — unlocking doors.");
+
         UnlockDoors();
     }
 

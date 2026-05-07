@@ -45,10 +45,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   basePlayerHealth: 100
-  basePlayerSpeed: 5
   basePlayerDamage: 20
   healthPerLevel: 20
-  speedPerLevel: 0.3
   damagePerLevel: 5
   baseXpToLevel: 100
   xpScalingFactor: 1.5
@@ -79,7 +77,6 @@ MonoBehaviour:
     baseDamage: 20
     baseXpReward: 20
   enemyScalePerLevel: 0.15
-  attackRange: 3
   OnPlayerLevelUp:
     m_PersistentCalls:
       m_Calls: []

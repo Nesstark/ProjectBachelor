@@ -40,7 +40,11 @@ public class RoomManager : MonoBehaviour
     HashSet<int> clearedCells = new();
     
 
-    void Awake() => Instance = this;
+    void Awake()
+    {
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        Instance = this;
+    }
 
     void Start()
     {
@@ -55,7 +59,7 @@ public class RoomManager : MonoBehaviour
             generator.GenerateWithSeed(CurrentLevel, save.Current.dungeonSeed);
 
             // Restore all PlayerStats values
-            GameManager.Instance?.Player.RestoreFromSave(save.Current);
+            GameManager.Instance?.RestorePlayerFromSave(save.Current);
 
             // Fire HUD update events once so health bar and XP bar refresh
             GameManager.Instance?.OnPlayerHealthChanged.Invoke(

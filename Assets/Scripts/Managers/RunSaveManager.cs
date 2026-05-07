@@ -35,10 +35,13 @@ public class RunSaveManager : MonoBehaviour
     public static RunSaveManager Instance { get; private set; }
 
     private const string SaveKey = "RunSaveData";
+    private const int CurrentSchema = 1;
 
     [Serializable]
     public class RunSaveData
     {
+        public int schemaVersion = 1;
+
         public bool hasActiveSave = false;
 
         // Dungeon state
@@ -111,6 +114,7 @@ public class RunSaveManager : MonoBehaviour
     {
         _current = new RunSaveData
         {
+            schemaVersion      = CurrentSchema,
             hasActiveSave      = true,
             dungeonLevel       = level,
             dungeonSeed        = seed,
@@ -148,9 +152,28 @@ public class RunSaveManager : MonoBehaviour
     private void LoadFromDisk()
     {
         if (PlayerPrefs.HasKey(SaveKey))
+        {
             _current = JsonUtility.FromJson<RunSaveData>(PlayerPrefs.GetString(SaveKey));
+
+            if (_current.schemaVersion != CurrentSchema)
+            {
+                Debug.LogWarning($"[RunSaveManager] Schema mismatch (found {_current.schemaVersion}, expected {CurrentSchema}). Clearing save.");
+                ClearSave();
+                return;
+            }
+
+            // Extra guard: xpToNextLevel = 0 causes infinite loop in AwardXp
+            if (_current.xpToNextLevel <= 0f)
+            {
+                Debug.LogWarning("[RunSaveManager] Invalid save: xpToNextLevel <= 0. Clearing save.");
+                ClearSave();
+                return;
+            }
+        }
         else
+        {
             _current = new RunSaveData { hasActiveSave = false };
+        }
 
         RefreshDebugView();
     }

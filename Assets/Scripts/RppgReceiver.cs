@@ -26,7 +26,11 @@ public class RppgReceiver : MonoBehaviour
     public float baselineDuration    = 120f;
     public bool  isCollectingBaseline = false;
     public bool  baselineReady        = false;
+    public bool  baselineSkipped      = false;
     public int   baselineSamples      = 0;
+
+    private const int MaxBaselineRetries = 2;
+    private int _baselineRetryCount = 0;
 
     [Header("Baseline Averages (for logging)")]
     public float baseline_HR        = 0f;
@@ -73,6 +77,7 @@ public class RppgReceiver : MonoBehaviour
     {
         isCollectingBaseline = true;
         baselineReady        = false;
+        baselineSkipped      = false;
         baselineTimer        = 0f;
         subsampleTimer       = 0f;
         baselineSamples      = 0;
@@ -168,7 +173,18 @@ public class RppgReceiver : MonoBehaviour
     {
         if (baselineRMSSDSamples.Count < 6)
         {
-            Debug.LogWarning("[RppgReceiver] Not enough baseline samples, restarting...");
+            _baselineRetryCount++;
+
+            if (_baselineRetryCount >= MaxBaselineRetries)
+            {
+                Debug.LogWarning("[RppgReceiver] Baseline failed after max retries — skipping. Affective computing disabled.");
+                baselineSkipped      = true;
+                isCollectingBaseline = false;
+                baselineReady        = false; // stays false — cognitive load won't compute
+                return;
+            }
+
+            Debug.LogWarning($"[RppgReceiver] Not enough baseline samples, retrying ({_baselineRetryCount}/{MaxBaselineRetries})...");
             StartBaseline();
             return;
         }

@@ -49,6 +49,8 @@ public class PickupTracker : MonoBehaviour
                 case "Speed":
                     controller?.AddMoveSpeed(value);
                     break;
+                // "Health" is intentionally absent — HealthPickup is consumable,
+                // not permanent. It is not tracked by PickupTracker.
             }
         }
 

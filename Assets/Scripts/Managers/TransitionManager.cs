@@ -27,7 +27,10 @@ public class TransitionManager : MonoBehaviour
 
     void Awake()
     {
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
+        if (vignetteImage == null) 
+            Debug.LogWarning("[TransitionManager] vignetteImage is not assigned in the Inspector.");
         SetAlpha(0f);
         if (levelUpGroup != null) levelUpGroup.alpha = 0f;
     }
@@ -114,6 +117,7 @@ public class TransitionManager : MonoBehaviour
 
     void SetAlpha(float alpha)
     {
+        if (vignetteImage == null) return;
         Color c = vignetteImage.color;
         vignetteImage.color = new Color(c.r, c.g, c.b, alpha);
     }

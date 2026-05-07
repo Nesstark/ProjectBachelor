@@ -46,22 +46,35 @@ public class AudioManager : MonoBehaviour
 
     public void Play(string id)
     {
-        if (!_soundMap.TryGetValue(id, out SoundData s)) { Debug.LogWarning($"[AudioManager] Sound '{id}' not found."); return; }
+        if (!_soundMap.TryGetValue(id, out SoundData s)) 
+        { 
+            Debug.LogWarning($"[AudioManager] Sound '{id}' not found."); 
+            return; 
+        }
+        if (s.clips == null || s.clips.Length == 0) 
+        { 
+            Debug.LogWarning($"[AudioManager] Sound '{id}' has no clips assigned."); 
+            return; 
+        }
 
-        s.source.clip = s.clips[Random.Range(0, s.clips.Length)];
-        s.source.volume = s.randomizeVolume ? s.volume + Random.Range(-s.volumeVariance, s.volumeVariance) : s.volume;
-        s.source.pitch = s.randomizePitch ? s.pitch + Random.Range(-s.pitchVariance, s.pitchVariance) : s.pitch;
-        s.source.Play();
-    }
+        AudioClip clip  = s.clips[Random.Range(0, s.clips.Length)];
+        float volume    = s.randomizeVolume ? s.volume + Random.Range(-s.volumeVariance, s.volumeVariance) : s.volume;
+        float pitch     = s.randomizePitch  ? s.pitch  + Random.Range(-s.pitchVariance,  s.pitchVariance)  : s.pitch;
 
-    public void Stop(string id)
-    {
-        if (_soundMap.TryGetValue(id, out SoundData s)) s.source.Stop();
+        s.source.pitch = pitch;
+        s.source.PlayOneShot(clip, volume);
     }
 
     public void PlayAtPosition(string id, Vector3 position)
     {
         if (!_soundMap.TryGetValue(id, out SoundData s)) return;
+
+        if (s.clips == null || s.clips.Length == 0) 
+        { 
+            Debug.LogWarning($"[AudioManager] Sound '{id}' has no clips assigned."); 
+            return; 
+        }
+
         AudioClip clip = s.clips[Random.Range(0, s.clips.Length)];
         AudioSource.PlayClipAtPoint(clip, position, s.volume);
     }
@@ -84,8 +97,25 @@ public class AudioManager : MonoBehaviour
 
     // ── Fade Helpers ──────────────────────────────────────────
 
-    public void FadeIn(string id, float duration)  => StartCoroutine(FadeCoroutine(id, 0f, _soundMap[id].volume, duration));
-    public void FadeOut(string id, float duration) => StartCoroutine(FadeCoroutine(id, _soundMap[id].source.volume, 0f, duration, stopOnEnd: true));
+    public void FadeIn(string id, float duration)
+    {
+        if (!_soundMap.TryGetValue(id, out SoundData s))
+        {
+            Debug.LogWarning($"[AudioManager] FadeIn: Sound '{id}' not found.");
+            return;
+        }
+        StartCoroutine(FadeCoroutine(id, 0f, s.volume, duration));
+    }
+
+    public void FadeOut(string id, float duration)
+    {
+        if (!_soundMap.TryGetValue(id, out SoundData s))
+        {
+            Debug.LogWarning($"[AudioManager] FadeOut: Sound '{id}' not found.");
+            return;
+        }
+        StartCoroutine(FadeCoroutine(id, s.source.volume, 0f, duration, stopOnEnd: true));
+    }
 
     private IEnumerator FadeCoroutine(string id, float from, float to, float duration, bool stopOnEnd = false)
     {

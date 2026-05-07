@@ -104,6 +104,8 @@ public class BossController : BaseEnemy
     // ─── Movement ─────────────────────────────────────────
     protected override void HandleMovement()
     {
+        if (!Agent.isOnNavMesh) return;
+
         float dist = Vector3.Distance(transform.position, PlayerTransform.position);
 
         if (dist <= chargeRange)
