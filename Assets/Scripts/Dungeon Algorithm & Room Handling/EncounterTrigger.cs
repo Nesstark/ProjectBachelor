@@ -11,6 +11,6 @@ public class EncounterTrigger : MonoBehaviour
         if (RoomManager.Instance.IsRoomCleared(RoomManager.Instance.CurrentCellPublic)) return;
 
         hasTriggered = true;
-        RoomManager.Instance.CurrentRoom.TriggerEncounter();
+        RoomManager.Instance.CurrentRoom.StartEncounter();
     }
 }

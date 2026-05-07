@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
 
 public class RoomController : MonoBehaviour
@@ -50,8 +51,6 @@ public class RoomController : MonoBehaviour
     public GameObject[] bossPrefabs;
 
     [Header("Encounter Settings")]
-    // Normal rooms: 3-6 enemies. Shop rooms: 4-8 (ambush).
-    // Boss rooms always spawn exactly 1. No public count needed.
     int remainingEnemies = 0;
     bool encounterActive = false;
 
@@ -74,8 +73,8 @@ public class RoomController : MonoBehaviour
     private GameObject _treasureB;
     private bool _treasureChosen = false;
 
-    // Static list of every enemy spawned this floor.
-    // Cleared by CleanupForNextLevel() before loading a new floor.
+    private bool _baselineLockHandled = false;
+
     private static readonly List<GameObject> _allSpawnedEnemies = new List<GameObject>();
 
     // ─────────────────────────────────────────────────────────
@@ -112,6 +111,35 @@ public class RoomController : MonoBehaviour
             UnlockDoors();
             return;
         }
+
+        // One-time baseline lock
+        if (roomType == RoomType.Start && !_baselineLockHandled)
+        {
+            _baselineLockHandled = true;
+
+            RppgReceiver rppg = FindAnyObjectByType<RppgReceiver>();
+
+            if (rppg != null && !rppg.baselineReady)
+            {
+                LockDoors(); // 👈 lock immediately, synchronously
+                StartCoroutine(WaitForBaselineThenUnlock(rppg));
+                return;
+            }
+        }
+    }
+
+    private IEnumerator WaitForBaselineThenUnlock(RppgReceiver rppg)
+    {
+        // LockDoors() removed from here — already called above
+        Debug.Log("[StartRoom] Doors locked — waiting for baseline...");
+
+        while (!rppg.baselineReady)
+        {
+            yield return null;
+        }
+
+        Debug.Log("[StartRoom] Baseline complete — unlocking doors.");
+        UnlockDoors();
     }
 
     public void TriggerEncounter()
@@ -127,11 +155,10 @@ public class RoomController : MonoBehaviour
 
         LockDoors();
 
-        // Boss: always 1. Shop: ambush (4-8). Normal: 3-6.
         int spawnCount;
-        if      (isBossRoom)               spawnCount = 1;
+        if      (isBossRoom)                spawnCount = 1;
         else if (roomType == RoomType.Shop) spawnCount = Mathf.Min(Random.Range(4, 9), enemySpawnPoints.Length);
-        else                               spawnCount = Mathf.Min(Random.Range(3, 7), enemySpawnPoints.Length);
+        else                                spawnCount = Mathf.Min(Random.Range(3, 7), enemySpawnPoints.Length);
 
         remainingEnemies = spawnCount;
 
@@ -214,11 +241,6 @@ public class RoomController : MonoBehaviour
     // LEVEL CLEANUP
     // ─────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Called by RoomManager.DoLevelUpTransition() before generating
-    /// the next floor. Destroys every enemy spawned this level so
-    /// none carry over into the new floor's start room.
-    /// </summary>
     public static void CleanupForNextLevel()
     {
         foreach (GameObject enemy in _allSpawnedEnemies)
