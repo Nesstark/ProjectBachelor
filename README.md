@@ -101,7 +101,7 @@ python rppg_server.py
 
 ## License
 
-This project is licensed under the terms found in [`LICENSE`](./LICENSE).
+This project is licensed under the terms found in [`LICENSE`](https://github.com/Nesstark/ProjectBachelor/blob/main/LICENSE).
 
 ---
 
