@@ -31,6 +31,11 @@ public class RoomManager : MonoBehaviour
     public int CurrentCellPublic => currentCell;
     public int CurrentLevel { get; set; } = 1;
     public int CurrentSeed => generator.seed;
+    
+    [Header("Baseline Door Locker")]
+    private bool _baselineDone = false;
+    public bool BaselineDone => _baselineDone;
+    public void MarkBaselineDone() => _baselineDone = true;
 
     int currentCell = 35;
     bool isTransitioning = false;
@@ -89,6 +94,7 @@ public class RoomManager : MonoBehaviour
         }
         else
         {
+            _baselineDone = false;
             CurrentLevel = 1;
             generator.Generate(CurrentLevel);
         }

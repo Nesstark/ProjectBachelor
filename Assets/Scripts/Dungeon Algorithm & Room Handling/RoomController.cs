@@ -116,6 +116,13 @@ public class RoomController : MonoBehaviour
 
         if (roomType == RoomType.Start)
         {
+            // Skip baseline if already collected this run
+            if (RoomManager.Instance.BaselineDone)
+            {
+                UnlockDoors();
+                return;
+            }
+
             if (baselineLockDuration > 0f)
             {
                 LockDoors();
@@ -123,7 +130,6 @@ public class RoomController : MonoBehaviour
             }
             else
             {
-                // baselineLockDuration = 0 → skip lock entirely (dev shortcut)
                 UnlockDoors();
             }
             return;
@@ -138,6 +144,7 @@ public class RoomController : MonoBehaviour
         Debug.Log($"[StartRoom] Doors locked for baseline ({baselineLockDuration}s).");
         yield return new WaitForSeconds(baselineLockDuration);
         Debug.Log("[StartRoom] Baseline window complete — unlocking doors.");
+        RoomManager.Instance.MarkBaselineDone(); 
         UnlockDoors();
     }
 
