@@ -463,7 +463,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArousalVignetteController
   minVignetteIntensity: 0.17
   maxVignetteIntensity: 0.8
-  minCAIntensity: 0.1
+  minCAIntensity: 0.17
   maxCAIntensity: 1
   caInnerRadius: 0.35
   vignetteLerpSpeed: 3

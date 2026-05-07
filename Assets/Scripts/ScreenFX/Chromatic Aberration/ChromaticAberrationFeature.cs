@@ -1,28 +1,16 @@
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.RenderGraphModule;
 using UnityEngine.Rendering.Universal;
 
-/// <summary>
-/// Fullscreen chromatic aberration post-process pass for URP.
-///
-/// Setup:
-///   1. Add this feature to your URP Renderer asset
-///      (Project Settings → Graphics → URP Asset → Renderer → Add Renderer Feature).
-///   2. Assign the Hidden/ChromaticAberration shader in the feature's inspector slot.
-///   3. Attach CognitiveLoadVignetteController to your Global Volume GameObject —
-///      it will drive _CAIntensity automatically.
-/// </summary>
 public class ChromaticAberrationFeature : ScriptableRendererFeature
 {
-    // ── Inspector ────────────────────────────────────────────────────────────
     [Tooltip("Assign the 'Hidden/ChromaticAberration' shader here.")]
     [SerializeField] private Shader shader;
 
-    // ── Private State ────────────────────────────────────────────────────────
-    private Material material;
+    private Material              material;
     private ChromaticAberrationPass pass;
 
-    // ────────────────────────────────────────────────────────────────────────
     public override void Create()
     {
         if (shader == null)
@@ -30,7 +18,6 @@ public class ChromaticAberrationFeature : ScriptableRendererFeature
             Debug.LogWarning("ChromaticAberrationFeature: No shader assigned.");
             return;
         }
-
         material = CoreUtils.CreateEngineMaterial(shader);
         pass     = new ChromaticAberrationPass(material);
     }
@@ -38,58 +25,73 @@ public class ChromaticAberrationFeature : ScriptableRendererFeature
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
         if (material == null) return;
-
-        // Skip scene-view camera to avoid cluttering editor workflows.
-        var cameraType = renderingData.cameraData.cameraType;
-        if (cameraType == CameraType.Preview || cameraType == CameraType.SceneView) return;
-
+        var ct = renderingData.cameraData.cameraType;
+        if (ct == CameraType.Preview || ct == CameraType.SceneView) return;
         renderer.EnqueuePass(pass);
     }
 
     protected override void Dispose(bool disposing)
     {
         CoreUtils.Destroy(material);
-        pass?.Dispose();
     }
 
-    // ── Inner Render Pass ────────────────────────────────────────────────────
+    // ── Inner Pass ────────────────────────────────────────────────────────────
     sealed class ChromaticAberrationPass : ScriptableRenderPass
     {
-        private readonly Material          material;
-        private          RTHandle          tempRT;
+        private readonly Material material;
+        private static readonly int CAIntensityId = Shader.PropertyToID("_CAIntensity");
 
-        private static readonly int            CAIntensityId = Shader.PropertyToID("_CAIntensity");
-        private static readonly ProfilingSampler Sampler     = new("Chromatic Aberration");
+        // Render graph pass data structs
+        class CopyData   { public TextureHandle source; }
+        class EffectData { public TextureHandle source; public Material material; }
 
         internal ChromaticAberrationPass(Material mat)
         {
-            material         = mat;
-            renderPassEvent  = RenderPassEvent.AfterRenderingPostProcessing;
+            material        = mat;
+            renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
         }
 
-        public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
+        public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
         {
-            var desc              = renderingData.cameraData.cameraTargetDescriptor;
-            desc.depthBufferBits  = 0;
-            RenderingUtils.ReAllocateIfNeeded(ref tempRT, desc, FilterMode.Bilinear, name: "_CATempRT");
-        }
-
-        public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
-        {
-            // Skip entirely when intensity is negligible — no GPU cost at rest.
             if (Shader.GetGlobalFloat(CAIntensityId) < 0.001f) return;
 
-            var cmd = CommandBufferPool.Get();
-            using (new ProfilingScope(cmd, Sampler))
-            {
-                var source = renderingData.cameraData.renderer.cameraColorTargetHandle;
-                Blitter.BlitCameraTexture(cmd, source, tempRT, material, 0);
-                Blitter.BlitCameraTexture(cmd, tempRT, source);
-            }
-            context.ExecuteCommandBuffer(cmd);
-            CommandBufferPool.Release(cmd);
-        }
+            var resourceData = frameData.Get<UniversalResourceData>();
 
-        internal void Dispose() => tempRT?.Release();
+            // Skip when URP renders directly to the backbuffer.
+            if (resourceData.isActiveTargetBackBuffer) return;
+
+            TextureHandle activeColor = resourceData.activeColorTexture;
+
+            // Create a temp texture matching the active colour buffer.
+            var tempDesc         = renderGraph.GetTextureDesc(activeColor);
+            tempDesc.name        = "_CATempCopy";
+            tempDesc.clearBuffer = false;
+            TextureHandle tempTexture = renderGraph.CreateTexture(tempDesc);
+
+            // ── Pass 1: copy activeColor → tempTexture (plain blit, no material) ──
+            using (var builder = renderGraph.AddRasterRenderPass<CopyData>("CA_Copy", out var passData))
+            {
+                passData.source = activeColor;
+                builder.UseTexture(passData.source);
+                builder.SetRenderAttachment(tempTexture, 0);
+                builder.SetRenderFunc((CopyData data, RasterGraphContext ctx) =>
+                {
+                    Blitter.BlitTexture(ctx.cmd, data.source, new Vector4(1, 1, 0, 0), 0, false);
+                });
+            }
+
+            // ── Pass 2: blit tempTexture → activeColor through the CA shader ─────
+            using (var builder = renderGraph.AddRasterRenderPass<EffectData>("CA_Effect", out var passData))
+            {
+                passData.source   = tempTexture;
+                passData.material = material;
+                builder.UseTexture(passData.source);
+                builder.SetRenderAttachment(activeColor, 0);
+                builder.SetRenderFunc((EffectData data, RasterGraphContext ctx) =>
+                {
+                    Blitter.BlitTexture(ctx.cmd, data.source, new Vector4(1, 1, 0, 0), data.material, 0);
+                });
+            }
+        }
     }
 }
