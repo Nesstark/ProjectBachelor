@@ -2039,10 +2039,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 946598690}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 861, y: 12}
-  m_SizeDelta: {x: 50, y: 50}
+  m_AnchorMin: {x: 1, y: 1}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 799, y: -28.4}
+  m_SizeDelta: {x: 100, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &639380948
 MonoBehaviour:
@@ -2091,8 +2091,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 18
-  m_fontSizeBase: 18
+  m_fontSize: 36
+  m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -3494,7 +3494,7 @@ PrefabInstance:
     m_RemovedGameObjects: []
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: 8564853733404867185, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
-      insertIndex: 1
+      insertIndex: -1
       addedObject: {fileID: 639380947}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 7842dfd943eb7fad7870fe2d1cd2b51a, type: 3}
