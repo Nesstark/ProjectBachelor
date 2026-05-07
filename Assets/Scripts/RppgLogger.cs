@@ -21,6 +21,7 @@ public class RppgLogger : MonoBehaviour
     private string previousLabel       = "";
     private bool   baselineStartLogged = false;
     private bool   baselineEndLogged   = false;
+    private bool   isInBossRoom        = false;
     private int    dataEntryCount      = 0;
 
     // ── Singleton ─────────────────────────────────
@@ -99,6 +100,17 @@ public class RppgLogger : MonoBehaviour
         // Only log live data once baseline is done and signal is valid
         if (!receiver.baselineReady || !receiver.signalValid) return;
 
+        bool bossRoom = RoomManager.Instance?.CurrentRoom?.isBossRoom == true;
+        if (bossRoom && !isInBossRoom)
+        {
+            logLines.Add(Row(GetElapsed(), "BOSS ROOM ENTER", "", "", "", "", "", "", "", ""));
+        }
+        else if (!bossRoom && isInBossRoom)
+        {
+            logLines.Add(Row(GetElapsed(), "BOSS ROOM EXIT", "", "", "", "", "", "", "", ""));
+        }
+        isInBossRoom = bossRoom;
+
         timer += Time.deltaTime;
         if (timer >= logInterval)
         {
@@ -120,6 +132,7 @@ public class RppgLogger : MonoBehaviour
         string lfhf    = $"{receiver.hrv_lf_hf:F2}";
         string breath  = $"{receiver.breathingRate:F3}";
         string sqi     = $"{receiver.signalQuality:F3}";
+        bool bossRoom  = RoomManager.Instance?.CurrentRoom?.isBossRoom == true;
 
         if (previousLabel != "" && previousLabel != load)
         {
@@ -127,7 +140,8 @@ public class RppgLogger : MonoBehaviour
             logLines.Add(Row(t, evt, load, score, hr, ibi, rmssd, lfhf, breath, sqi));
         }
 
-        logLines.Add(Row(t, "DATA", load, score, hr, ibi, rmssd, lfhf, breath, sqi));
+        string eventName = bossRoom ? "BOSS DATA" : "DATA";
+        logLines.Add(Row(t, eventName, load, score, hr, ibi, rmssd, lfhf, breath, sqi));
         previousLabel = load;
         dataEntryCount++;
     }
