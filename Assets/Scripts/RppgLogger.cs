@@ -29,7 +29,7 @@ public class RppgLogger : MonoBehaviour
     // Column widths — must match the session file layout exactly
     private const int COL_TIME      = 11;
     private const int COL_EVENT     = 19;
-    private const int COL_AROUSAL   = 11;
+    private const int COL_LOAD   = 11;
     private const int COL_SCORE     = 9;
     private const int COL_HR        = 9;
     private const int COL_IBI       = 9;
@@ -112,7 +112,7 @@ public class RppgLogger : MonoBehaviour
     private void LogData()
     {
         string t       = GetElapsed();
-        string arousal = receiver.cognitiveLoadLabel;
+        string load    = receiver.cognitiveLoadLabel;
         string score   = $"{receiver.cognitiveLoadScore:F3}";
         string hr      = $"{receiver.heartRate:F1}";
         string ibi     = $"{receiver.hrv_ibi:F1}";
@@ -121,26 +121,26 @@ public class RppgLogger : MonoBehaviour
         string breath  = $"{receiver.breathingRate:F3}";
         string sqi     = $"{receiver.signalQuality:F3}";
 
-        if (previousLabel != "" && previousLabel != arousal)
+        if (previousLabel != "" && previousLabel != load)
         {
-            string evt = $"LEVEL {previousLabel}>{arousal}";
-            logLines.Add(Row(t, evt, arousal, score, hr, ibi, rmssd, lfhf, breath, sqi));
+            string evt = $"LEVEL {previousLabel}>{load}";
+            logLines.Add(Row(t, evt, load, score, hr, ibi, rmssd, lfhf, breath, sqi));
         }
 
-        logLines.Add(Row(t, "DATA", arousal, score, hr, ibi, rmssd, lfhf, breath, sqi));
-        previousLabel = arousal;
+        logLines.Add(Row(t, "DATA", load, score, hr, ibi, rmssd, lfhf, breath, sqi));
+        previousLabel = load;
         dataEntryCount++;
     }
 
     private string Row(string time, string evt,
-        string arousal, string score,
+        string load, string score,
         string hr,      string ibi,
         string rmssd,   string lfhf,
         string breath,  string sqi)
     {
         return time.PadRight(COL_TIME)
              + evt.PadRight(COL_EVENT)
-             + arousal.PadRight(COL_AROUSAL)
+             + load.PadRight(COL_LOAD)
              + score.PadRight(COL_SCORE)
              + hr.PadRight(COL_HR)
              + ibi.PadRight(COL_IBI)
@@ -183,7 +183,7 @@ public class RppgLogger : MonoBehaviour
         logLines.Add(
             "Time".PadRight(COL_TIME)      +
             "Event".PadRight(COL_EVENT)    +
-            "Arousal".PadRight(COL_AROUSAL)+
+            "Load".PadRight(COL_LOAD)      +
             "Score".PadRight(COL_SCORE)    +
             "HR".PadRight(COL_HR)          +
             "IBI".PadRight(COL_IBI)        +
