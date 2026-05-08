@@ -461,10 +461,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a86e5111a7a06edcbb9c71526b2bbe35, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ArousalVignetteController
-  minVignetteIntensity: 0.17
-  maxVignetteIntensity: 0.8
-  minCAIntensity: 0.17
-  maxCAIntensity: 1
+  minVignetteIntensity: 0.3
+  maxVignetteIntensity: 0.3
+  minCAIntensity: 0.2
+  maxCAIntensity: 0.2
   caInnerRadius: 0.35
   vignetteLerpSpeed: 3
   caLerpSpeed: 3
