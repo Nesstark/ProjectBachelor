@@ -205,6 +205,24 @@ public class InGameSettings : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────────────
+    // Quit
+    // ─────────────────────────────────────────────────────────────────────
+
+    public void OnQuitPressed()
+    {
+        AudioManager.Instance.Play("Click");
+        PlayerPrefs.Save();
+
+        Time.timeScale = 1f; // Reset timescale before quitting
+
+    #if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+    #else
+        Application.Quit();
+    #endif
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
     // Slider callbacks
     // ─────────────────────────────────────────────────────────────────────
 
