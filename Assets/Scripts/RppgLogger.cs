@@ -24,13 +24,17 @@ public class RppgLogger : MonoBehaviour
     private bool   isInBossRoom        = false;
     private int    dataEntryCount      = 0;
 
+    // Current context string written on every row
+    private string currentContext = "Normal";
+
     // ── Singleton ─────────────────────────────────
     private static RppgLogger instance;
 
     // Column widths — must match the session file layout exactly
     private const int COL_TIME      = 11;
     private const int COL_EVENT     = 19;
-    private const int COL_LOAD   = 11;
+    private const int COL_CONTEXT   = 12;   // new column
+    private const int COL_LOAD      = 11;
     private const int COL_SCORE     = 9;
     private const int COL_HR        = 9;
     private const int COL_IBI       = 9;
@@ -71,6 +75,16 @@ public class RppgLogger : MonoBehaviour
         StartLogging();
     }
 
+    void OnEnable()
+    {
+        GameManager.Instance?.OnPlayerDied.AddListener(HandlePlayerDied);
+    }
+
+    void OnDisable()
+    {
+        GameManager.Instance?.OnPlayerDied.RemoveListener(HandlePlayerDied);
+    }
+
     void Update()
     {
         if (!isLogging || receiver == null) return;
@@ -78,7 +92,7 @@ public class RppgLogger : MonoBehaviour
         // BASELINE START — logged once as soon as baseline begins
         if (receiver.isCollectingBaseline && !baselineStartLogged)
         {
-            logLines.Add(Row(GetElapsed(), "BASELINE START", "", "", "", "", "", "", "", ""));
+            logLines.Add(Row(GetElapsed(), "BASELINE START", currentContext, "", "", "", "", "", "", "", ""));
             baselineStartLogged = true;
         }
 
@@ -86,7 +100,7 @@ public class RppgLogger : MonoBehaviour
         if (!receiver.isCollectingBaseline && receiver.baselineReady && !baselineEndLogged)
         {
             logLines.Add(Row(
-                GetElapsed(), "BASELINE END",
+                GetElapsed(), "BASELINE END", currentContext,
                 "–", "–",
                 $"{receiver.baseline_HR:F1}",
                 $"{receiver.baseline_IBI:F1}",
@@ -100,14 +114,17 @@ public class RppgLogger : MonoBehaviour
         // Only log live data once baseline is done and signal is valid
         if (!receiver.baselineReady || !receiver.signalValid) return;
 
+        // Update context and log transitions
         bool bossRoom = RoomManager.Instance?.CurrentRoom?.isBossRoom == true;
         if (bossRoom && !isInBossRoom)
         {
-            logLines.Add(Row(GetElapsed(), "BOSS ROOM ENTER", "", "", "", "", "", "", "", ""));
+            currentContext = "BossRoom";
+            logLines.Add(Row(GetElapsed(), "BOSS ROOM ENTER", currentContext, "", "", "", "", "", "", "", ""));
         }
         else if (!bossRoom && isInBossRoom)
         {
-            logLines.Add(Row(GetElapsed(), "BOSS ROOM EXIT", "", "", "", "", "", "", "", ""));
+            currentContext = "Normal";
+            logLines.Add(Row(GetElapsed(), "BOSS ROOM EXIT", currentContext, "", "", "", "", "", "", "", ""));
         }
         isInBossRoom = bossRoom;
 
@@ -123,37 +140,42 @@ public class RppgLogger : MonoBehaviour
 
     private void LogData()
     {
-        string t       = GetElapsed();
-        string load    = receiver.cognitiveLoadLabel;
-        string score   = $"{receiver.cognitiveLoadScore:F3}";
-        string hr      = $"{receiver.heartRate:F1}";
-        string ibi     = $"{receiver.hrv_ibi:F1}";
-        string rmssd   = $"{receiver.hrv_rmssd:F1}";
-        string lfhf    = $"{receiver.hrv_lf_hf:F2}";
-        string breath  = $"{receiver.breathingRate:F3}";
-        string sqi     = $"{receiver.signalQuality:F3}";
-        bool bossRoom  = RoomManager.Instance?.CurrentRoom?.isBossRoom == true;
+        string t      = GetElapsed();
+        string load   = receiver.cognitiveLoadLabel;
+        string score  = $"{receiver.cognitiveLoadScore:F3}";
+        string hr     = $"{receiver.heartRate:F1}";
+        string ibi    = $"{receiver.hrv_ibi:F1}";
+        string rmssd  = $"{receiver.hrv_rmssd:F1}";
+        string lfhf   = $"{receiver.hrv_lf_hf:F2}";
+        string breath = $"{receiver.breathingRate:F3}";
+        string sqi    = $"{receiver.signalQuality:F3}";
 
         if (previousLabel != "" && previousLabel != load)
         {
             string evt = $"LEVEL {previousLabel}>{load}";
-            logLines.Add(Row(t, evt, load, score, hr, ibi, rmssd, lfhf, breath, sqi));
+            logLines.Add(Row(t, evt, currentContext, load, score, hr, ibi, rmssd, lfhf, breath, sqi));
         }
 
-        string eventName = bossRoom ? "BOSS DATA" : "DATA";
-        logLines.Add(Row(t, eventName, load, score, hr, ibi, rmssd, lfhf, breath, sqi));
+        logLines.Add(Row(t, "DATA", currentContext, load, score, hr, ibi, rmssd, lfhf, breath, sqi));
         previousLabel = load;
         dataEntryCount++;
     }
 
-    private string Row(string time, string evt,
-        string load, string score,
-        string hr,      string ibi,
-        string rmssd,   string lfhf,
-        string breath,  string sqi)
+    private void HandlePlayerDied()
+    {
+        if (!isLogging) return;
+        logLines.Add(Row(GetElapsed(), "PLAYER DIED", currentContext, "", "", "", "", "", "", "", ""));
+    }
+
+    private string Row(string time, string evt, string context,
+        string load,  string score,
+        string hr,    string ibi,
+        string rmssd, string lfhf,
+        string breath, string sqi)
     {
         return time.PadRight(COL_TIME)
              + evt.PadRight(COL_EVENT)
+             + context.PadRight(COL_CONTEXT)
              + load.PadRight(COL_LOAD)
              + score.PadRight(COL_SCORE)
              + hr.PadRight(COL_HR)
@@ -183,6 +205,7 @@ public class RppgLogger : MonoBehaviour
         baselineStartLogged  = false;
         baselineEndLogged    = false;
         previousLabel        = "";
+        currentContext       = "Normal";
         dataEntryCount       = 0;
         timer                = 0f;
         isLogging            = true;
@@ -195,17 +218,18 @@ public class RppgLogger : MonoBehaviour
         logLines.Add("");
 
         logLines.Add(
-            "Time".PadRight(COL_TIME)      +
-            "Event".PadRight(COL_EVENT)    +
-            "Load".PadRight(COL_LOAD)      +
-            "Score".PadRight(COL_SCORE)    +
-            "HR".PadRight(COL_HR)          +
-            "IBI".PadRight(COL_IBI)        +
-            "RMSSD".PadRight(COL_RMSSD)    +
-            "LF/HF".PadRight(COL_LFHF)    +
-            "Breathing".PadRight(COL_BREATHING) +
+            "Time".PadRight(COL_TIME)            +
+            "Event".PadRight(COL_EVENT)          +
+            "Context".PadRight(COL_CONTEXT)      +
+            "Load".PadRight(COL_LOAD)            +
+            "Score".PadRight(COL_SCORE)          +
+            "HR".PadRight(COL_HR)                +
+            "IBI".PadRight(COL_IBI)              +
+            "RMSSD".PadRight(COL_RMSSD)          +
+            "LF/HF".PadRight(COL_LFHF)           +
+            "Breathing".PadRight(COL_BREATHING)  +
             "SQI");
-        logLines.Add(new string('-', 100));
+        logLines.Add(new string('-', 112));
 
         Debug.Log($"[RppgLogger] Session {sessionNumber:D2} started → {filePath}");
     }
@@ -214,7 +238,7 @@ public class RppgLogger : MonoBehaviour
     {
         isLogging = false;
 
-        logLines.Add(new string('-', 100));
+        logLines.Add(new string('-', 112));
         logLines.Add($"Session ended: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         logLines.Add($"Total entries logged: {dataEntryCount}");
 
