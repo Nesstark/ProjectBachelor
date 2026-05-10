@@ -47,25 +47,34 @@ public class DungeonGenerator : MonoBehaviour
     public void Generate(int level)
     {
         if (useRandomSeed)
-            seed = Random.Range(0, 99999);
+            seed = UnityEngine.Random.Range(0, 99999);
 
-        Random.InitState(seed);
+        RunWithSeed(level, seed);
+    }
 
+    public void GenerateWithSeed(int level, int savedSeed)
+    {
+        seed = savedSeed;
+        useRandomSeed = false; // don't overwrite the injected seed this call
+        RunWithSeed(level, seed);
+        useRandomSeed = true;  // restore default behaviour for future levels
+    }
+
+    private void RunWithSeed(int level, int usedSeed)
+    {
+        UnityEngine.Random.InitState(usedSeed);
         int attempts = 0;
-        bool valid   = false;
-
+        bool valid = false;
         while (!valid)
         {
             if (++attempts > maxGenerationAttempts)
             {
-                Debug.LogError($"[DungeonGenerator] Failed to generate a valid dungeon after {maxGenerationAttempts} attempts (seed={seed}, level={level}).");
+                Debug.LogError($"[DungeonGenerator] Failed after {maxGenerationAttempts} attempts.");
                 return;
             }
-
             DungeonMap.Clear();
             valid = TryGenerate(level);
         }
-
         AssignSpecialRooms();
         AssignCorridors();
     }
@@ -107,7 +116,7 @@ public class DungeonGenerator : MonoBehaviour
 
                 if (DungeonMap.ContainsKey(neighbour)) continue;   // already visited
                 if (CountNeighbours(neighbour) > 1)    continue;   // would create a loop
-                if (Random.value < expansionChance)    continue;   // stochastic branching
+                if (Random.value >= expansionChance)   continue;   // stochastic branching
 
                 DungeonMap[neighbour] = RoomType.Normal;
                 queue.Enqueue(neighbour);

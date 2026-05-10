@@ -15,9 +15,22 @@ public class TransitionManager : MonoBehaviour
     public TextMeshProUGUI levelUpText;
     public float levelUpHoldDuration = 1.5f;
 
+    [Header("Teleport VFX")]
+    public Transform playerTransform;
+    public GameObject teleportVFXPrefab;
+    [Tooltip("How long to wait after spawning the VFX before starting the screen fade.")]
+    public float teleportVFXDelay = 0.6f;
+    [Tooltip("Vertical offset from the player's position. Tweak if the VFX spawns too low or high.")]
+    public float teleportVFXHeightOffset = 0f;
+    [Tooltip("How many seconds before the VFX GameObject is destroyed. Match this to your particle effect's duration.")]
+    public float teleportVFXLifetime = 2f;
+
     void Awake()
     {
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
+        if (vignetteImage == null) 
+            Debug.LogWarning("[TransitionManager] vignetteImage is not assigned in the Inspector.");
         SetAlpha(0f);
         if (levelUpGroup != null) levelUpGroup.alpha = 0f;
     }
@@ -34,6 +47,11 @@ public class TransitionManager : MonoBehaviour
     public IEnumerator LevelUpTransition(int newLevel, Action onMidpoint)
     {
         Debug.Log("LevelUpTransition START");
+
+        // Spawn the teleport VFX at the player's feet, then wait for it to play
+        SpawnTeleportVFX();
+        yield return new WaitForSeconds(teleportVFXDelay);
+
         yield return FadeGroup(levelUpGroup, 0f, 1f);
 
         onMidpoint?.Invoke();
@@ -52,6 +70,25 @@ public class TransitionManager : MonoBehaviour
         yield return FadeGroup(levelUpGroup, 1f, 0f);
     }
 
+    // Spawns the teleport VFX prefab at the player's position with a height offset,
+    // then destroys it automatically after teleportVFXLifetime seconds.
+    void SpawnTeleportVFX()
+    {
+        if (teleportVFXPrefab == null)
+        {
+            Debug.LogWarning("TransitionManager: No teleportVFXPrefab assigned.");
+            return;
+        }
+
+        Vector3 spawnPos = playerTransform != null
+            ? playerTransform.position
+            : Vector3.zero;
+
+        spawnPos.y += teleportVFXHeightOffset;
+
+        GameObject vfx = Instantiate(teleportVFXPrefab, spawnPos, Quaternion.identity);
+        Destroy(vfx, teleportVFXLifetime);
+    }
 
     IEnumerator Fade(float from, float to)
     {
@@ -80,6 +117,7 @@ public class TransitionManager : MonoBehaviour
 
     void SetAlpha(float alpha)
     {
+        if (vignetteImage == null) return;
         Color c = vignetteImage.color;
         vignetteImage.color = new Color(c.r, c.g, c.b, alpha);
     }

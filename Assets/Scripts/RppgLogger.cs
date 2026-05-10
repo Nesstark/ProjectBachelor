@@ -1,137 +1,266 @@
-using UnityEngine;
 using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Text;
+using UnityEngine;
 
 public class RppgLogger : MonoBehaviour
 {
-    [Header("Log Settings")]
-    public bool logLevelChangesOnly = false;
+    public RppgReceiver receiver;
 
-    private RppgReceiver receiver;
-    private StreamWriter writer;
-    private string filePath;
-    private string sessionName;
-    private float logInterval = 1f;
-    private float logTimer = 0f;
-    private int entryCount = 0;
-    private bool baselineLogged = false;
+    [Header("Logging")]
+    public bool  isLogging   = false;
+    public float logInterval = 1f;
+
+    private float         timer              = 0f;
+    private List<string>  logLines           = new List<string>();
+    private string        filePath;
+    private float         sessionStartTime;
+    private DateTime      sessionStartDateTime;
+    private int           sessionNumber;
+
+    private string previousLabel       = "";
+    private bool   baselineStartLogged = false;
+    private bool   baselineEndLogged   = false;
+    private bool   isInBossRoom        = false;
+    private int    dataEntryCount      = 0;
+
+    // Current context string written on every row
+    private string currentContext = "Normal";
+
+    // ── Singleton ─────────────────────────────────
+    private static RppgLogger instance;
+
+    // Column widths — must match the session file layout exactly
+    private const int COL_TIME      = 11;
+    private const int COL_EVENT     = 19;
+    private const int COL_CONTEXT   = 12;   // new column
+    private const int COL_LOAD      = 11;
+    private const int COL_SCORE     = 9;
+    private const int COL_HR        = 9;
+    private const int COL_IBI       = 9;
+    private const int COL_RMSSD     = 9;
+    private const int COL_LFHF      = 9;
+    private const int COL_BREATHING = 13;
+
+    // ─────────────────────────────────────────────
+
+    void Awake()
+    {
+        if (instance != null)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        instance = this;
+        DontDestroyOnLoad(gameObject);
+    }
 
     void Start()
     {
-        receiver = FindObjectOfType<RppgReceiver>();
+        string username = System.Environment.UserName;
+        string folder   = Path.Combine(
+            "C:\\Users", username,
+            "Documents", "GitHub", "ProjectBachelor", "Assets", "Logged");
 
-        // Auto-increment session number
-        string logFolder = Path.Combine(Application.dataPath, "logged");
-        Directory.CreateDirectory(logFolder);
+        if (!Directory.Exists(folder))
+            Directory.CreateDirectory(folder);
 
-        int sessionNumber = 1;
-        while (File.Exists(Path.Combine(logFolder, $"Session_{sessionNumber:D2}_{DateTime.Now:yyyy-MM-dd}.txt")))
-        {
-            sessionNumber++;
-        }
+        string[] existing = Directory.GetFiles(folder, "Session_*.txt");
+        sessionNumber = existing.Length + 1;
 
-        string fileName = $"Session_{sessionNumber:D2}_{DateTime.Now:yyyy-MM-dd}.txt";
-        filePath    = Path.Combine(logFolder, fileName);
-        sessionName = $"Session {sessionNumber:D2}";
+        string dateStr  = DateTime.Now.ToString("yyyy-MM-dd");
+        string fileName = $"Session_{sessionNumber:D2}_{dateStr}.txt";
+        filePath = Path.Combine(folder, fileName);
 
-        writer = new StreamWriter(filePath, false, Encoding.UTF8);
-        WriteHeader();
-
-        // Log baseline start
-        writer.WriteLine($"{"00:00:00",-10} {"BASELINE START",-18}");
-        writer.Flush();
-
-        // Subscribe to level change event
-        receiver.OnArousalLevelChanged += OnLevelChanged;
-
-        Debug.Log($"[RppgLogger] Session {sessionNumber:D2} started — logging to: {filePath}");
+        StartLogging();
     }
 
-    private void WriteHeader()
+    void OnEnable()
     {
-        writer.WriteLine("==============================================");
-        writer.WriteLine($"  Session: {sessionName}");
-        writer.WriteLine($"  Started: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-        writer.WriteLine("==============================================");
-        writer.WriteLine();
-        writer.WriteLine(
-            $"{"Time",-10} {"Event",-18} {"Arousal",-10} {"Score",-8} " +
-            $"{"HR",-8} {"IBI",-8} {"RMSSD",-8} {"LF/HF",-8} " +
-            $"{"Breathing",-12} {"SQI",-6}"
-        );
-        writer.WriteLine(new string('-', 100));
-        writer.Flush();
+        GameManager.Instance?.OnPlayerDied.AddListener(HandlePlayerDied);
+    }
+
+    void OnDisable()
+    {
+        GameManager.Instance?.OnPlayerDied.RemoveListener(HandlePlayerDied);
     }
 
     void Update()
     {
-        // Log baseline end once
-        if (receiver.baselineReady && !baselineLogged)
+        if (!isLogging || receiver == null) return;
+
+        // BASELINE START — logged once as soon as baseline begins
+        if (receiver.isCollectingBaseline && !baselineStartLogged)
         {
-            string timeStr = TimeSpan.FromSeconds(Time.time).ToString(@"hh\:mm\:ss");
-            writer.WriteLine(
-                $"{timeStr,-10} {"BASELINE END",-18} {"–",-10} {"–",-8} " +
-                $"{receiver.heartRate,-8:F1} {receiver.hrv_ibi,-8:F1} " +
-                $"{receiver.hrv_rmssd,-8:F1} {receiver.hrv_lfhf,-8:F2} " +
-                $"{receiver.breathingRate,-12:F3} {receiver.signalQuality,-6:F3}"
-            );
-            writer.Flush();
-            baselineLogged = true;
-            Debug.Log($"[RppgLogger] Baseline complete — HR: {receiver.heartRate:F1} BPM  IBI: {receiver.hrv_ibi:F1}ms  RMSSD: {receiver.hrv_rmssd:F1}ms  Arousal tracking started.");
+            logLines.Add(Row(GetElapsed(), "BASELINE START", currentContext, "", "", "", "", "", "", "", ""));
+            baselineStartLogged = true;
         }
 
-        if (!receiver.baselineReady) return;
-        if (logLevelChangesOnly) return;
-
-        logTimer += Time.deltaTime;
-        if (logTimer >= logInterval)
+        // BASELINE END — logged once as soon as baseline completes
+        if (!receiver.isCollectingBaseline && receiver.baselineReady && !baselineEndLogged)
         {
-            LogEntry("DATA");
-            logTimer = 0f;
+            logLines.Add(Row(
+                GetElapsed(), "BASELINE END", currentContext,
+                "–", "–",
+                $"{receiver.baseline_HR:F1}",
+                $"{receiver.baseline_IBI:F1}",
+                $"{receiver.baseline_RMSSD:F1}",
+                $"{receiver.baseline_LFHF:F2}",
+                $"{receiver.baseline_Breathing:F3}",
+                $"{receiver.baseline_SQI:F3}"));
+            baselineEndLogged = true;
+        }
+
+        // Only log live data once baseline is done and signal is valid
+        if (!receiver.baselineReady || !receiver.signalValid) return;
+
+        // Update context and log transitions
+        bool bossRoom = RoomManager.Instance?.CurrentRoom?.isBossRoom == true;
+        if (bossRoom && !isInBossRoom)
+        {
+            currentContext = "BossRoom";
+            logLines.Add(Row(GetElapsed(), "BOSS ROOM ENTER", currentContext, "", "", "", "", "", "", "", ""));
+        }
+        else if (!bossRoom && isInBossRoom)
+        {
+            currentContext = "Normal";
+            logLines.Add(Row(GetElapsed(), "BOSS ROOM EXIT", currentContext, "", "", "", "", "", "", "", ""));
+        }
+        isInBossRoom = bossRoom;
+
+        timer += Time.deltaTime;
+        if (timer >= logInterval)
+        {
+            timer = 0f;
+            LogData();
         }
     }
 
-    private void OnLevelChanged(string oldLevel, string newLevel)
+    // ─────────────────────────────────────────────
+
+    private void LogData()
     {
-        LogEntry($"LEVEL {oldLevel}→{newLevel}");
+        string t      = GetElapsed();
+        string load   = receiver.cognitiveLoadLabel;
+        string score  = $"{receiver.cognitiveLoadScore:F3}";
+        string hr     = $"{receiver.heartRate:F1}";
+        string ibi    = $"{receiver.hrv_ibi:F1}";
+        string rmssd  = $"{receiver.hrv_rmssd:F1}";
+        string lfhf   = $"{receiver.hrv_lf_hf:F2}";
+        string breath = $"{receiver.breathingRate:F3}";
+        string sqi    = $"{receiver.signalQuality:F3}";
+
+        if (previousLabel != "" && previousLabel != load)
+        {
+            string evt = $"LEVEL {previousLabel}>{load}";
+            logLines.Add(Row(t, evt, currentContext, load, score, hr, ibi, rmssd, lfhf, breath, sqi));
+        }
+
+        logLines.Add(Row(t, "DATA", currentContext, load, score, hr, ibi, rmssd, lfhf, breath, sqi));
+        previousLabel = load;
+        dataEntryCount++;
     }
 
-    private void LogEntry(string eventType)
+    private void HandlePlayerDied()
     {
-        string timeStr = TimeSpan.FromSeconds(Time.time).ToString(@"hh\:mm\:ss");
-
-        string line = string.Format(
-            "{0,-10} {1,-18} {2,-10} {3,-8} {4,-8} {5,-8} {6,-8} {7,-8} {8,-12} {9,-6}",
-            timeStr,
-            eventType,
-            receiver.arousalLabel,
-            receiver.arousalScore.ToString("F3"),
-            receiver.heartRate.ToString("F1"),
-            receiver.hrv_ibi.ToString("F1"),
-            receiver.hrv_rmssd.ToString("F1"),
-            receiver.hrv_lfhf.ToString("F2"),
-            receiver.breathingRate.ToString("F3"),
-            receiver.signalQuality.ToString("F3")
-        );
-
-        writer.WriteLine(line);
-        writer.Flush();
-        entryCount++;
+        if (!isLogging) return;
+        logLines.Add(Row(GetElapsed(), "PLAYER DIED", currentContext, "", "", "", "", "", "", "", ""));
     }
 
-    public void EndSession()
+    private string Row(string time, string evt, string context,
+        string load,  string score,
+        string hr,    string ibi,
+        string rmssd, string lfhf,
+        string breath, string sqi)
     {
-        writer.WriteLine();
-        writer.WriteLine(new string('-', 100));
-        writer.WriteLine($"Session ended: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-        writer.WriteLine($"Total entries logged: {entryCount}");
-        writer.Close();
-        Debug.Log($"[RppgLogger] Session ended — {entryCount} entries saved to: {filePath}");
+        return time.PadRight(COL_TIME)
+             + evt.PadRight(COL_EVENT)
+             + context.PadRight(COL_CONTEXT)
+             + load.PadRight(COL_LOAD)
+             + score.PadRight(COL_SCORE)
+             + hr.PadRight(COL_HR)
+             + ibi.PadRight(COL_IBI)
+             + rmssd.PadRight(COL_RMSSD)
+             + lfhf.PadRight(COL_LFHF)
+             + breath.PadRight(COL_BREATHING)
+             + sqi;
+    }
+
+    private string GetElapsed()
+    {
+        float e = Time.time - sessionStartTime;
+        int h = (int)(e / 3600);
+        int m = (int)((e % 3600) / 60);
+        int s = (int)(e % 60);
+        return $"{h:D2}:{m:D2}:{s:D2}";
+    }
+
+    // ─────────────────────────────────────────────
+
+    public void StartLogging()
+    {
+        logLines.Clear();
+        sessionStartTime     = Time.time;
+        sessionStartDateTime = DateTime.Now;
+        baselineStartLogged  = false;
+        baselineEndLogged    = false;
+        previousLabel        = "";
+        currentContext       = "Normal";
+        dataEntryCount       = 0;
+        timer                = 0f;
+        isLogging            = true;
+
+        string eqLine = new string('=', 46);
+        logLines.Add(eqLine);
+        logLines.Add($"  Session: Session {sessionNumber:D2}");
+        logLines.Add($"  Started: {sessionStartDateTime:yyyy-MM-dd HH:mm:ss}");
+        logLines.Add(eqLine);
+        logLines.Add("");
+
+        logLines.Add(
+            "Time".PadRight(COL_TIME)            +
+            "Event".PadRight(COL_EVENT)          +
+            "Context".PadRight(COL_CONTEXT)      +
+            "Load".PadRight(COL_LOAD)            +
+            "Score".PadRight(COL_SCORE)          +
+            "HR".PadRight(COL_HR)                +
+            "IBI".PadRight(COL_IBI)              +
+            "RMSSD".PadRight(COL_RMSSD)          +
+            "LF/HF".PadRight(COL_LFHF)           +
+            "Breathing".PadRight(COL_BREATHING)  +
+            "SQI");
+        logLines.Add(new string('-', 112));
+
+        Debug.Log($"[RppgLogger] Session {sessionNumber:D2} started → {filePath}");
+    }
+
+    public void StopLogging()
+    {
+        isLogging = false;
+
+        logLines.Add(new string('-', 112));
+        logLines.Add($"Session ended: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        logLines.Add($"Total entries logged: {dataEntryCount}");
+
+        SaveToFile();
+        Debug.Log("[RppgLogger] Logging stopped and saved");
+    }
+
+    private void SaveToFile()
+    {
+        try
+        {
+            File.WriteAllLines(filePath, logLines);
+            Debug.Log("[RppgLogger] Saved to: " + filePath);
+        }
+        catch (IOException e)
+        {
+            Debug.LogError("[RppgLogger] File write failed: " + e.Message);
+        }
     }
 
     void OnApplicationQuit()
     {
-        EndSession();
+        if (isLogging) StopLogging();
     }
 }

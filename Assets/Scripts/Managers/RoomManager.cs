@@ -21,13 +21,16 @@ public class RoomManager : MonoBehaviour
 
     [Header("Level Exit")]
     public GameObject levelExitPrefab;
+    [Tooltip("Vertical offset applied when spawning the level exit portal.")]
+    public float levelExitHeightOffset = 0f;
 
     GameObject currentRoomInstance;
     GameObject currentLevelExit;
 
     public RoomController CurrentRoom { get; private set; }
     public int CurrentCellPublic => currentCell;
-    public int CurrentLevel { get; private set; } = 1;
+    public int CurrentLevel { get; set; } = 1;
+    public int CurrentSeed => generator.seed;
 
     int currentCell = 35;
     bool isTransitioning = false;
@@ -36,46 +39,60 @@ public class RoomManager : MonoBehaviour
     HashSet<int> visitedCells = new();
     HashSet<int> clearedCells = new();
 
-    void Awake() => Instance = this;
+    void Awake()
+    {
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        Instance = this;
+    }
 
     void Start()
     {
-        generator.Generate(CurrentLevel);
+        // Always clear stale event listeners first — prevents invincibility bug
+        GameManager.Instance?.PrepareForSceneLoad();
+
+        var save = RunSaveManager.Instance;
+
+        if (save != null && save.HasActiveSave)
+        {
+            CurrentLevel = save.Current.dungeonLevel;
+            generator.GenerateWithSeed(CurrentLevel, save.Current.dungeonSeed);
+
+            // Restore all PlayerStats values
+            GameManager.Instance?.RestorePlayerFromSave(save.Current);
+
+            // Fire HUD update events once so health bar and XP bar refresh
+            GameManager.Instance?.OnPlayerHealthChanged.Invoke(
+                save.Current.currentHealth, save.Current.maxHealth);
+            GameManager.Instance?.OnXpChanged.Invoke(
+                save.Current.playerLevel, save.Current.currentXp, save.Current.xpToNextLevel);
+
+            // Restore PlayerController stats (move speed and attack range)
+            var controller = playerTransform.GetComponent<PlayerController>();
+            if (controller != null)
+            {
+                if (save.Current.moveSpeed   > 0f) controller.SetMoveSpeed(save.Current.moveSpeed);
+                if (save.Current.attackRange > 0f) controller.SetAttackRange(save.Current.attackRange);
+            }
+
+            // Reapply permanent pickup effects silently
+            PickupTracker.Instance?.ClearAll();
+            if (PickupTracker.Instance != null)
+            {
+                PickupTracker.Instance.ApplySavedPickups(
+                    playerTransform.gameObject, save.Current.collectedPickupIds);
+                foreach (var id in save.Current.collectedPickupIds)
+                    PickupTracker.Instance.Register(id);
+            }
+
+            Debug.Log($"[RoomManager] Run restored — Level {CurrentLevel}, Seed {save.Current.dungeonSeed}");
+        }
+        else
+        {
+            CurrentLevel = 1;
+            generator.Generate(CurrentLevel);
+        }
+
         LoadRoom(35, Direction.South);
-    }
-
-    // ─── Reset — called by AIPlayerAgent on episode begin ────
-    /// <summary>
-    /// Fully resets the dungeon back to level 1, room 35.
-    /// Destroys all current room instances and regenerates the map.
-    /// Called at the start of every ML-Agents training episode.
-    /// </summary>
-    public void ResetDungeon()
-    {
-        // Stop any ongoing transitions
-        StopAllCoroutines();
-        isTransitioning = false;
-
-        // Clean up current level exit
-        if (currentLevelExit != null) Destroy(currentLevelExit);
-
-        // Clear all tracking state
-        cellPrefabMap.Clear();
-        visitedCells.Clear();
-        clearedCells.Clear();
-
-        // Reset level counter
-        CurrentLevel = 1;
-
-        // Regenerate the dungeon map
-        generator.Generate(CurrentLevel);
-
-        // Destroy current room and load the start room
-        if (currentRoomInstance != null) Destroy(currentRoomInstance);
-        currentCell = 35;
-        LoadRoom(35, Direction.South);
-
-        Debug.Log("[RoomManager] Dungeon reset — back to level 1 start room.");
     }
 
     public void LoadNextLevel()
@@ -97,6 +114,9 @@ public class RoomManager : MonoBehaviour
             cellPrefabMap.Clear();
             visitedCells.Clear();
             clearedCells.Clear();
+
+            RoomController.CleanupForNextLevel();
+
             generator.Generate(CurrentLevel);
             if (currentRoomInstance != null) Destroy(currentRoomInstance);
             currentCell = 35;
@@ -113,7 +133,10 @@ public class RoomManager : MonoBehaviour
             Debug.LogError("LevelExit prefab er ikke sat på RoomManager!");
             return;
         }
-        currentLevelExit = Instantiate(levelExitPrefab, position, Quaternion.identity);
+        if (currentLevelExit != null) return;
+        Vector3 spawnPos = position;
+        spawnPos.y += levelExitHeightOffset;
+        currentLevelExit = Instantiate(levelExitPrefab, spawnPos, Quaternion.identity);
     }
 
     public void TryMove(Direction dir)
@@ -135,31 +158,21 @@ public class RoomManager : MonoBehaviour
         StartCoroutine(DoTransition(targetCell, dir));
     }
 
-IEnumerator DoTransition(int targetCell, Direction fromDirection)
-{
-    isTransitioning = true;
-
-    // Disable gravity during room swap so player doesn't fall
-    Rigidbody rb = playerTransform?.GetComponent<Rigidbody>();
-    if (rb != null)
+    IEnumerator DoTransition(int targetCell, Direction fromDirection)
     {
-        rb.useGravity = false;
-        rb.linearVelocity = Vector3.zero;
+        isTransitioning = true;
+
+        yield return StartCoroutine(TransitionManager.Instance.Transition(() =>
+        {
+            if (currentLevelExit != null) currentLevelExit.SetActive(false);
+
+            if (currentRoomInstance != null) Destroy(currentRoomInstance);
+            currentCell = targetCell;
+            LoadRoom(targetCell, fromDirection);
+        }));
+
+        isTransitioning = false;
     }
-
-    yield return StartCoroutine(TransitionManager.Instance.Transition(() =>
-    {
-        if (currentRoomInstance != null) Destroy(currentRoomInstance);
-        currentCell = targetCell;
-        LoadRoom(targetCell, fromDirection);
-    }));
-
-    // Re-enable gravity after new room floor is loaded
-    if (rb != null)
-        rb.useGravity = true;
-
-    isTransitioning = false;
-}
 
     void LoadRoom(int cell, Direction fromDirection)
     {
@@ -216,12 +229,15 @@ IEnumerator DoTransition(int targetCell, Direction fromDirection)
             }
         }
 
-        CurrentRoom.StartEncounter();
+        if (CurrentRoom.roomType == RoomType.Start)
+            CurrentRoom.StartEncounter();
+
+        if (CurrentRoom.isBossRoom && IsRoomCleared(cell) && currentLevelExit != null)
+            currentLevelExit.SetActive(true);
     }
 
     public void MarkRoomCleared(int cell) => clearedCells.Add(cell);
-    public bool IsRoomCleared(int cell)   => clearedCells.Contains(cell);
-    public bool IsRoomVisited(int cell)   => visitedCells.Contains(cell);
+    public bool IsRoomCleared(int cell) => clearedCells.Contains(cell);
 
     string PickPrefab(RoomType type)
     {

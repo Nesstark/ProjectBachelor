@@ -1,45 +1,38 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
 using TMPro;
+
 
 // ============================================================
 //  GameHUD.cs  —  Dark Souls style HUD
-//
-//  CANVAS LAYOUT (anchor: top-left):
-//  ─────────────────────────────────────────────────────────
-//  Canvas (Screen Space Overlay)
-//   └─ HUD_Root  ← attach this script here
-//       ├─ LevelText         TMP  — "LEVEL 3"
-//       ├─ HealthBarBG       Image (dark bg)
-//       │   └─ HealthFill    Image (red, Fill Method: Horizontal)
-//       ├─ HealthValueText   TMP  — "75 / 100"
-//       ├─ XpBarBG           Image (dark bg)
-//       │   └─ XpFill        Image (gold, Fill Method: Horizontal)
-//       ├─ XpValueText       TMP  — "340 / 500"
-//       ├─ StaminaBarBG      Image (dark bg)
-//       │   └─ StaminaFill   Image (green, Fill Method: Horizontal)
-//       └─ StaminaReadyText  TMP  — "ready" / "recharging"
-//
-//  Anchor the HUD_Root panel to top-left in the Rect Transform.
-//  Set pivot to (0, 1) and position to e.g. (20, -20).
 // ============================================================
+
 
 public class GameHUD : MonoBehaviour
 {
     [Header("Level")]
     [SerializeField] private TMP_Text levelText;
 
+
     [Header("Health")]
     [SerializeField] private Image    healthFill;
     [SerializeField] private TMP_Text healthValueText;
+
 
     [Header("XP")]
     [SerializeField] private Image    xpFill;
     [SerializeField] private TMP_Text xpValueText;
 
+
     [Header("Stamina / Dash")]
     [SerializeField] private Image    staminaFill;
     [SerializeField] private TMP_Text staminaReadyText;
+
+
+    [Header("Game Timer")]
+    [SerializeField] private TMP_Text timerText;
+
 
     [Header("Colors")]
     [SerializeField] private Color healthColor    = new Color(0.55f, 0.10f, 0.10f);
@@ -48,25 +41,37 @@ public class GameHUD : MonoBehaviour
     [SerializeField] private Color staminaColor   = new Color(0.23f, 0.43f, 0.16f);
     [SerializeField] private Color staminaLowColor= new Color(0.15f, 0.28f, 0.10f);
 
+
     private GameManager      _gm;
     private PlayerController _player;
+    private float            _elapsedTime = 0f;
 
-    private void Start()
+
+    private IEnumerator Start()
     {
-        _gm     = GameManager.Instance;
-        _player = FindObjectOfType<PlayerController>();
+        _gm = GameManager.Instance;
 
-        if (_gm == null) { Debug.LogError("[GameHUD] GameManager not found!"); return; }
+
+        if (_gm == null) { Debug.LogError("[GameHUD] GameManager not found!"); yield break; }
+
 
         if (healthFill  != null) healthFill .color = healthColor;
         if (xpFill      != null) xpFill     .color = xpColor;
         if (staminaFill != null) staminaFill.color = staminaColor;
 
+
         _gm.OnPlayerHealthChanged.AddListener(OnHealthChanged);
         _gm.OnXpChanged          .AddListener(OnXpChanged);
 
+
+        // Wait one frame so RoomManager.Start() has time to call RestoreFromSave()
+        yield return null;
+
+
+        _player = FindFirstObjectByType<PlayerController>();
         RefreshAll();
     }
+
 
     private void OnDestroy()
     {
@@ -75,16 +80,19 @@ public class GameHUD : MonoBehaviour
         _gm.OnXpChanged          .RemoveListener(OnXpChanged);
     }
 
+
     private void Update()
     {
         // Stamina reads from PlayerController.DashReadyFraction each frame
         if (_player == null)
         {
-            _player = FindObjectOfType<PlayerController>();
+            _player = FindFirstObjectByType<PlayerController>();
             return;
         }
 
+
         float fraction = _player.DashReadyFraction;
+
 
         if (staminaFill != null)
         {
@@ -92,14 +100,31 @@ public class GameHUD : MonoBehaviour
             staminaFill.color = fraction < 0.2f ? staminaLowColor : staminaColor;
         }
 
+
         if (staminaReadyText != null)
             staminaReadyText.text = fraction >= 1f ? "ready" : "recharging";
+
+
+        // Game timer
+        _elapsedTime += Time.deltaTime;
+        if (_elapsedTime >= 3600f) _elapsedTime = 0f;
+
+
+        if (timerText != null)
+        {
+            int total   = Mathf.FloorToInt(_elapsedTime);
+            int minutes = total / 60;
+            int seconds = total % 60;
+            timerText.text = $"{minutes:00}:{seconds:00}";
+        }
     }
+
 
     // ─────────────────────────────────────────────────────────
     private void OnHealthChanged(float current, float max)
     {
         float fraction = max > 0f ? current / max : 0f;
+
 
         if (healthFill != null)
         {
@@ -107,23 +132,29 @@ public class GameHUD : MonoBehaviour
             healthFill.color      = fraction < 0.25f ? healthLowColor : healthColor;
         }
 
+
         if (healthValueText != null)
             healthValueText.text = $"{Mathf.RoundToInt(current)} / {Mathf.RoundToInt(max)}";
     }
+
 
     private void OnXpChanged(int level, float currentXp, float xpToNext)
     {
         float fraction = xpToNext > 0f ? currentXp / xpToNext : 0f;
 
+
         if (xpFill != null)
             xpFill.fillAmount = fraction;
+
 
         if (xpValueText != null)
             xpValueText.text = $"{Mathf.RoundToInt(currentXp)} / {Mathf.RoundToInt(xpToNext)}";
 
+
         if (levelText != null)
             levelText.text = $"LEVEL  {level}";
     }
+
 
     private void RefreshAll()
     {

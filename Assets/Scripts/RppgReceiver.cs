@@ -3,52 +3,71 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class RppgReceiver : MonoBehaviour
 {
     [Header("Live Data")]
-    public float heartRate = 0f;
+    public float heartRate    = 0f;
     public float signalQuality = 0f;
-    public float hrv_rmssd = 0f;
-    public float hrv_ibi = 0f;
-    public float hrv_lfhf = 0f;
+    public float hrv_rmssd   = 0f;
+    public float hrv_ibi     = 0f;
+    public float hrv_lf_hf   = 0f;
     public float breathingRate = 0f;
 
     [Header("Arousal")]
-    public float arousalScore = 0f;
-    public float stressLevel => arousalScore;
-    public string arousalLabel = "Low";
+    public float cognitiveLoadScore = 0f;
+    public string cognitiveLoadLabel = "Low";
     public bool signalValid = false;
 
     [Header("Baseline")]
-    public float baselineDuration = 120f;
-    public bool isCollectingBaseline = false;
-    public bool baselineReady = false;
+    public float baselineDuration    = 120f;
+    public bool  isCollectingBaseline = false;
+    public bool  baselineReady        = false;
+    public bool  baselineSkipped      = false;
+    public int   baselineSamples      = 0;
 
-    // Baseline internals
-    private float baselineIBI, baselineRMSSD, baselineLFHF;
-    private float baselineTimer, baselineIBISum, baselineRMSSDSum, baselineLFHFSum;
-    private int baselineSamples;
+    private const int MaxBaselineRetries = 2;
+    private int _baselineRetryCount = 0;
 
-    // Smoothing
-    private float[] arousalHistory = new float[5];
-    private int arousalHistoryIndex = 0;
+    [Header("Baseline Averages (for logging)")]
+    public float baseline_HR        = 0f;
+    public float baseline_IBI       = 0f;
+    public float baseline_RMSSD     = 0f;
+    public float baseline_LFHF      = 0f;
+    public float baseline_Breathing = 0f;
+    public float baseline_SQI       = 0f;
 
-    // Level change event
-    private string previousArousalLabel = "";
-    public event Action<string, string> OnArousalLevelChanged;
+    [Header("Smoothing")]
+    public int smoothingWindow = 5;
 
-    // UDP
-    private UdpClient udpClient;
-    private Thread receiveThread;
+    private const float SubsampleInterval = 10f;
+    private float baselineTimer   = 0f;
+    private float subsampleTimer  = 0f;
+
+    private List<float> baselineRMSSDSamples    = new List<float>();
+    private List<float> baselineHRSamples        = new List<float>();
+    private List<float> baselineIBISamples       = new List<float>();
+    private List<float> baselineLFHFSamples      = new List<float>();
+    private List<float> baselineBreathingSamples = new List<float>();
+    private List<float> baselineSQISamples       = new List<float>();
+
+    private float baselineRMSSD_mean, baselineRMSSD_std;
+    private float baselineHR_std;
+    private Queue<float> scoreHistory = new Queue<float>();
+
+    private UdpClient  udpClient;
+    private Thread     receiveThread;
     private RppgPayload latestPayload;
-    private bool newData = false;
+    private bool        newData = false;
     private readonly object dataLock = new object();
 
     void Start()
     {
-        udpClient = new UdpClient(5005);
+        DontDestroyOnLoad(gameObject);
+        udpClient     = new UdpClient(5005);
         receiveThread = new Thread(Receive) { IsBackground = true };
         receiveThread.Start();
         StartBaseline();
@@ -57,137 +76,167 @@ public class RppgReceiver : MonoBehaviour
     public void StartBaseline()
     {
         isCollectingBaseline = true;
-        baselineReady = false;
-        baselineTimer = baselineIBISum = baselineRMSSDSum = baselineLFHFSum = 0f;
-        baselineSamples = 0;
-        arousalHistoryIndex = 0;
-        Array.Clear(arousalHistory, 0, arousalHistory.Length);
-        Debug.Log("Baseline started — sit still for 2 minutes.");
+        baselineReady        = false;
+        baselineSkipped      = false;
+        baselineTimer        = 0f;
+        subsampleTimer       = 0f;
+        baselineSamples      = 0;
+
+        baselineRMSSDSamples.Clear();
+        baselineHRSamples.Clear();
+        baselineIBISamples.Clear();
+        baselineLFHFSamples.Clear();
+        baselineBreathingSamples.Clear();
+        baselineSQISamples.Clear();
+        scoreHistory.Clear();
+
+        Debug.Log("[RppgReceiver] Baseline started");
     }
 
     void Update()
     {
-        // Always tick the baseline timer regardless of data
-        if (isCollectingBaseline)
-        {
-            baselineTimer += Time.deltaTime;
-            Debug.Log($"[Baseline] {baselineTimer:F0}s / {baselineDuration:F0}s — samples: {baselineSamples}");
-
-            if (baselineTimer >= baselineDuration)
-                FinalizeBaseline();
-        }
-
-        // Get latest UDP data if available
         RppgPayload payload = null;
         lock (dataLock)
         {
             if (newData) { payload = latestPayload; newData = false; }
         }
 
-        if (payload == null) return;
-
-        // Update live values
-        heartRate     = payload.hr;
-        signalQuality = payload.sqi;
-
-        if (payload.hrv != null)
+        if (isCollectingBaseline)
         {
-            hrv_rmssd     = payload.hrv.rmssd;
-            hrv_ibi       = payload.hrv.ibi;
-            hrv_lfhf      = payload.hrv.lf_hf;
-            breathingRate = payload.hrv.breathingrate;
+            baselineTimer  += Time.deltaTime;
+            subsampleTimer += Time.deltaTime;
+
+            Debug.Log($"[Baseline] {baselineTimer:F0}s / {baselineDuration:F0}s — samples: {baselineSamples}");
+
+            if (payload != null &&
+                payload.hrv != null &&
+                payload.hrv.rmssd > 0f &&
+                subsampleTimer >= SubsampleInterval)
+            {
+                baselineRMSSDSamples.Add(payload.hrv.rmssd);
+                baselineHRSamples.Add(payload.hr);
+                baselineIBISamples.Add(payload.hrv.ibi);
+                baselineLFHFSamples.Add(payload.hrv.lf_hf);
+                baselineBreathingSamples.Add(payload.hrv.breathingrate);
+                baselineSQISamples.Add(payload.sqi);
+                baselineSamples++;
+                subsampleTimer = 0f;
+            }
+
+            if (baselineTimer >= baselineDuration)
+                FinalizeBaseline();
+
+            if (payload != null) UpdateLive(payload);
+            return;
         }
 
-        // Accumulate baseline samples
-        if (isCollectingBaseline && payload.hrv != null && payload.hrv.ibi > 0)
+        if (payload == null || !baselineReady) return;
+
+        UpdateLive(payload);
+
+        signalValid = payload.sqi > 0.3f || (heartRate > 0 && (payload.hrv == null || payload.hrv.rmssd <= 0));
+        if (!signalValid) return;
+
+        float rawScore;
+        if (payload.hrv != null && payload.hrv.rmssd > 0f)
         {
-            baselineIBISum   += payload.hrv.ibi;
-            baselineRMSSDSum += payload.hrv.rmssd;
-            baselineLFHFSum  += payload.hrv.lf_hf;
-            baselineSamples++;
+            rawScore = CalculateCognitiveLoad(payload.hrv);
+        }
+        else
+        {
+            rawScore = CalculatePseudoCognitiveLoad(heartRate);
         }
 
-        // Calculate arousal once baseline is ready
-        if (baselineReady && payload.hrv != null)
+        scoreHistory.Enqueue(rawScore);
+        if (scoreHistory.Count > smoothingWindow)
+            scoreHistory.Dequeue();
+
+        cognitiveLoadScore = scoreHistory.Average();
+        cognitiveLoadLabel = GetLabel(cognitiveLoadScore);
+    }
+
+    private void UpdateLive(RppgPayload p)
+    {
+        heartRate     = p.hr;
+        signalQuality = p.sqi;
+
+        if (p.hrv != null)
         {
-            signalValid = payload.sqi > 0.3f && payload.hrv.ibi > 300f;
-
-            if (signalValid)
-            {
-                arousalScore = CalculateArousal(payload.hrv);
-                arousalLabel = GetArousalLabel(arousalScore);
-
-                if (arousalLabel != previousArousalLabel && previousArousalLabel != "")
-                    OnArousalLevelChanged?.Invoke(previousArousalLabel, arousalLabel);
-
-                previousArousalLabel = arousalLabel;
-            }
-            else if (payload.hrv.ibi < 300f && heartRate > 0f)
-            {
-                // Fallback to HR-based arousal when IBI is unavailable
-                float hrBaseline = 60000f / baselineIBI;
-                arousalScore = SmoothArousal(Mathf.Clamp01((heartRate - hrBaseline) / hrBaseline));
-                arousalLabel = GetArousalLabel(arousalScore);
-
-                if (arousalLabel != previousArousalLabel && previousArousalLabel != "")
-                    OnArousalLevelChanged?.Invoke(previousArousalLabel, arousalLabel);
-
-                previousArousalLabel = arousalLabel;
-                Debug.LogWarning("[RppgReceiver] Signal too weak — using HR fallback.");
-            }
-            else
-            {
-                Debug.LogWarning("[RppgReceiver] Signal too weak — arousal paused. Get back on screen.");
-            }
+            hrv_rmssd   = p.hrv.rmssd;
+            hrv_ibi     = p.hrv.ibi;
+            hrv_lf_hf   = p.hrv.lf_hf;
+            breathingRate = p.hrv.breathingrate;
         }
     }
 
     private void FinalizeBaseline()
     {
-        baselineIBI   = baselineSamples > 0 ? baselineIBISum   / baselineSamples : 800f;
-        baselineRMSSD = baselineSamples > 0 ? baselineRMSSDSum / baselineSamples : 60f;
-        baselineLFHF  = baselineSamples > 0 ? baselineLFHFSum  / baselineSamples : 1f;
-
-        isCollectingBaseline = false;
-        baselineReady = true;
-        Debug.Log($"[RppgReceiver] Baseline complete — IBI: {baselineIBI:F1}ms  RMSSD: {baselineRMSSD:F1}ms  LF/HF: {baselineLFHF:F2}");
-    }
-
-    private float CalculateArousal(HrvData hrv)
-    {
-        // If IBI is missing fall back to HR
-        if (hrv.ibi < 300f)
+        if (baselineRMSSDSamples.Count < 6)
         {
-            float hrBaseline = 60000f / baselineIBI;
-            return SmoothArousal(Mathf.Clamp01((heartRate - hrBaseline) / hrBaseline));
+            _baselineRetryCount++;
+
+            if (_baselineRetryCount >= MaxBaselineRetries)
+            {
+                Debug.LogWarning("[RppgReceiver] Baseline failed after max retries — skipping. Affective computing disabled.");
+                baselineSkipped      = true;
+                isCollectingBaseline = false;
+                baselineReady        = false; // stays false — cognitive load won't compute
+                return;
+            }
+
+            Debug.LogWarning($"[RppgReceiver] Not enough baseline samples, retrying ({_baselineRetryCount}/{MaxBaselineRetries})...");
+            StartBaseline();
+            return;
         }
 
-        // IBI — reaches max score at 30% drop from baseline
-        float ibiScore   = Mathf.Clamp01((baselineIBI - hrv.ibi) / (baselineIBI * 0.3f));
+        baselineRMSSD_mean = baselineRMSSDSamples.Average();
 
-        // RMSSD — lower than baseline = more aroused
-        float rmssdScore = baselineRMSSD > 0 ? Mathf.Clamp01(1f - (hrv.rmssd / baselineRMSSD)) : 0f;
+        float variance = baselineRMSSDSamples
+            .Select(v => (v - baselineRMSSD_mean) * (v - baselineRMSSD_mean))
+            .Average();
 
-        // LF/HF — reaches max at 1.5x baseline, heavily weighted for phasic detection
-        float lfhfScore  = baselineLFHF  > 0 ? Mathf.Clamp01(hrv.lf_hf / (baselineLFHF * 1.5f)) : 0f;
+        baselineRMSSD_std = Mathf.Sqrt(variance);
 
-        float raw = (ibiScore * 0.4f) + (rmssdScore * 0.2f) + (lfhfScore * 0.4f);
-        return SmoothArousal(raw);
+        // Calculate HR std
+        float hr_variance = baselineHRSamples
+            .Select(v => (v - baseline_HR) * (v - baseline_HR))
+            .Average();
+        baselineHR_std = Mathf.Sqrt(hr_variance);
+
+        // Store averages so RppgLogger can write BASELINE END row
+        baseline_HR        = baselineHRSamples.Average();
+        baseline_IBI       = baselineIBISamples.Average();
+        baseline_RMSSD     = baselineRMSSD_mean;
+        baseline_LFHF      = baselineLFHFSamples.Average();
+        baseline_Breathing = baselineBreathingSamples.Average();
+        baseline_SQI       = baselineSQISamples.Average();
+
+        baselineReady        = true;
+        isCollectingBaseline = false;
+
+        Debug.Log($"[RppgReceiver] Baseline RMSSD: {baselineRMSSD_mean:F2} ± {baselineRMSSD_std:F2} ({baselineSamples} samples)");
     }
 
-    private float SmoothArousal(float raw)
+    private float CalculateCognitiveLoad(HrvData hrv)
     {
-        arousalHistory[arousalHistoryIndex % 5] = raw;
-        arousalHistoryIndex++;
-        float sum = 0f;
-        foreach (float v in arousalHistory) sum += v;
-        return sum / 5f;
+        float delta = baselineRMSSD_mean - hrv.rmssd;
+        float std   = Mathf.Max(baselineRMSSD_std, baselineRMSSD_mean * 0.05f);
+        float z     = delta / std;
+        return Mathf.Clamp01(Mathf.Max(0f, z) / 2f);
     }
 
-    private string GetArousalLabel(float score)
+    private float CalculatePseudoCognitiveLoad(float hr)
     {
-        if (score < 0.15f) return "Low";
-        if (score < 0.50f) return "Medium";
+        float delta = hr - baseline_HR;
+        float std   = Mathf.Max(baselineHR_std, baseline_HR * 0.05f);
+        float z     = delta / std;
+        return Mathf.Clamp01(Mathf.Max(0f, z) / 2f);
+    }
+
+    private string GetLabel(float score)
+    {
+        if (score < 0.25f) return "Low";
+        if (score < 0.5f)  return "Medium";
         return "High";
     }
 
@@ -201,9 +250,13 @@ public class RppgReceiver : MonoBehaviour
                 byte[] data = udpClient.Receive(ref ep);
                 string json = Encoding.UTF8.GetString(data);
                 var payload = JsonUtility.FromJson<RppgPayload>(json);
-                lock (dataLock) { latestPayload = payload; newData = true; }
+                lock (dataLock)
+                {
+                    latestPayload = payload;
+                    newData       = true;
+                }
             }
-            catch (Exception e) { Debug.LogWarning("UDP error: " + e.Message); }
+            catch { }
         }
     }
 
@@ -227,7 +280,7 @@ public class HrvData
 [System.Serializable]
 public class RppgPayload
 {
-    public float hr;
-    public float sqi;
+    public float   hr;
+    public float   sqi;
     public HrvData hrv;
 }

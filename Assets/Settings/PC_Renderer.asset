@@ -91,7 +91,8 @@ MonoBehaviour:
   - {fileID: -371021145236946202}
   - {fileID: 5126523116529242525}
   - {fileID: -6686508452297221716}
-  m_RendererFeatureMap: ad6b866f10d7b46ce642fef13bded9fa9dd18ded9c112547ac592d41fdbf34a3
+  - {fileID: 5030731475096853436}
+  m_RendererFeatureMap: ad6b866f10d7b46ce642fef13bded9fa9dd18ded9c112547ac592d41fdbf34a3bc5b86659fbfd045
   m_UseNativeRenderPass: 1
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
@@ -136,6 +137,20 @@ MonoBehaviour:
   settings: {outlineMaterial: {fileID: 2100000, guid: e592f895b7b9843798f1b6dfc88ee2a0, type: 2}}
   ', outlineLayer':
     m_Bits: 4294967295
+--- !u!114 &5030731475096853436
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f40151f639a82459883f0b0276b58915, type: 3}
+  m_Name: ChromaticAberrationFeature
+  m_EditorClassIdentifier: Assembly-CSharp::ChromaticAberrationFeature
+  m_Active: 1
+  shader: {fileID: 4800000, guid: 3b9b2a8146a6243f39c15056061595c3, type: 3}
 --- !u!114 &5126523116529242525
 MonoBehaviour:
   m_ObjectHideFlags: 0

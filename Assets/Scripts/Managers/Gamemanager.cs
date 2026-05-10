@@ -2,15 +2,10 @@
 using UnityEngine.Events;
 using System.Collections.Generic;
 
-// ============================================================
-// GameManager.cs — Central Stat & Game-State Manager
-// ============================================================
 public class GameManager : MonoBehaviour
 {
-    // ─── Singleton ───────────────────────────────────────────
     public static GameManager Instance { get; private set; }
 
-    // ─── Player Base Stats ───────────────────────────────────
     [Header("Player Base Stats (Level 1)")]
     [SerializeField] private float basePlayerHealth = 100f;
     [SerializeField] private float basePlayerDamage = 20f;
@@ -20,36 +15,36 @@ public class GameManager : MonoBehaviour
     [SerializeField] private float damagePerLevel = 5f;
 
     [Header("XP Curve")]
-    [SerializeField] private float baseXpToLevel    = 100f;
-    [SerializeField] private float xpScalingFactor  = 1.5f;
+    [SerializeField] private float baseXpToLevel   = 100f;
+    [SerializeField] private float xpScalingFactor = 1.5f;
 
-    // ─── Enemy Type Definitions ──────────────────────────────
     [Header("Enemy Type Definitions")]
     [SerializeField] private EnemyTypeData[] enemyTypes;
 
     [Header("Enemy Level Scaling (applied on top of base stats)")]
-    [Tooltip("+X% per player level to all enemy stats")]
-    [SerializeField] private float enemyScalePerLevel = 0.15f;
+    [Tooltip("+X% per dungeon level to all enemy stats")]
+    [SerializeField] private float enemyScalePerLevel = 0.20f;
 
-    [Header("Attack Range")]
-    [SerializeField] private float attackRange = 3f;
+    [Header("Damage Reduction Cap")]
+    [Tooltip("DamageReduction can never exceed this value, preventing invincibility")]
+    [SerializeField] private float maxDamageReduction = 20f;
+    [Tooltip("Reduction can never absorb more than this fraction of a hit (0.75 = 75% max)")]
+    [SerializeField] private float maxReductionFraction = 0.75f;
 
-    // ─── Events ──────────────────────────────────────────────
-    [HideInInspector] public UnityEvent                  OnPlayerLevelUp     = new UnityEvent();
-    [HideInInspector] public UnityEvent<float, float>    OnPlayerHealthChanged = new UnityEvent<float, float>();
-    [HideInInspector] public UnityEvent<int, float, float> OnXpChanged       = new UnityEvent<int, float, float>();
-    [HideInInspector] public UnityEvent                  OnPlayerDied        = new UnityEvent();
+    [HideInInspector] public UnityEvent                    OnPlayerLevelUp       = new UnityEvent();
+    [HideInInspector] public UnityEvent<float, float>      OnPlayerHealthChanged = new UnityEvent<float, float>();
+    [HideInInspector] public UnityEvent<int, float, float> OnXpChanged           = new UnityEvent<int, float, float>();
+    [HideInInspector] public UnityEvent                    OnPlayerDied          = new UnityEvent();
 
-    // ─── Runtime Player Stats ────────────────────────────────
-    public PlayerStats Player   { get; private set; }
-    public float AttackRange    => attackRange;
+    public PlayerStats Player { get; private set; }
 
-    // ─── Lookup cache ────────────────────────────────────────
     private Dictionary<string, EnemyTypeData> _enemyLookup;
 
-    // ─────────────────────────────────────────────────────────
     private void Awake()
     {
+        if (InputDeviceTracker.Instance != null)
+            InputDeviceTracker.Instance.LockCursorOnGamepad = true;
+
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
         DontDestroyOnLoad(gameObject);
@@ -58,7 +53,6 @@ public class GameManager : MonoBehaviour
         InitPlayer();
     }
 
-    // ─── Lookup ──────────────────────────────────────────────
     private void BuildLookup()
     {
         _enemyLookup = new Dictionary<string, EnemyTypeData>();
@@ -71,12 +65,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Returns a fully scaled EnemyStats block for the given enemy type name.
-    /// Matches "Archer", "Warrior", "Elite" (case-insensitive).
-    /// Falls back to Warrior stats if the name is not found.
-    /// </summary>
-    public EnemyStats GetEnemyStats(string enemyTypeName)
+    public EnemyStats GetEnemyStats(string enemyTypeName, int dungeonLevel)
     {
         string key = enemyTypeName.ToLower();
 
@@ -86,76 +75,102 @@ public class GameManager : MonoBehaviour
             data = FallbackType();
         }
 
-        float scale = 1f + (Player.Level - 1) * enemyScalePerLevel;
+        float scale = 1f + (dungeonLevel - 1) * enemyScalePerLevel;
 
         return new EnemyStats
         {
-            MaxHealth   = data.baseHealth   * scale,
-            CurrentHealth = data.baseHealth * scale,
-            Speed       = data.baseSpeed    * scale,
-            Damage      = data.baseDamage   * scale,
-            XpReward    = data.baseXpReward * Mathf.Pow(1.1f, Player.Level - 1)
+            MaxHealth     = data.baseHealth   * scale,
+            CurrentHealth = data.baseHealth   * scale,
+            Speed         = data.baseSpeed    * scale,
+            Damage        = data.baseDamage   * scale,
+            XpReward      = data.baseXpReward * Mathf.Pow(1.1f, dungeonLevel - 1)
         };
     }
 
-    // ─── Player Init ─────────────────────────────────────────
     private void InitPlayer()
     {
         Player = new PlayerStats
         {
-            Level         = 1,
-            CurrentXp     = 0f,
-            XpToNextLevel = baseXpToLevel,
-            MaxHealth     = basePlayerHealth,
-            CurrentHealth = basePlayerHealth,
-            Damage        = basePlayerDamage
+            Level           = 1,
+            CurrentXp       = 0f,
+            XpToNextLevel   = baseXpToLevel,
+            MaxHealth       = basePlayerHealth,
+            CurrentHealth   = basePlayerHealth,
+            Damage          = basePlayerDamage,
+            DamageReduction = 0f
         };
     }
 
-    // ─── Reset for New Game ──────────────────────────────────
-    /// <summary>
-    /// Call this before loading a new game scene to fully wipe
-    /// all player progress and return stats to Level 1 defaults.
-    /// </summary>
+    public void RestorePlayerFromSave(RunSaveManager.RunSaveData data)
+    {
+        Player.RestoreFromSave(data, basePlayerHealth);
+    }
+
+    public void PrepareForSceneLoad() { }
+
+    // ─── Reset for new game ───────────────────────────────────
     public void ResetForNewGame()
     {
         InitPlayer();
+        PickupTracker.Instance?.ClearAll();
+
+        OnPlayerDied.RemoveAllListeners();
+        OnPlayerHealthChanged.RemoveAllListeners();
+
+        PlayerController pc = FindFirstObjectByType<PlayerController>();
+        pc?.ResetAttackRange();
+        pc?.ResetMoveSpeed();
+
         Debug.Log("[GM] Player stats reset for new game.");
     }
 
-    // ─── Reset for ML-Agents episode ─────────────────────────
-/// <summary>
-/// Called by AIPlayerAgent at the start of every training episode.
-/// Same as ResetForNewGame but also fires events so the HUD updates.
-/// </summary>
-public void ResetPlayer()
-{
-    InitPlayer();
-    OnPlayerHealthChanged.Invoke(Player.CurrentHealth, Player.MaxHealth);
-    OnXpChanged.Invoke(Player.Level, Player.CurrentXp, Player.XpToNextLevel);
-    Debug.Log("[GM] Player reset for new training episode.");
-}
+    // ─── Reset for AI training episodes only ─────────────────
+    public void ResetPlayer()
+    {
+        InitPlayer();
 
-    // ─── Player Damage ───────────────────────────────────────
+        PlayerController pc = FindFirstObjectByType<PlayerController>();
+        pc?.ResetAttackRange();
+        pc?.ResetMoveSpeed();
+
+        OnPlayerHealthChanged.Invoke(Player.CurrentHealth, Player.MaxHealth);
+        OnXpChanged.Invoke(Player.Level, Player.CurrentXp, Player.XpToNextLevel);
+        Debug.Log("[GM] Player reset for new training episode.");
+    }
+
+    // ─── Pickup Methods ───────────────────────────────────────
+    public void HealPlayer(float amount)
+    {
+        Player.CurrentHealth = Mathf.Min(Player.MaxHealth, Player.CurrentHealth + amount);
+        OnPlayerHealthChanged.Invoke(Player.CurrentHealth, Player.MaxHealth);
+    }
+
+    public void AddDamageReduction(float amount)
+    {
+        Player.DamageReduction = Mathf.Min(Player.DamageReduction + amount, maxDamageReduction);
+        Debug.Log($"[GM] Damage reduction → {Player.DamageReduction:F1} (cap: {maxDamageReduction})");
+    }
+
+    // ─── Player Damage ────────────────────────────────────────
     public void ApplyDamageToPlayer(float amount)
     {
         if (Player.CurrentHealth <= 0f) return;
 
-        Player.CurrentHealth = Mathf.Max(0f, Player.CurrentHealth - amount);
+        // Reduction can absorb at most maxReductionFraction of the hit,
+        // so at least (1 - maxReductionFraction) always gets through.
+        float maxAbsorb  = amount * maxReductionFraction;
+        float absorbed   = Mathf.Min(Player.DamageReduction, maxAbsorb);
+        float mitigated  = Mathf.Max(1f, amount - absorbed); // always deal at least 1
+
+        Player.CurrentHealth = Mathf.Max(0f, Player.CurrentHealth - mitigated);
         OnPlayerHealthChanged.Invoke(Player.CurrentHealth, Player.MaxHealth);
-        Debug.Log($"[GM] Player hit {amount:F1}. HP:{Player.CurrentHealth:F0}/{Player.MaxHealth:F0}");
+        Debug.Log($"[GM] Player hit {amount:F1} → absorbed:{absorbed:F1} → dealt:{mitigated:F1} | HP:{Player.CurrentHealth:F0}/{Player.MaxHealth:F0}");
 
         if (Player.CurrentHealth <= 0f)
         {
             Debug.Log("[GM] Player died.");
             OnPlayerDied.Invoke();
         }
-    }
-
-    public void HealPlayer(float amount)
-    {
-        Player.CurrentHealth = Mathf.Min(Player.MaxHealth, Player.CurrentHealth + amount);
-        OnPlayerHealthChanged.Invoke(Player.CurrentHealth, Player.MaxHealth);
     }
 
     // ─── XP & Level Up ───────────────────────────────────────
@@ -186,13 +201,12 @@ public void ResetPlayer()
         OnPlayerHealthChanged.Invoke(Player.CurrentHealth, Player.MaxHealth);
     }
 
-    // ─── Fallback ────────────────────────────────────────────
     private EnemyTypeData FallbackType() => new EnemyTypeData
     {
-        typeName    = "Fallback",
-        baseHealth  = 50f,
-        baseSpeed   = 2.5f,
-        baseDamage  = 10f,
+        typeName     = "Fallback",
+        baseHealth   = 50f,
+        baseSpeed    = 2.5f,
+        baseDamage   = 10f,
         baseXpReward = 25f
     };
 }
@@ -209,6 +223,18 @@ public class PlayerStats
     public float MaxHealth;
     public float CurrentHealth;
     public float Damage;
+    public float DamageReduction;
+
+    public void RestoreFromSave(RunSaveManager.RunSaveData data, float defaultMaxHealth)
+    {
+        MaxHealth       = data.maxHealth > 0f ? data.maxHealth : defaultMaxHealth;
+        CurrentHealth   = data.currentHealth > 0f ? data.currentHealth : MaxHealth;
+        Damage          = data.damage;
+        DamageReduction = data.damageReduction;
+        Level           = data.playerLevel;
+        CurrentXp       = data.currentXp;
+        XpToNextLevel   = data.xpToNextLevel;
+    }
 }
 
 [System.Serializable]
@@ -221,16 +247,11 @@ public class EnemyStats
     public float XpReward;
 }
 
-/// <summary>
-/// Defines the base stats for one enemy type.
-/// Add one entry per type in the GameManager Inspector.
-/// </summary>
 [System.Serializable]
 public class EnemyTypeData
 {
-    [Tooltip("Must exactly match the EnemyType set on each EnemyController (Archer / Warrior / Elite)")]
+    [Tooltip("Must exactly match the EnemyType set on each EnemyController")]
     public string typeName;
-
     [Space]
     public float baseHealth   = 50f;
     public float baseSpeed    = 3f;

@@ -21,6 +21,10 @@ public class AudioManager : MonoBehaviour
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
         DontDestroyOnLoad(gameObject);
+    }
+
+    private void Start()
+    {
         InitializeSounds(sfxSounds);
         InitializeSounds(uiSounds);
     }
@@ -42,22 +46,35 @@ public class AudioManager : MonoBehaviour
 
     public void Play(string id)
     {
-        if (!_soundMap.TryGetValue(id, out SoundData s)) { Debug.LogWarning($"[AudioManager] Sound '{id}' not found."); return; }
+        if (!_soundMap.TryGetValue(id, out SoundData s)) 
+        { 
+            Debug.LogWarning($"[AudioManager] Sound '{id}' not found."); 
+            return; 
+        }
+        if (s.clips == null || s.clips.Length == 0) 
+        { 
+            Debug.LogWarning($"[AudioManager] Sound '{id}' has no clips assigned."); 
+            return; 
+        }
 
-        s.source.clip = s.clips[Random.Range(0, s.clips.Length)];
-        s.source.volume = s.randomizeVolume ? s.volume + Random.Range(-s.volumeVariance, s.volumeVariance) : s.volume;
-        s.source.pitch  = s.randomizePitch  ? s.pitch  + Random.Range(-s.pitchVariance,  s.pitchVariance)  : s.pitch;
-        s.source.Play();
-    }
+        AudioClip clip  = s.clips[Random.Range(0, s.clips.Length)];
+        float volume    = s.randomizeVolume ? s.volume + Random.Range(-s.volumeVariance, s.volumeVariance) : s.volume;
+        float pitch     = s.randomizePitch  ? s.pitch  + Random.Range(-s.pitchVariance,  s.pitchVariance)  : s.pitch;
 
-    public void Stop(string id)
-    {
-        if (_soundMap.TryGetValue(id, out SoundData s)) s.source.Stop();
+        s.source.pitch = pitch;
+        s.source.PlayOneShot(clip, volume);
     }
 
     public void PlayAtPosition(string id, Vector3 position)
     {
         if (!_soundMap.TryGetValue(id, out SoundData s)) return;
+
+        if (s.clips == null || s.clips.Length == 0) 
+        { 
+            Debug.LogWarning($"[AudioManager] Sound '{id}' has no clips assigned."); 
+            return; 
+        }
+
         AudioClip clip = s.clips[Random.Range(0, s.clips.Length)];
         AudioSource.PlayClipAtPoint(clip, position, s.volume);
     }
@@ -71,15 +88,34 @@ public class AudioManager : MonoBehaviour
         audioMixer.SetFloat(exposedParam, dB);
     }
 
-    public void SetSFXVolume(float val)    => SetVolume("SFXVolume", val);
-    public void SetMusicVolume(float val)  => SetVolume("MusicVolume", val);
-    public void SetAmbianceVolume(float v) => SetVolume("AmbianceVolume", v);
-    public void SetUIVolume(float val)     => SetVolume("UIVolume", val);
+    public void SetMasterVolume(float val)   => SetVolume("MasterVolume",   val);
+    public void SetMusicVolume(float val)    => SetVolume("MusicVolume",    val);
+    public void SetSFXVolume(float val)      => SetVolume("SFXVolume",      val);
+    public void SetAmbianceVolume(float val) => SetVolume("AmbianceVolume", val);
+    public void SetUIVolume(float val)       => SetVolume("UIVolume",       val);
+    public void SetVoiceVolume(float val)    => SetVolume("VoiceVolume",    val);
 
     // ── Fade Helpers ──────────────────────────────────────────
 
-    public void FadeIn(string id, float duration)  => StartCoroutine(FadeCoroutine(id, 0f, _soundMap[id].volume, duration));
-    public void FadeOut(string id, float duration) => StartCoroutine(FadeCoroutine(id, _soundMap[id].source.volume, 0f, duration, stopOnEnd: true));
+    public void FadeIn(string id, float duration)
+    {
+        if (!_soundMap.TryGetValue(id, out SoundData s))
+        {
+            Debug.LogWarning($"[AudioManager] FadeIn: Sound '{id}' not found.");
+            return;
+        }
+        StartCoroutine(FadeCoroutine(id, 0f, s.volume, duration));
+    }
+
+    public void FadeOut(string id, float duration)
+    {
+        if (!_soundMap.TryGetValue(id, out SoundData s))
+        {
+            Debug.LogWarning($"[AudioManager] FadeOut: Sound '{id}' not found.");
+            return;
+        }
+        StartCoroutine(FadeCoroutine(id, s.source.volume, 0f, duration, stopOnEnd: true));
+    }
 
     private IEnumerator FadeCoroutine(string id, float from, float to, float duration, bool stopOnEnd = false)
     {
@@ -100,19 +136,29 @@ public class AudioManager : MonoBehaviour
 
     public void SaveVolumes()
     {
-        audioMixer.GetFloat("MusicVolume",   out float m);
-        audioMixer.GetFloat("SFXVolume",     out float s);
-        audioMixer.GetFloat("AmbianceVolume",out float a);
-        PlayerPrefs.SetFloat("Vol_Music",    m);
-        PlayerPrefs.SetFloat("Vol_SFX",      s);
-        PlayerPrefs.SetFloat("Vol_Ambiance", a);
+        audioMixer.GetFloat("MasterVolume",   out float master);
+        audioMixer.GetFloat("MusicVolume",    out float music);
+        audioMixer.GetFloat("SFXVolume",      out float sfx);
+        audioMixer.GetFloat("AmbianceVolume", out float ambiance);
+        audioMixer.GetFloat("UIVolume",       out float ui);
+        audioMixer.GetFloat("VoiceVolume",    out float voice);
+
+        PlayerPrefs.SetFloat("Vol_Master",   master);
+        PlayerPrefs.SetFloat("Vol_Music",    music);
+        PlayerPrefs.SetFloat("Vol_SFX",      sfx);
+        PlayerPrefs.SetFloat("Vol_Ambiance", ambiance);
+        PlayerPrefs.SetFloat("Vol_UI",       ui);
+        PlayerPrefs.SetFloat("Vol_Voice",    voice);
         PlayerPrefs.Save();
     }
 
     public void LoadVolumes()
     {
+        audioMixer.SetFloat("MasterVolume",   PlayerPrefs.GetFloat("Vol_Master",   0f));
         audioMixer.SetFloat("MusicVolume",    PlayerPrefs.GetFloat("Vol_Music",    0f));
         audioMixer.SetFloat("SFXVolume",      PlayerPrefs.GetFloat("Vol_SFX",      0f));
         audioMixer.SetFloat("AmbianceVolume", PlayerPrefs.GetFloat("Vol_Ambiance", 0f));
+        audioMixer.SetFloat("UIVolume",       PlayerPrefs.GetFloat("Vol_UI",       0f));
+        audioMixer.SetFloat("VoiceVolume",    PlayerPrefs.GetFloat("Vol_Voice",    0f));
     }
 }
