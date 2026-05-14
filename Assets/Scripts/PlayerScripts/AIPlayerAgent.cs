@@ -5,86 +5,114 @@ using Unity.MLAgents.Actuators;
 using System.Collections.Generic;
 
 // ============================================================
-//  AIPlayerAgent.cs  —  Reinforcement Learning Player Agent
+//  AIPlayerAgent.cs  —  Reinforcement Learning Player Agent  (v2)
 //
-//  HOW IT WORKS (Carrot & Stick / RL):
+//  CHANGES FROM v1:
 //  ─────────────────────────────────────────────────────────
-//  Every training step the agent:
-//    1. OBSERVES  — reads a limited "window" of the world
-//                   (only what a real player could see)
-//    2. ACTS      — outputs move/dash/attack decisions
-//    3. RECEIVES  — a reward (carrot) or penalty (stick)
-//    4. LEARNS    — the PPO algorithm adjusts its neural
-//                   network weights to maximise future reward
+//  • Pickup awareness : observes 3 nearest pickups (type + dir + dist)
+//  • Pickup rewards   : carrot for collecting each pickup type;
+//                       permanent stat effects applied locally
+//  • Stat tracking    : _currentAttackRange / _currentMoveSpeed
+//                       replace the missing GM.AttackRange reference
+//  • Instant respawn  : EndEpisode() fires immediately on death —
+//                       DeathScreenUI is bypassed entirely
+//  • ResetForTraining : OnEpisodeBegin calls RoomManager.ResetForTraining()
+//                       which rebuilds the dungeon from scratch each episode
 //
-//  SETUP:
+//  OBSERVATION VECTOR = 58 floats  (update Behaviour Parameters!)
 //  ─────────────────────────────────────────────────────────
-//  1. Install com.unity.ml-agents via Package Manager
-//  2. Add this component to your Player prefab
-//     (remove or disable PlayerController — this replaces it)
-//  3. Add a "Behaviour Parameters" component
-//       Vector Observation Size : 47   (see CollectObservations)
-//       Continuous Actions      : 2    (moveX, moveZ)
-//       Discrete Branches       : 2    (dash, attack)
-//       Branch 0 size           : 2    (0=no dash, 1=dash)
-//       Branch 1 size           : 2    (0=no attack, 1=attack)
-//  4. Add a "Decision Requester" component → Decision Period: 5
-//  5. Add a "Ray Perception Sensor 3D" for walls/env sensing
-//  6. Assign all Inspector references below
-//  7. Run training:  mlagents-learn config/agent.yaml --run-id=run1
+//  Self       [0-4]    health, pos.x, pos.z, dash cd, attack cd
+//  Exit       [5-7]    known?, dir.x, dir.z
+//  Enemies  5×7=[8-42] present, dist, dir.x, dir.z, type, hp, inMelee
+//  Pickups  3×5=[43-57] present, dist, dir.x, dir.z, type
+//
+//  BEHAVIOUR PARAMETERS (update in Inspector):
+//    Vector Observation Size : 58
+//    Continuous Actions      : 2  (moveX, moveZ)
+//    Discrete Branches       : 2
+//      Branch 0 size         : 2  (0=no dash,   1=dash)
+//      Branch 1 size         : 2  (0=no attack, 1=attack)
+//
+//  MULTIPLE INSTANCES (faster training):
+//  ─────────────────────────────────────────────────────────
+//  The easiest way to gather steps faster is to run several
+//  separate Unity builds all connected to the same Python trainer:
+//
+//    mlagents-learn config/agent.yaml --run-id=run1 --num-envs=4
+//
+//  Each build is an independent process; no scene changes needed.
+//  Alternatively, set up a build with --inference-device=cpu,
+//  launch 4-8 copies, and they all feed the same trainer.
+//
+//  If you want multiple agents inside ONE scene (parallel envs),
+//  that requires refactoring all singletons into local references
+//  per environment — a larger architectural change. Start with
+//  separate builds; it is just as fast and far simpler.
 // ============================================================
 
 [RequireComponent(typeof(Rigidbody))]
 public class AIPlayerAgent : Agent
 {
-    // ─── Inspector References ────────────────────────────────
+    // ─── Movement ────────────────────────────────────────────
     [Header("Movement")]
-    [SerializeField] private float moveSpeed    = 10f;
-    [SerializeField] private float acceleration = 80f;
-    [SerializeField] private float deceleration = 120f;
-    [SerializeField] private float dashSpeed    = 24f;
-    [SerializeField] private float dashDuration = 0.12f;
-    [SerializeField] private float dashCooldown = 0.5f;
+    [SerializeField] private float baseMoveSpeed = 10f;
+    [SerializeField] private float maxMoveSpeed  = 20f;
+    [SerializeField] private float acceleration  = 80f;
+    [SerializeField] private float deceleration  = 120f;
+    [SerializeField] private float dashSpeed     = 24f;
+    [SerializeField] private float dashDuration  = 0.12f;
+    [SerializeField] private float dashCooldown  = 0.5f;
 
+    // ─── Attack ──────────────────────────────────────────────
     [Header("Attack")]
-    [SerializeField] private float     attackCooldown = 0.4f;
-    [SerializeField] private float     attackAngle    = 90f;   // matches PlayerController
+    [SerializeField] private float     attackCooldown  = 0.4f;
+    [SerializeField] private float     attackAngle     = 90f;
+    [SerializeField] private float     baseAttackRange = 3f;
+    [SerializeField] private float     maxAttackRange  = 8f;
     [SerializeField] private LayerMask enemyLayer;
     [SerializeField] private Transform attackOrigin;
 
     [Header("Hit VFX")]
-    [SerializeField] private GameObject slashVFXPrefab;        // matches PlayerController
+    [SerializeField] private GameObject slashVFXPrefab;
 
+    // ─── Perception ──────────────────────────────────────────
     [Header("Perception")]
-    [Tooltip("How far the agent can 'see' enemies and the exit")]
-    [SerializeField] private float visionRadius = 12f;
-    [Tooltip("Max enemies tracked in observation vector (keep stable)")]
-    [SerializeField] private int maxTrackedEnemies = 5;
+    [Tooltip("How far the agent can see enemies, pickups, and the exit")]
+    [SerializeField] private float visionRadius     = 12f;
+    [SerializeField] private int   maxTrackedEnemies = 5;   // keep at 5; changing breaks obs vector
+    [SerializeField] private int   maxTrackedPickups = 3;   // keep at 3; changing breaks obs vector
 
+    // ─── Level Goal ──────────────────────────────────────────
     [Header("Level Goal")]
     [SerializeField] private Transform exitDoor;
-    [Tooltip("How close to exit counts as 'found it'")]
-    [SerializeField] private float exitDiscoveryRadius = 6f;
-    [SerializeField] private float exitCompleteRadius  = 1.5f;
+    [SerializeField] private float     exitDiscoveryRadius = 6f;
+    [SerializeField] private float     exitCompleteRadius  = 1.5f;
 
+    // ─── Visual ──────────────────────────────────────────────
     [Header("Visual")]
     [SerializeField] private SpriteRenderer spriteRenderer;
     [SerializeField] private Animator       animator;
 
-    // ─── Reward Tuning (Carrot & Stick) ──────────────────────
+    // ─── Rewards ─────────────────────────────────────────────
     [Header("Rewards  (+carrots)")]
-    [SerializeField] private float rewardKillEnemy      = 1.0f;   // killed an enemy
-    [SerializeField] private float rewardDiscoverExit   = 0.5f;   // first time it sees the exit
-    [SerializeField] private float rewardReachExit      = 5.0f;   // completes the level
-    [SerializeField] private float rewardExploreNew     = 0.02f;  // steps into unexplored area
-    [SerializeField] private float rewardSurvivePerSec  = 0.005f; // small bonus just for staying alive
+    [SerializeField] private float rewardKillEnemy       = 1.0f;
+    [SerializeField] private float rewardDiscoverExit    = 0.5f;
+    [SerializeField] private float rewardReachExit       = 5.0f;
+    [SerializeField] private float rewardExploreNew      = 0.02f;
+    [SerializeField] private float rewardSurvivePerSec   = 0.005f;
+    [SerializeField] private float rewardPickupHealth    = 0.3f;  // consumable heal
+    [SerializeField] private float rewardPickupPermanent = 0.5f;  // speed / armor / range
 
     [Header("Penalties  (-sticks)")]
-    [SerializeField] private float penaltyTakeDamage    = 0.3f;   // per hit point lost
-    [SerializeField] private float penaltyDie           = 3.0f;   // episode ends
-    [SerializeField] private float penaltyIdlePerSec    = 0.01f;  // standing still too long
-    [SerializeField] private float penaltyTimePerSec    = 0.001f; // small time pressure
-    [SerializeField] private float penaltyRevisitCell   = 0.005f; // stepping into already-visited cell
+    [SerializeField] private float penaltyTakeDamage  = 0.3f;
+    [SerializeField] private float penaltyDie         = 3.0f;
+    [SerializeField] private float penaltyIdlePerSec  = 0.01f;
+    [SerializeField] private float penaltyTimePerSec  = 0.001f;
+    [SerializeField] private float penaltyRevisitCell = 0.005f;
+
+    // ─── Fall Death ──────────────────────────────────────────
+    [Header("Fall Death")]
+    [SerializeField] private float fallDeathY = -5f;
 
     // ─── Private Runtime State ────────────────────────────────
     private Rigidbody _rb;
@@ -96,29 +124,29 @@ public class AIPlayerAgent : Agent
     private Vector3   _lastMoveDir;
     private bool      _isDead;
     private bool      _exitDiscovered;
+    private float     _lastHealth;
+    private float     _idleTimer;
+    private float     _episodeTime;
 
-    private float _lastHealth;
-    private float _idleTimer;
-    private float _episodeTime;
+    // Local stat mirrors — updated when pickups are collected.
+    // These replace the old GM.AttackRange reference which doesn't exist.
+    private float _currentAttackRange;
+    private float _currentMoveSpeed;
 
-    // Exploration grid — tracks which cells the agent has visited
-    private HashSet<Vector2Int> _visitedCells = new HashSet<Vector2Int>();
+    // Exploration grid
+    private readonly HashSet<Vector2Int> _visitedCells = new HashSet<Vector2Int>();
     private const float CELL_SIZE = 3f;
 
-    // Spawn & fall death
     private Vector3 _spawnPosition;
-    [Header("Fall Death")]
-    [Tooltip("If the agent drops below this Y value the episode ends immediately")]
-    [SerializeField] private float fallDeathY = -5f;
 
     private GameManager GM => GameManager.Instance;
 
-    // Animator hashes — matches PlayerController exactly
+    // Animator hashes — match PlayerController exactly
     private static readonly int HashSpeed     = Animator.StringToHash("Speed");
     private static readonly int HashDirX      = Animator.StringToHash("DirX");
     private static readonly int HashDirZ      = Animator.StringToHash("DirZ");
     private static readonly int HashDash      = Animator.StringToHash("Dash");
-    private static readonly int HashAttack    = Animator.StringToHash("attack");   // lowercase, matches PlayerController
+    private static readonly int HashAttack    = Animator.StringToHash("attack");
     private static readonly int HashIsWalking = Animator.StringToHash("isWalking");
     private static readonly int HashFlipX     = Animator.StringToHash("FlipX");
 
@@ -129,36 +157,48 @@ public class AIPlayerAgent : Agent
     public override void Initialize()
     {
         _rb = GetComponent<Rigidbody>();
-
-        // FIX: Use FreezeRotation only (same as PlayerController).
-        // The old FreezePositionY was preventing the rigidbody from
-        // settling onto newly spawned floor geometry, causing fall-through.
         _rb.constraints   = RigidbodyConstraints.FreezeRotation;
         _rb.linearDamping = 0f;
 
         if (attackOrigin == null) attackOrigin = transform;
-        _lastMoveDir   = Vector3.forward;
-        _spawnPosition = transform.position;
+        _lastMoveDir        = Vector3.forward;
+        _spawnPosition      = transform.position;
+        _currentAttackRange = baseAttackRange;
+        _currentMoveSpeed   = baseMoveSpeed;
 
         if (GM != null)
         {
             GM.OnPlayerHealthChanged.AddListener(OnHealthChanged);
             GM.OnPlayerDied.AddListener(OnPlayerDied);
         }
+
+        // Subscribe to the static pickup event so we receive rewards and
+        // can apply permanent stat bonuses locally (PlayerController is disabled).
+        PickupBase.OnAnyPickupCollected += OnPickupCollected;
     }
 
-    // Called at the start of every training episode
+    /// <summary>
+    /// Called by ML-Agents at the start of every training episode.
+    /// Resets the full game state so the agent trains on a fresh dungeon.
+    /// </summary>
     public override void OnEpisodeBegin()
     {
-        // ── Reset the full game state ──────────────────────────
+        // Reset player stats (health, damage, XP etc.)
         GM?.ResetPlayer();
-        RoomManager.Instance?.ResetDungeon();
 
-        // ── Reset physics and snap back to spawn ───────────────
+        // Reset local stat mirrors to base values
+        _currentAttackRange = baseAttackRange;
+        _currentMoveSpeed   = baseMoveSpeed;
+
+        // Rebuild the dungeon: new seed, destroy all enemies/pickups, reload start room
+        RoomManager.Instance?.ResetForTraining();
+
+        // Reset physics
         _rb.linearVelocity  = Vector3.zero;
         _rb.angularVelocity = Vector3.zero;
         transform.position  = _spawnPosition;
 
+        // Reset all episode state
         _isDead            = false;
         _exitDiscovered    = false;
         _isDashing         = false;
@@ -174,59 +214,40 @@ public class AIPlayerAgent : Agent
         _lastHealth = GM != null ? GM.Player.CurrentHealth : 100f;
     }
 
+    private void OnDestroy()
+    {
+        if (GM != null)
+        {
+            GM.OnPlayerHealthChanged.RemoveListener(OnHealthChanged);
+            GM.OnPlayerDied.RemoveListener(OnPlayerDied);
+        }
+        PickupBase.OnAnyPickupCollected -= OnPickupCollected;
+    }
+
     // =========================================================
-    //  OBSERVATIONS  — "What the agent can see"
-    // =========================================================
-    //
-    //  Total observation size = 47 floats
-    //  ─────────────────────────────────────────────────────
-    //  Self (5):
-    //    [0]   normalised health
-    //    [1-2] normalised room position (x,z)
-    //    [3]   dash cooldown fraction (0=ready, 1=on cooldown)
-    //    [4]   attack cooldown fraction
-    //
-    //  Exit (3):
-    //    [5]   exit known? (0/1)
-    //    [6-7] direction to exit, normalised (x,z)
-    //
-    //  Enemies (maxTrackedEnemies × 7 = 5×7 = 35 floats):
-    //    per enemy slot:
-    //    [0] present? (0/1) — slot may be empty
-    //    [1] distance, normalised 0-1 over visionRadius
-    //    [2-3] direction to enemy (x,z)
-    //    [4] enemy type  (0=Warrior, 0.33=Archer, 0.66=Rogue, 1=Boss)
-    //    [5] enemy health fraction
-    //    [6] is enemy in melee attack range? (0/1)
-    //
-    //  NOTE: The agent has NO knowledge of enemies outside visionRadius
-    //        and cannot read enemy scripts directly — it only gets the
-    //        sensor data below, just like a real player would have to react.
+    //  OBSERVATIONS  (58 floats)
     // =========================================================
 
     public override void CollectObservations(VectorSensor sensor)
     {
-        // ── Self ──────────────────────────────────────────────
+        // ── Self [0-4] ─────────────────────────────────────────
         float healthFraction = GM != null
-            ? GM.Player.CurrentHealth / GM.Player.MaxHealth
-            : 1f;
-        sensor.AddObservation(healthFraction);                        // [0]
+            ? GM.Player.CurrentHealth / GM.Player.MaxHealth : 1f;
+        sensor.AddObservation(healthFraction);
+        sensor.AddObservation(transform.position.x / 30f);
+        sensor.AddObservation(transform.position.z / 30f);
+        sensor.AddObservation(Mathf.Clamp01(_dashCooldownTimer / dashCooldown));
+        sensor.AddObservation(Mathf.Clamp01(_attackTimer / attackCooldown));
 
-        sensor.AddObservation(transform.position.x / 30f);           // [1]
-        sensor.AddObservation(transform.position.z / 30f);           // [2]
-
-        sensor.AddObservation(Mathf.Clamp01(_dashCooldownTimer / dashCooldown));    // [3]
-        sensor.AddObservation(Mathf.Clamp01(_attackTimer / attackCooldown));        // [4]
-
-        // ── Exit ──────────────────────────────────────────────
+        // ── Exit [5-7] ─────────────────────────────────────────
         if (_exitDiscovered && exitDoor != null)
         {
-            sensor.AddObservation(1f);                                // [5] known
-            Vector3 toExit = (exitDoor.position - transform.position);
+            Vector3 toExit = exitDoor.position - transform.position;
             toExit.y = 0f;
             toExit = toExit.sqrMagnitude > 0f ? toExit.normalized : Vector3.zero;
-            sensor.AddObservation(toExit.x);                          // [6]
-            sensor.AddObservation(toExit.z);                          // [7]
+            sensor.AddObservation(1f);
+            sensor.AddObservation(toExit.x);
+            sensor.AddObservation(toExit.z);
         }
         else
         {
@@ -235,9 +256,8 @@ public class AIPlayerAgent : Agent
             sensor.AddObservation(0f);
         }
 
-        // ── Nearby Enemies (only within visionRadius) ─────────
+        // ── Enemies [8-42] (5 × 7 = 35) ───────────────────────
         List<EnemyObservation> visible = GetVisibleEnemies();
-
         for (int i = 0; i < maxTrackedEnemies; i++)
         {
             if (i < visible.Count)
@@ -253,29 +273,40 @@ public class AIPlayerAgent : Agent
             }
             else
             {
-                sensor.AddObservation(0f); sensor.AddObservation(0f);
-                sensor.AddObservation(0f); sensor.AddObservation(0f);
-                sensor.AddObservation(0f); sensor.AddObservation(0f);
-                sensor.AddObservation(0f);
+                for (int j = 0; j < 7; j++) sensor.AddObservation(0f);
+            }
+        }
+
+        // ── Pickups [43-57] (3 × 5 = 15) ──────────────────────
+        List<PickupObservation> pickups = GetNearbyPickups();
+        for (int i = 0; i < maxTrackedPickups; i++)
+        {
+            if (i < pickups.Count)
+            {
+                PickupObservation p = pickups[i];
+                sensor.AddObservation(1f);
+                sensor.AddObservation(p.normalizedDist);
+                sensor.AddObservation(p.dirX);
+                sensor.AddObservation(p.dirZ);
+                sensor.AddObservation(p.typeCode);
+            }
+            else
+            {
+                for (int j = 0; j < 5; j++) sensor.AddObservation(0f);
             }
         }
     }
 
     // =========================================================
-    //  ACTIONS  — "What the agent decides to do"
-    // =========================================================
-    //
-    //  Continuous[0] = move X  (-1 to +1)
-    //  Continuous[1] = move Z  (-1 to +1)
-    //  Discrete[0]   = dash    (0=no, 1=yes)
-    //  Discrete[1]   = attack  (0=no, 1=yes)
+    //  ACTIONS
+    //  Continuous[0] = moveX,  Continuous[1] = moveZ
+    //  Discrete[0]   = dash,   Discrete[1]   = attack
     // =========================================================
 
     public override void OnActionReceived(ActionBuffers actions)
     {
         if (_isDead) return;
 
-        // ── Fall death check ──────────────────────────────────
         if (transform.position.y < fallDeathY)
         {
             FallDeath();
@@ -284,27 +315,24 @@ public class AIPlayerAgent : Agent
 
         float inputX    = actions.ContinuousActions[0];
         float inputZ    = actions.ContinuousActions[1];
-        bool wantDash   = actions.DiscreteActions[0] == 1;
-        bool wantAttack = actions.DiscreteActions[1] == 1;
+        bool  wantDash  = actions.DiscreteActions[0] == 1;
+        bool  wantAtk   = actions.DiscreteActions[1] == 1;
 
-        // ── Movement vector ────────────────────────────────────
         _moveDir = new Vector3(inputX, 0f, inputZ);
         if (_moveDir.magnitude > 1f) _moveDir.Normalize();
         if (_moveDir.magnitude > 0.1f) _lastMoveDir = _moveDir;
 
-        // ── Dash ──────────────────────────────────────────────
         if (wantDash && !_isDashing && _dashCooldownTimer <= 0f)
             StartDash();
 
-        // ── Attack ────────────────────────────────────────────
-        if (wantAttack && _attackTimer <= 0f)
+        if (wantAtk && _attackTimer <= 0f)
         {
             _attackTimer = attackCooldown;
             PerformAttack();
         }
 
-        // ── Step rewards ──────────────────────────────────────
-        AddReward(rewardSurvivePerSec  * Time.fixedDeltaTime);
+        // ── Per-step rewards ──────────────────────────────────
+        AddReward( rewardSurvivePerSec * Time.fixedDeltaTime);
         AddReward(-penaltyTimePerSec   * Time.fixedDeltaTime);
 
         if (_moveDir.magnitude < 0.1f)
@@ -325,18 +353,15 @@ public class AIPlayerAgent : Agent
         else
             AddReward(-penaltyRevisitCell);
 
-        // ── Exit proximity check ──────────────────────────────
         CheckExitProximity();
-
         UpdateTimers();
         UpdateAnimator();
         UpdateSpriteFlip();
     }
 
     // =========================================================
-    //  HEURISTIC  — keyboard override for human testing
-    //  Press Play, set Behaviour Type to "Heuristic Only"
-    //  and you can control the agent manually to verify rewards
+    //  HEURISTIC — human keyboard override for testing
+    //  Set Behaviour Type to "Heuristic Only" in Play mode.
     // =========================================================
     public override void Heuristic(in ActionBuffers actionsOut)
     {
@@ -354,12 +379,12 @@ public class AIPlayerAgent : Agent
 
         cont[0] = move.x;
         cont[1] = move.y;
-        disc[0] = kb    != null && kb.spaceKey.wasPressedThisFrame  ? 1 : 0;
-        disc[1] = mouse != null && mouse.leftButton.isPressed        ? 1 : 0;
+        disc[0] = kb    != null && kb.spaceKey.wasPressedThisFrame ? 1 : 0;
+        disc[1] = mouse != null && mouse.leftButton.isPressed       ? 1 : 0;
     }
 
     // =========================================================
-    //  PHYSICS  — matches PlayerController.FixedUpdate exactly
+    //  PHYSICS — matches PlayerController.FixedUpdate
     // =========================================================
     private void FixedUpdate()
     {
@@ -371,7 +396,7 @@ public class AIPlayerAgent : Agent
             return;
         }
 
-        Vector3 target  = _moveDir * moveSpeed;
+        Vector3 target  = _moveDir * _currentMoveSpeed;
         Vector3 current = new Vector3(_rb.linearVelocity.x, 0f, _rb.linearVelocity.z);
         float   accel   = _moveDir.magnitude > 0.1f ? acceleration : deceleration;
         Vector3 next    = Vector3.MoveTowards(current, target, accel * Time.fixedDeltaTime);
@@ -379,25 +404,22 @@ public class AIPlayerAgent : Agent
     }
 
     // =========================================================
-    //  ATTACK  — matches PlayerController.PerformAttack exactly:
-    //            configurable angle cone, audio, slash VFX,
-    //            camera shake on hit
+    //  ATTACK — matches PlayerController.PerformAttack
     // =========================================================
     private void PerformAttack()
     {
-        float range  = GM != null ? GM.AttackRange   : 3f;
+        float range  = _currentAttackRange;
         float damage = GM != null ? GM.Player.Damage : 20f;
         int   mask   = enemyLayer.value != 0 ? enemyLayer.value : ~0;
 
         if (animator != null) animator.SetTrigger(HashAttack);
-
         AudioManager.Instance?.Play("PlayerAttack");
 
         if (slashVFXPrefab != null)
         {
-            float yAngle     = Mathf.Atan2(_lastMoveDir.x, _lastMoveDir.z) * Mathf.Rad2Deg;
-            Quaternion rot   = Quaternion.Euler(0f, yAngle, 0f);
-            GameObject slash = Instantiate(slashVFXPrefab, attackOrigin.position, rot, attackOrigin);
+            float      yAngle = Mathf.Atan2(_lastMoveDir.x, _lastMoveDir.z) * Mathf.Rad2Deg;
+            Quaternion rot    = Quaternion.Euler(0f, yAngle, 0f);
+            GameObject slash  = Instantiate(slashVFXPrefab, attackOrigin.position, rot, attackOrigin);
             Destroy(slash, 0.5f);
         }
 
@@ -415,7 +437,6 @@ public class AIPlayerAgent : Agent
             if (_lastMoveDir.magnitude > 0.1f)
             {
                 float dot = Vector3.Dot(_lastMoveDir.normalized, toEnemy.normalized);
-                // FIX: use configurable attackAngle (was hardcoded dot < 0.3f)
                 if (dot < Mathf.Cos(attackAngle * 0.5f * Mathf.Deg2Rad)) continue;
             }
 
@@ -443,13 +464,17 @@ public class AIPlayerAgent : Agent
         float delta = _lastHealth - current;
         if (delta > 0f)
         {
-            float penalty = delta * penaltyTakeDamage;
-            AddReward(-penalty);
-            Debug.Log($"[AIAgent] STICK  took {delta:F1} dmg  penalty:{penalty:F3}");
+            AddReward(-delta * penaltyTakeDamage);
+            Debug.Log($"[AIAgent] STICK  took {delta:F1} dmg  penalty:{delta * penaltyTakeDamage:F3}");
         }
         _lastHealth = current;
     }
 
+    /// <summary>
+    /// GameManager fires OnPlayerDied. We end the episode immediately —
+    /// no death screen, no button presses, instant next episode.
+    /// DeathScreenUI.OnPlayerDied() checks for this component and skips itself.
+    /// </summary>
     private void OnPlayerDied()
     {
         if (_isDead) return;
@@ -457,7 +482,7 @@ public class AIPlayerAgent : Agent
 
         AddReward(-penaltyDie);
         Debug.Log("[AIAgent] STICK  died  penalty:" + penaltyDie);
-        EndEpisode();
+        EndEpisode();   // ML-Agents calls OnEpisodeBegin immediately after this
     }
 
     public void FallDeath()
@@ -474,6 +499,51 @@ public class AIPlayerAgent : Agent
     {
         AddReward(rewardKillEnemy);
         Debug.Log($"[AIAgent] CARROT  enemy killed  reward:{rewardKillEnemy:F2}");
+    }
+
+    /// <summary>
+    /// Fires whenever any PickupBase is collected anywhere in the scene.
+    /// We filter by proximity so we only react to pickups the agent itself grabbed.
+    /// Permanent stat effects (speed, range) are applied locally here because
+    /// PlayerController is disabled and SpeedPickup/RangePickup would silently
+    /// find no PlayerController to call.
+    /// Health and Armor pickups apply themselves through GameManager as normal.
+    /// </summary>
+    private void OnPickupCollected(PickupBase pickup)
+    {
+        // PickupBase fires this BEFORE Destroy(), so pickup.transform is still valid.
+        if (pickup == null) return;
+        float dist = Vector3.Distance(transform.position, pickup.transform.position);
+        if (dist > 2.5f) return;  // wasn't collected by this agent
+
+        switch (pickup)
+        {
+            case HealthPickup _:
+                // GameManager.HealPlayer() already ran inside HealthPickup.OnPickedUp.
+                AddReward(rewardPickupHealth);
+                Debug.Log($"[AIAgent] CARROT  health pickup  reward:{rewardPickupHealth:F2}");
+                break;
+
+            case SpeedPickup sp:
+                // PlayerController is disabled, so we apply the bonus ourselves.
+                _currentMoveSpeed = Mathf.Min(_currentMoveSpeed + sp.SpeedBonus, maxMoveSpeed);
+                AddReward(rewardPickupPermanent);
+                Debug.Log($"[AIAgent] CARROT  speed pickup  +{sp.SpeedBonus}  speed→{_currentMoveSpeed:F1}");
+                break;
+
+            case ArmorPickup _:
+                // GameManager.AddDamageReduction() already ran inside ArmorPickup.OnPickedUp.
+                AddReward(rewardPickupPermanent);
+                Debug.Log($"[AIAgent] CARROT  armor pickup  reward:{rewardPickupPermanent:F2}");
+                break;
+
+            case RangePickup rp:
+                // Apply the bonus ourselves since PlayerController is disabled.
+                _currentAttackRange = Mathf.Min(_currentAttackRange + rp.RangeBonus, maxAttackRange);
+                AddReward(rewardPickupPermanent);
+                Debug.Log($"[AIAgent] CARROT  range pickup  +{rp.RangeBonus}  range→{_currentAttackRange:F1}");
+                break;
+        }
     }
 
     // =========================================================
@@ -503,13 +573,13 @@ public class AIPlayerAgent : Agent
     // =========================================================
     //  HELPERS
     // =========================================================
+
     private void StartDash()
     {
         _isDashing         = true;
         _dashTimer         = dashDuration;
         _dashCooldownTimer = dashCooldown;
         if (animator != null) animator.SetTrigger(HashDash);
-        // FIX: added camera shake to match PlayerController
         CameraShakeManager.Instance?.ShakeImpulse(CameraShakeManager.Instance.dashShakeForce);
     }
 
@@ -526,7 +596,6 @@ public class AIPlayerAgent : Agent
         }
     }
 
-    // FIX: now sets isWalking and FlipX bools to match PlayerController
     private void UpdateAnimator()
     {
         if (animator == null) return;
@@ -566,6 +635,7 @@ public class AIPlayerAgent : Agent
             toEnemy.y = 0f;
             float dist = toEnemy.magnitude;
 
+            // Skip enemies behind walls
             if (Physics.Linecast(transform.position + Vector3.up * 0.5f,
                                   col.transform.position + Vector3.up * 0.5f,
                                   LayerMask.GetMask("Wall", "Obstacle")))
@@ -580,26 +650,70 @@ public class AIPlayerAgent : Agent
                 if      (typeName.Contains("archer")) typeCode = 0.33f;
                 else if (typeName.Contains("rogue"))  typeCode = 0.66f;
                 else if (typeName.Contains("boss"))   typeCode = 1.00f;
-                else                                  typeCode = 0.00f;
+                // Warrior / Elite stay at 0f
             }
 
             Vector3 dir = dist > 0f ? toEnemy / dist : Vector3.zero;
 
             result.Add(new EnemyObservation
             {
-                normalizedDist = dist / visionRadius,
+                normalizedDist = Mathf.Clamp01(dist / visionRadius),
                 dirX           = dir.x,
                 dirZ           = dir.z,
                 typeCode       = typeCode,
-                healthFraction = 1f,
-                inMeleeRange   = dist <= (GM != null ? GM.AttackRange : 3f)
+                healthFraction = 1f,   // BaseEnemy.Stats is protected; use 1f as safe default
+                inMeleeRange   = dist <= _currentAttackRange
             });
         }
 
         result.Sort((a, b) => a.normalizedDist.CompareTo(b.normalizedDist));
-
         if (result.Count > maxTrackedEnemies)
             result.RemoveRange(maxTrackedEnemies, result.Count - maxTrackedEnemies);
+
+        return result;
+    }
+
+    // =========================================================
+    //  PICKUP PERCEPTION
+    // =========================================================
+    private List<PickupObservation> GetNearbyPickups()
+    {
+        List<PickupObservation> result = new List<PickupObservation>();
+
+        // OverlapSphere with no layer mask to catch all colliders, then filter by component.
+        Collider[] nearby = Physics.OverlapSphere(transform.position, visionRadius);
+        foreach (Collider col in nearby)
+        {
+            PickupBase pickup = col.GetComponent<PickupBase>();
+            if (pickup == null) continue;
+
+            Vector3 toPickup = col.transform.position - transform.position;
+            toPickup.y = 0f;
+            float   dist = toPickup.magnitude;
+            Vector3 dir  = dist > 0f ? toPickup / dist : Vector3.zero;
+
+            // Encode pickup type as a normalised float the network can distinguish
+            float typeCode = pickup switch
+            {
+                HealthPickup _ => 0.00f,  // consumable — high priority when low HP
+                SpeedPickup  _ => 0.33f,  // permanent speed boost
+                ArmorPickup  _ => 0.66f,  // permanent damage reduction
+                RangePickup  _ => 1.00f,  // permanent attack range boost
+                _              => 0.50f   // unknown
+            };
+
+            result.Add(new PickupObservation
+            {
+                normalizedDist = Mathf.Clamp01(dist / visionRadius),
+                dirX           = dir.x,
+                dirZ           = dir.z,
+                typeCode       = typeCode
+            });
+        }
+
+        result.Sort((a, b) => a.normalizedDist.CompareTo(b.normalizedDist));
+        if (result.Count > maxTrackedPickups)
+            result.RemoveRange(maxTrackedPickups, result.Count - maxTrackedPickups);
 
         return result;
     }
@@ -620,8 +734,7 @@ public class AIPlayerAgent : Agent
             Gizmos.DrawWireSphere(transform.position, exitDiscoveryRadius);
         }
 
-        // Attack cone gizmo — matches PlayerController
-        float   range   = Application.isPlaying && GM != null ? GM.AttackRange : 3f;
+        float   range   = Application.isPlaying ? _currentAttackRange : baseAttackRange;
         Vector3 origin  = attackOrigin != null ? attackOrigin.position : transform.position;
         Vector3 forward = Application.isPlaying ? _lastMoveDir : transform.forward;
         forward.y = 0f;
@@ -633,26 +746,15 @@ public class AIPlayerAgent : Agent
         {
             forward.Normalize();
             float   halfAngle = attackAngle * 0.5f;
-            Vector3 leftEdge  = Quaternion.Euler(0f, -halfAngle, 0f) * forward;
-            Vector3 rightEdge = Quaternion.Euler(0f,  halfAngle, 0f) * forward;
-
             Gizmos.color = Color.cyan;
-            Gizmos.DrawLine(origin, origin + leftEdge  * range);
-            Gizmos.DrawLine(origin, origin + rightEdge * range);
-        }
-    }
-
-    private void OnDestroy()
-    {
-        if (GM != null)
-        {
-            GM.OnPlayerHealthChanged.RemoveListener(OnHealthChanged);
-            GM.OnPlayerDied.RemoveListener(OnPlayerDied);
+            Gizmos.DrawLine(origin, origin + Quaternion.Euler(0f, -halfAngle, 0f) * forward * range);
+            Gizmos.DrawLine(origin, origin + Quaternion.Euler(0f,  halfAngle, 0f) * forward * range);
         }
     }
 }
 
-// ─── Helper struct ────────────────────────────────────────────────────────────
+// ─── Helper structs ───────────────────────────────────────────────────────────
+
 public struct EnemyObservation
 {
     public float normalizedDist;
@@ -660,4 +762,11 @@ public struct EnemyObservation
     public float typeCode;
     public float healthFraction;
     public bool  inMeleeRange;
+}
+
+public struct PickupObservation
+{
+    public float normalizedDist;
+    public float dirX, dirZ;
+    public float typeCode;
 }

@@ -47,7 +47,6 @@ public class RoomManager : MonoBehaviour
 
     void Start()
     {
-        // Always clear stale event listeners first — prevents invincibility bug
         GameManager.Instance?.PrepareForSceneLoad();
 
         var save = RunSaveManager.Instance;
@@ -57,16 +56,13 @@ public class RoomManager : MonoBehaviour
             CurrentLevel = save.Current.dungeonLevel;
             generator.GenerateWithSeed(CurrentLevel, save.Current.dungeonSeed);
 
-            // Restore all PlayerStats values
             GameManager.Instance?.RestorePlayerFromSave(save.Current);
 
-            // Fire HUD update events once so health bar and XP bar refresh
             GameManager.Instance?.OnPlayerHealthChanged.Invoke(
                 save.Current.currentHealth, save.Current.maxHealth);
             GameManager.Instance?.OnXpChanged.Invoke(
                 save.Current.playerLevel, save.Current.currentXp, save.Current.xpToNextLevel);
 
-            // Restore PlayerController stats (move speed and attack range)
             var controller = playerTransform.GetComponent<PlayerController>();
             if (controller != null)
             {
@@ -74,7 +70,6 @@ public class RoomManager : MonoBehaviour
                 if (save.Current.attackRange > 0f) controller.SetAttackRange(save.Current.attackRange);
             }
 
-            // Reapply permanent pickup effects silently
             PickupTracker.Instance?.ClearAll();
             if (PickupTracker.Instance != null)
             {
@@ -94,6 +89,55 @@ public class RoomManager : MonoBehaviour
 
         LoadRoom(35, Direction.South);
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // AI TRAINING RESET
+    // Called by AIPlayerAgent.OnEpisodeBegin() to get a fresh dungeon
+    // each episode without going through the full scene-load pipeline.
+    // ─────────────────────────────────────────────────────────────────────────
+    public void ResetForTraining()
+    {
+        // Destroy the level exit if one exists
+        if (currentLevelExit != null)
+        {
+            Destroy(currentLevelExit);
+            currentLevelExit = null;
+        }
+
+        // Clear all room/cell state
+        cellPrefabMap.Clear();
+        visitedCells.Clear();
+        clearedCells.Clear();
+
+        // Destroy all enemies that were spawned during this episode
+        RoomController.CleanupForNextLevel();
+
+        // Destroy any loose pickups remaining in the scene
+        foreach (var pickup in FindObjectsByType<PickupBase>(FindObjectsSortMode.None))
+            Destroy(pickup.gameObject);
+
+        // Reset PickupTracker so the new episode starts clean
+        PickupTracker.Instance?.ClearAll();
+
+        // Regenerate the dungeon with a new random seed
+        CurrentLevel = 1;
+        generator.Generate(CurrentLevel);
+
+        // Destroy the old room and load the start room
+        if (currentRoomInstance != null)
+        {
+            Destroy(currentRoomInstance);
+            currentRoomInstance = null;
+        }
+
+        currentCell = 35;
+        isTransitioning = false;
+        LoadRoom(35, Direction.South);
+
+        Debug.Log($"[RoomManager] ResetForTraining complete — Seed:{generator.seed}");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
 
     public void LoadNextLevel()
     {

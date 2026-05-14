@@ -18,7 +18,6 @@ public class DeathScreenUI : MonoBehaviour
     [SerializeField] private Button          exitButton;
 
     [Header("Timing")]
-    [Tooltip("Wait this many seconds after death before the overlay begins")]
     [SerializeField] private float delayBeforeShow     = 0.9f;
     [SerializeField] private float overlayFadeDuration = 1.0f;
     [SerializeField] private float textFadeDuration    = 0.7f;
@@ -47,7 +46,20 @@ public class DeathScreenUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    private void OnPlayerDied() => StartCoroutine(ShowDeathScreen());
+
+    private void OnPlayerDied()
+    {
+        // When an AI agent is in control it calls EndEpisode() immediately and
+        // handles its own reset. Showing a death screen would block training,
+        // so we skip the whole sequence entirely.
+        if (FindFirstObjectByType<AIPlayerAgent>() != null)
+        {
+            Debug.Log("[DeathScreenUI] AI agent active — skipping death screen.");
+            return;
+        }
+
+        StartCoroutine(ShowDeathScreen());
+    }
 
     private IEnumerator ShowDeathScreen()
     {
@@ -74,9 +86,6 @@ public class DeathScreenUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Called by the Restart button in the Inspector (or via onClick listener).
-    // Reloads the game scene so DungeonGenerator.Generate() runs fresh,
-    // re-rolling seeds and rebuilding the dungeon from scratch.
     public void RestartGame()
     {
         Time.timeScale = 1f;
@@ -84,7 +93,6 @@ public class DeathScreenUI : MonoBehaviour
         SceneManager.LoadScene(gameSceneName);
     }
 
-    // Called by the Exit button — returns to the main menu.
     public void ExitToMenu()
     {
         Time.timeScale = 1f;
@@ -101,8 +109,6 @@ public class DeathScreenUI : MonoBehaviour
 
         var controller = FindFirstObjectByType<PlayerController>();
 
-        // On death, restore current health to max so the next run is playable.
-        // Keep MaxHealth, level, XP, pickups, etc.
         gm.Player.CurrentHealth = gm.Player.MaxHealth;
 
         var pickupIds = PickupTracker.Instance != null
