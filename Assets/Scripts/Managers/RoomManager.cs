@@ -28,6 +28,7 @@ public class RoomManager : MonoBehaviour
     GameObject currentLevelExit;
 
     public RoomController CurrentRoom { get; private set; }
+    public GameObject CurrentLevelExit => currentLevelExit;
     public int CurrentCellPublic => currentCell;
     public int CurrentLevel { get; set; } = 1;
     public int CurrentSeed => generator.seed;
