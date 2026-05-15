@@ -4227,10 +4227,10 @@ MonoBehaviour:
     m_Bits: 64
   attackOrigin: {fileID: 322880166}
   slashVFXPrefab: {fileID: 5673747554692793758, guid: 2f7ed43e30b4d08058775dbd7086116f, type: 3}
-  visionRadius: 12
+  visionRadius: 7
   maxTrackedEnemies: 5
   maxTrackedPickups: 3
-  exitDiscoveryRadius: 2
+  exitDiscoveryRadius: 1
   exitCompleteRadius: 1
   spriteRenderer: {fileID: 946598691}
   animator: {fileID: 946598690}
@@ -4260,7 +4260,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Policies.BehaviorParameters
   m_BrainParameters:
-    VectorObservationSize: 2
+    VectorObservationSize: 58
     NumStackedVectorObservations: 1
     m_ActionSpec:
       m_NumContinuousActions: 2

@@ -27,7 +27,14 @@ public class RoomManager : MonoBehaviour
     GameObject currentRoomInstance;
     GameObject currentLevelExit;
 
-    public RoomController CurrentRoom { get; private set; }
+    public RoomController CurrentRoom    { get; private set; }
+
+    /// <summary>
+    /// The spawned level exit GameObject — null until the boss dies and
+    /// RoomController.UnlockDoors() calls SpawnLevelExit().
+    /// AIPlayerAgent.GetExitDoor() reads this to stay blind to the exit
+    /// until the boss has actually been killed.
+    /// </summary>
     public GameObject CurrentLevelExit => currentLevelExit;
     public int CurrentCellPublic => currentCell;
     public int CurrentLevel { get; set; } = 1;
