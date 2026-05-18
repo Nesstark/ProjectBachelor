@@ -1,0 +1,43 @@
+========================================================================
+  GROUP COMPARISON REPORT — rPPG Physiological Data
+========================================================================
+  Group A (Dynamic visuals): n = 19
+  Group B (Static visuals):  n = 17
+  α = 0.05  |  Bonferroni correction: α / 9 tests = 0.0056
+
+  NOTE: Cognitive load score is entangled with the Group A manipulation
+  (visuals are driven by the score). Physiological measures (RMSSD, HR)
+  are less confounded. All results are supplementary to questionnaire data.
+
+────────────────────────────────────────────────────────────────────────
+  Measure                                     Med A    Med B        U   p (raw)  p (Bonf)       r    
+────────────────────────────────────────────────────────────────────────
+  Median RMSSD (ms)                             0.8     0.81    145.5    0.6228       1.0   0.099    
+  IQR of RMSSD (ms)                            1.09     1.31    103.0    0.0659    0.5932   0.362    
+  Median HR (bpm)                             792.3    714.9    219.0    0.0709     0.638  -0.356    
+  Median Cognitive Load Score                  75.8     82.9    102.0    0.0615    0.5534   0.368    
+  Death Count                                   2.0      2.0    126.0    0.2481       1.0    0.22    
+  Session Duration (s)                        497.0    503.0    144.5    0.6008       1.0   0.105    
+  RMSSD – Normal context                        nan      nan      nan       nan       nan     nan    
+  RMSSD – Boss Room context                     nan      nan      nan       nan       nan     nan    
+  % Time High Load                              0.0      0.0    161.5       1.0       1.0     0.0    
+────────────────────────────────────────────────────────────────────────
+  * = significant after Bonferroni correction
+  r: rank-biserial correlation (positive = Group A higher)
+     |r| ≥ 0.1 small, ≥ 0.3 medium, ≥ 0.5 large
+
+────────────────────────────────────────────────────────────────────────
+  DATA QUALITY SUMMARY
+────────────────────────────────────────────────────────────────────────
+
+  Group A:
+    Mean invalid/stale row %:  9.4%
+    Mean session duration:      495s
+    Mean baseline RMSSD:        62.3 ms
+
+  Group B:
+    Mean invalid/stale row %:  8.0%
+    Mean session duration:      504s
+    Mean baseline RMSSD:        58.6 ms
+
+========================================================================
