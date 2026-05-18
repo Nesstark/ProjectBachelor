@@ -171,7 +171,7 @@ public class RppgReceiver : MonoBehaviour
 
     private void FinalizeBaseline()
     {
-        if (baselineRMSSDSamples.Count < 6)
+        if (baselineRMSSDSamples.Count < 10)
         {
             _baselineRetryCount++;
 
