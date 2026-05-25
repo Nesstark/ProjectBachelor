@@ -2,8 +2,8 @@
 
 ## Academic Context
 
-**Thesis question:**
-> *"???"*
+**Problem statement:**
+> *"How can the use of camera-based physiological input affect engagement in affective games?"*
 
 This project was developed as part of a Bachelor's degree in Medialogy at Aalborg University in Copenhagen and serves as both a playable game and a research artefact.
 
