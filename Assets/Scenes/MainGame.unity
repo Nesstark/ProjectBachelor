@@ -4192,7 +4192,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a5c9d521e5ef4759a8246a07d52221e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.DecisionRequester
-  DecisionPeriod: 5
+  DecisionPeriod: 2
   DecisionStep: 0
   TakeActionsBetweenDecisions: 1
 --- !u!114 &946598694
@@ -4213,8 +4213,8 @@ MonoBehaviour:
   MaxStep: 10000000
   baseMoveSpeed: 10
   maxMoveSpeed: 20
-  acceleration: 80
-  deceleration: 120
+  acceleration: 10
+  deceleration: 20
   dashSpeed: 24
   dashDuration: 0.12
   dashCooldown: 0.5
@@ -4237,15 +4237,19 @@ MonoBehaviour:
   rewardKillEnemy: 1
   rewardDiscoverExit: 0.5
   rewardReachExit: 5
-  rewardExploreNew: 0.02
+  rewardExploreNewCell: 0.02
+  rewardNewRoom: 0.3
   rewardSurvivePerSec: 0.005
   rewardPickupHealth: 0.3
   rewardPickupPermanent: 0.5
+  rewardApproachDoor: 0.05
   penaltyTakeDamage: 0.3
   penaltyDie: 3
   penaltyIdlePerSec: 0.01
+  penaltyStagnationPerCheck: 0.1
   penaltyTimePerSec: 0.001
-  penaltyRevisitCell: 0.005
+  penaltyRevisitCell: 0.05
+  penaltyClearedRoomPerSec: 0.05
   fallDeathY: -5
 --- !u!114 &946598695
 MonoBehaviour:
@@ -4260,7 +4264,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Policies.BehaviorParameters
   m_BrainParameters:
-    VectorObservationSize: 58
+    VectorObservationSize: 72
     NumStackedVectorObservations: 1
     m_ActionSpec:
       m_NumContinuousActions: 2

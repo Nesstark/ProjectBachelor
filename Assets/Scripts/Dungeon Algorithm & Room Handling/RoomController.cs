@@ -271,6 +271,18 @@ public class RoomController : MonoBehaviour
         };
     }
 
+    // Returns the world positions of all currently unlocked (passable) doors.
+    // Locked doors during an encounter are excluded so the agent won't try to leave mid-fight.
+    public List<Vector3> GetUnlockedDoorPositions()
+    {
+        var positions = new List<Vector3>();
+        if (doorNorthTrigger != null && doorNorthTrigger.enabled) positions.Add(doorNorthTrigger.transform.position);
+        if (doorSouthTrigger != null && doorSouthTrigger.enabled) positions.Add(doorSouthTrigger.transform.position);
+        if (doorEastTrigger  != null && doorEastTrigger.enabled)  positions.Add(doorEastTrigger.transform.position);
+        if (doorWestTrigger  != null && doorWestTrigger.enabled)  positions.Add(doorWestTrigger.transform.position);
+        return positions;
+    }
+
     // ─────────────────────────────────────────────────────────
     // TREASURE ROOM
     // ─────────────────────────────────────────────────────────

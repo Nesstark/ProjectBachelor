@@ -23,16 +23,17 @@ using System.Collections.Generic;
 //                       [5] is current room cleared?  (0 / 1)
 //                       [6] is this a first visit?    (1=new, 0=seen before)
 //
-//  OBSERVATION VECTOR = 60 floats  (was 58 — update Behaviour Parameters!)
+//  OBSERVATION VECTOR = 72 floats  (was 60 — update Behaviour Parameters!)
 //  ─────────────────────────────────────────────────────────
-//  Self       [0-6]   health, pos.x, pos.z, dash cd, attack cd,
-//                     room_cleared, room_is_new
-//  Exit       [7-9]   known?, dir.x, dir.z
+//  Self       [0-6]    health, pos.x, pos.z, dash cd, attack cd,
+//                      room_cleared, room_is_new
+//  Exit       [7-9]    known?, dir.x, dir.z
 //  Enemies  5x7=[10-44]
 //  Pickups  3x5=[45-59]
+//  Doors    4x3=[60-71] up to 4 unlocked doors: present, dir.x, dir.z
 //
 //  BEHAVIOUR PARAMETERS:
-//    Vector Observation Size : 60   <- was 58
+//    Vector Observation Size : 72   <- was 60
 //    Continuous Actions      : 2
 //    Discrete Branches       : 2  (sizes: 2, 2)
 // ============================================================
@@ -88,6 +89,7 @@ public class AIPlayerAgent : Agent
     [SerializeField] private float rewardSurvivePerSec   = 0.005f;
     [SerializeField] private float rewardPickupHealth    = 0.3f;
     [SerializeField] private float rewardPickupPermanent = 0.5f;
+    [SerializeField] private float rewardApproachDoor    = 0.05f;  // per metre closed toward nearest door (cleared rooms only)
 
     [Header("Penalties  (-sticks)")]
     [SerializeField] private float penaltyTakeDamage         = 0.3f;
@@ -96,7 +98,7 @@ public class AIPlayerAgent : Agent
     [SerializeField] private float penaltyStagnationPerCheck = 0.1f;
     [SerializeField] private float penaltyTimePerSec         = 0.001f;
     [SerializeField] private float penaltyRevisitCell        = 0.015f;
-    [SerializeField] private float penaltyClearedRoomPerSec  = 0.02f;
+    [SerializeField] private float penaltyClearedRoomPerSec  = 0.05f;  // raised from 0.02 — loitering must hurt more than exploring
 
     // ─── Fall Death ──────────────────────────────────────────
     [Header("Fall Death")]
@@ -130,7 +132,7 @@ public class AIPlayerAgent : Agent
     private float         _stagnationTimer      = 0f;
     private const float   StagnationInterval    = 1f;
     private const int     StagnationBufferSize  = 3;
-    private const float   StagnationMinTravel   = 2f;
+    private const float   StagnationMinTravel   = 1.5f;   // tightened from 2 m — catches slow corner-hugging
     private readonly Vector3[] _posBuffer = new Vector3[StagnationBufferSize];
     private int  _posBufferIdx  = 0;
     private bool _posBufferFull = false;
@@ -139,9 +141,10 @@ public class AIPlayerAgent : Agent
     private readonly HashSet<int> _visitedRooms   = new HashSet<int>();
     private int   _lastDungeonCell  = -999;
     private float _clearedRoomTimer = 0f;
-    private const float ClearedRoomGrace = 2f;
+    private const float ClearedRoomGrace = 1f;  // tightened from 2 s — start penalising sooner
 
     private Vector3 _spawnPosition;
+    private float   _lastDistToDoor = -1f;  // used for door-approach shaping; -1 = no reference yet
     private GameManager GM => GameManager.Instance;
 
     private static readonly int HashSpeed     = Animator.StringToHash("Speed");
@@ -209,6 +212,7 @@ public class AIPlayerAgent : Agent
         _visitedRooms.Clear();
         _lastDungeonCell  = -999;
         _clearedRoomTimer = 0f;
+        _lastDistToDoor   = -1f;
 
         _idleTimer       = 0f;
         _stagnationTimer = 0f;
@@ -231,7 +235,7 @@ public class AIPlayerAgent : Agent
     }
 
     // =========================================================
-    //  OBSERVATIONS  (60 floats)
+    //  OBSERVATIONS  (72 floats)
     // =========================================================
 
     public override void CollectObservations(VectorSensor sensor)
@@ -297,6 +301,31 @@ public class AIPlayerAgent : Agent
                 sensor.AddObservation(p.typeCode);
             }
             else { for (int j = 0; j < 5; j++) sensor.AddObservation(0f); }
+        }
+
+        // ── Doors [60-71] (4 × 3 = 12) ────────────────────────
+        // Sorted by distance so slot 0 is always the nearest door.
+        // Only unlocked doors are returned — locked doors during an
+        // encounter are excluded so the agent doesn't try to leave mid-fight.
+        List<Vector3> doors = GetUnlockedDoorPositions();
+        for (int i = 0; i < 4; i++)
+        {
+            if (i < doors.Count)
+            {
+                Vector3 toDoor = doors[i] - transform.position;
+                toDoor.y = 0f;
+                float dist = toDoor.magnitude;
+                Vector3 dir = dist > 0f ? toDoor / dist : Vector3.zero;
+                sensor.AddObservation(1f);
+                sensor.AddObservation(dir.x);
+                sensor.AddObservation(dir.z);
+            }
+            else
+            {
+                sensor.AddObservation(0f);
+                sensor.AddObservation(0f);
+                sensor.AddObservation(0f);
+            }
         }
     }
 
@@ -387,6 +416,34 @@ public class AIPlayerAgent : Agent
         else
         {
             _clearedRoomTimer = 0f;
+        }
+
+        // ── Door-approach shaping ─────────────────────────────
+        // When a room is cleared, reward every metre closed toward the nearest
+        // unlocked door. This creates a dense gradient the network can follow
+        // rather than waiting for the sparse rewardNewRoom on the far side.
+        if (roomCleared)
+        {
+            List<Vector3> doors = GetUnlockedDoorPositions();
+            if (doors.Count > 0)
+            {
+                float distNow = Vector3.Distance(transform.position, doors[0]);
+                if (_lastDistToDoor >= 0f)
+                {
+                    float delta = _lastDistToDoor - distNow;   // positive = getting closer
+                    if (delta > 0f)
+                        AddReward(delta * rewardApproachDoor);
+                }
+                _lastDistToDoor = distNow;
+            }
+            else
+            {
+                _lastDistToDoor = -1f;
+            }
+        }
+        else
+        {
+            _lastDistToDoor = -1f;
         }
 
         CheckExitProximity();
@@ -656,6 +713,27 @@ public class AIPlayerAgent : Agent
         result.Sort((a, b) => a.normalizedDist.CompareTo(b.normalizedDist));
         if (result.Count > maxTrackedPickups) result.RemoveRange(maxTrackedPickups, result.Count - maxTrackedPickups);
         return result;
+    }
+
+    // =========================================================
+    //  DOOR PERCEPTION
+    // =========================================================
+    // Fetches unlocked door positions from the current room and sorts them
+    // by distance so slot 0 is always the nearest door.
+    private List<Vector3> GetUnlockedDoorPositions()
+    {
+        var result = new List<Vector3>();
+        var room = RoomManager.Instance?.CurrentRoom;
+        if (room == null) return result;
+
+        List<Vector3> raw = room.GetUnlockedDoorPositions();
+
+        // Sort by distance so nearest door is always in slot 0
+        raw.Sort((a, b) =>
+            Vector3.Distance(transform.position, a)
+            .CompareTo(Vector3.Distance(transform.position, b)));
+
+        return raw;
     }
 
     // =========================================================
