@@ -8680,11 +8680,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4251322413276067216, guid: 3c673b3ddecd86ab0aaf750cc8e5f5e0, type: 3}
       propertyPath: maxRooms
-      value: 3
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4251322413276067216, guid: 3c673b3ddecd86ab0aaf750cc8e5f5e0, type: 3}
       propertyPath: minRooms
       value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 4251322413276067216, guid: 3c673b3ddecd86ab0aaf750cc8e5f5e0, type: 3}
+      propertyPath: roomCountVariance
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 5764871965597002432, guid: 3c673b3ddecd86ab0aaf750cc8e5f5e0, type: 3}
       propertyPath: m_LocalPosition.x
