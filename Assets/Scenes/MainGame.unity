@@ -4210,7 +4210,7 @@ MonoBehaviour:
   agentParameters:
     maxStep: 0
   hasUpgradedFromAgentParameters: 1
-  MaxStep: 10000000
+  MaxStep: 70000
   baseMoveSpeed: 10
   maxMoveSpeed: 20
   acceleration: 10
@@ -4227,29 +4227,20 @@ MonoBehaviour:
     m_Bits: 64
   attackOrigin: {fileID: 322880166}
   slashVFXPrefab: {fileID: 5673747554692793758, guid: 2f7ed43e30b4d08058775dbd7086116f, type: 3}
-  visionRadius: 7
+  visionRadius: 10
   maxTrackedEnemies: 5
   maxTrackedPickups: 3
-  exitDiscoveryRadius: 1
+  exitDiscoveryRadius: 5
   exitCompleteRadius: 1
   spriteRenderer: {fileID: 946598691}
   animator: {fileID: 946598690}
+  rewardNewRoom: 1
   rewardKillEnemy: 1
-  rewardDiscoverExit: 0.5
+  rewardPickup: 0.5
   rewardReachExit: 5
-  rewardExploreNewCell: 0.02
-  rewardNewRoom: 0.3
-  rewardSurvivePerSec: 0.005
-  rewardPickupHealth: 0.3
-  rewardPickupPermanent: 0.5
-  rewardApproachDoor: 0.05
-  penaltyTakeDamage: 0.3
-  penaltyDie: 3
-  penaltyIdlePerSec: 0.01
-  penaltyStagnationPerCheck: 0.1
   penaltyTimePerSec: 0.001
-  penaltyRevisitCell: 0.05
   penaltyClearedRoomPerSec: 0.05
+  penaltyDie: 2
   fallDeathY: -5
 --- !u!114 &946598695
 MonoBehaviour:

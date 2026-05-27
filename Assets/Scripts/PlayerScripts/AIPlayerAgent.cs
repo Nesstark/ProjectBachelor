@@ -5,35 +5,46 @@ using Unity.MLAgents.Actuators;
 using System.Collections.Generic;
 
 // ============================================================
-//  AIPlayerAgent.cs  —  Reinforcement Learning Player Agent  (v3)
+//  AIPlayerAgent.cs  —  Reinforcement Learning Player Agent  (v4)
 //
-//  CHANGES FROM v2:
+//  CHANGES FROM v3:
 //  ─────────────────────────────────────────────────────────
-//  • Idle fix       : idle penalty now checks actual Rigidbody velocity
-//                     instead of input magnitude — the agent can no longer
-//                     game it by jiggling input while standing still
-//  • Stagnation     : position ring-buffer sampled every second; if net
-//                     displacement over 3 samples is under 2 m the agent
-//                     takes a stagnation penalty regardless of input
-//  • Room tracking  : tracks visited DUNGEON CELLS (RoomManager cell IDs),
-//                     not just world-space grid cells
-//                       → reward for entering each room for the first time
-//                       → escalating penalty for lingering in cleared rooms
-//  • Room observations: 2 new floats added to the self block
-//                       [5] is current room cleared?  (0 / 1)
-//                       [6] is this a first visit?    (1=new, 0=seen before)
+//  • REWARD SIMPLIFICATION — every overlapping/noisy signal stripped.
+//    The full reward table is now:
 //
-//  OBSERVATION VECTOR = 72 floats  (was 60 — update Behaviour Parameters!)
+//      CARROTS
+//        +1.0   Enter a new room  (first visit only)
+//        +1.0   Kill an enemy
+//        +0.5   Collect any pickup  (all types unified)
+//        +5.0   Reach the exit
+//
+//      STICKS
+//        -0.001/s  Time pressure  (gentle; keeps episode from dragging)
+//        -0.05/s   Lingering in a cleared room  (post grace-period)
+//        -2.0      Die
+//
+//  • REMOVED: rewardSurvivePerSec, rewardDiscoverExit,
+//             rewardExploreNewCell, rewardApproachDoor,
+//             penaltyIdlePerSec, penaltyStagnationPerCheck,
+//             penaltyRevisitCell, penaltyTakeDamage
+//  • REMOVED: all idle detection state (_idleTimer, IdleSpeedThreshold…)
+//  • REMOVED: stagnation ring-buffer (_posBuffer, _posBufferIdx…)
+//  • REMOVED: world-cell hash set (_visitedCells)
+//  • REMOVED: _lastDistToDoor / door-approach shaping block
+//  • rewardPickupHealth / rewardPickupPermanent → single rewardPickup
+//  • OnHealthChanged listener removed (penaltyTakeDamage gone)
+//
+//  OBSERVATION VECTOR = 72 floats  (unchanged from v3 — no re-training needed)
 //  ─────────────────────────────────────────────────────────
 //  Self       [0-6]    health, pos.x, pos.z, dash cd, attack cd,
 //                      room_cleared, room_is_new
 //  Exit       [7-9]    known?, dir.x, dir.z
 //  Enemies  5x7=[10-44]
 //  Pickups  3x5=[45-59]
-//  Doors    4x3=[60-71] up to 4 unlocked doors: present, dir.x, dir.z
+//  Doors    4x3=[60-71]
 //
-//  BEHAVIOUR PARAMETERS:
-//    Vector Observation Size : 72   <- was 60
+//  BEHAVIOUR PARAMETERS  (same as v3 — no change required):
+//    Vector Observation Size : 72
 //    Continuous Actions      : 2
 //    Discrete Branches       : 2  (sizes: 2, 2)
 // ============================================================
@@ -81,24 +92,15 @@ public class AIPlayerAgent : Agent
 
     // ─── Rewards ─────────────────────────────────────────────
     [Header("Rewards  (+carrots)")]
-    [SerializeField] private float rewardKillEnemy       = 1.0f;
-    [SerializeField] private float rewardDiscoverExit    = 0.5f;
-    [SerializeField] private float rewardReachExit       = 5.0f;
-    [SerializeField] private float rewardExploreNewCell  = 0.02f;
-    [SerializeField] private float rewardNewRoom         = 0.3f;
-    [SerializeField] private float rewardSurvivePerSec   = 0.005f;
-    [SerializeField] private float rewardPickupHealth    = 0.3f;
-    [SerializeField] private float rewardPickupPermanent = 0.5f;
-    [SerializeField] private float rewardApproachDoor    = 0.05f;  // per metre closed toward nearest door (cleared rooms only)
+    [SerializeField] private float rewardNewRoom    = 1.0f;
+    [SerializeField] private float rewardKillEnemy  = 1.0f;
+    [SerializeField] private float rewardPickup     = 0.5f;
+    [SerializeField] private float rewardReachExit  = 5.0f;
 
     [Header("Penalties  (-sticks)")]
-    [SerializeField] private float penaltyTakeDamage         = 0.3f;
-    [SerializeField] private float penaltyDie                = 3.0f;
-    [SerializeField] private float penaltyIdlePerSec         = 0.05f;
-    [SerializeField] private float penaltyStagnationPerCheck = 0.1f;
     [SerializeField] private float penaltyTimePerSec         = 0.001f;
-    [SerializeField] private float penaltyRevisitCell        = 0.015f;
-    [SerializeField] private float penaltyClearedRoomPerSec  = 0.05f;  // raised from 0.02 — loitering must hurt more than exploring
+    [SerializeField] private float penaltyClearedRoomPerSec  = 0.05f;
+    [SerializeField] private float penaltyDie                = 2.0f;
 
     // ─── Fall Death ──────────────────────────────────────────
     [Header("Fall Death")]
@@ -114,37 +116,17 @@ public class AIPlayerAgent : Agent
     private Vector3   _lastMoveDir;
     private bool      _isDead;
     private bool      _exitDiscovered;
-    private float     _lastHealth;
     private float     _episodeTime;
     private float     _currentAttackRange;
     private float     _currentMoveSpeed;
-
-    // World-cell exploration (3 m grid)
-    private readonly HashSet<Vector2Int> _visitedCells = new HashSet<Vector2Int>();
-    private const float CELL_SIZE = 3f;
-
-    // Idle detection — velocity-based
-    private float       _idleTimer          = 0f;
-    private const float IdleSpeedThreshold  = 0.5f;
-    private const float IdleGracePeriod     = 0.5f;
-
-    // Stagnation — position ring-buffer
-    private float         _stagnationTimer      = 0f;
-    private const float   StagnationInterval    = 1f;
-    private const int     StagnationBufferSize  = 3;
-    private const float   StagnationMinTravel   = 1.5f;   // tightened from 2 m — catches slow corner-hugging
-    private readonly Vector3[] _posBuffer = new Vector3[StagnationBufferSize];
-    private int  _posBufferIdx  = 0;
-    private bool _posBufferFull = false;
 
     // Room-level tracking
     private readonly HashSet<int> _visitedRooms   = new HashSet<int>();
     private int   _lastDungeonCell  = -999;
     private float _clearedRoomTimer = 0f;
-    private const float ClearedRoomGrace = 1f;  // tightened from 2 s — start penalising sooner
+    private const float ClearedRoomGrace = 1f;
 
     private Vector3 _spawnPosition;
-    private float   _lastDistToDoor = -1f;  // used for door-approach shaping; -1 = no reference yet
     private GameManager GM => GameManager.Instance;
 
     private static readonly int HashSpeed     = Animator.StringToHash("Speed");
@@ -179,10 +161,8 @@ public class AIPlayerAgent : Agent
         _currentMoveSpeed   = baseMoveSpeed;
 
         if (GM != null)
-        {
-            GM.OnPlayerHealthChanged.AddListener(OnHealthChanged);
             GM.OnPlayerDied.AddListener(OnPlayerDied);
-        }
+
         PickupBase.OnAnyPickupCollected += OnPickupCollected;
     }
 
@@ -208,34 +188,21 @@ public class AIPlayerAgent : Agent
         _moveDir           = Vector3.zero;
         _lastMoveDir       = Vector3.forward;
 
-        _visitedCells.Clear();
         _visitedRooms.Clear();
         _lastDungeonCell  = -999;
         _clearedRoomTimer = 0f;
-        _lastDistToDoor   = -1f;
-
-        _idleTimer       = 0f;
-        _stagnationTimer = 0f;
-        _posBufferIdx    = 0;
-        _posBufferFull   = false;
-        for (int i = 0; i < StagnationBufferSize; i++)
-            _posBuffer[i] = _spawnPosition;
-
-        _lastHealth = GM != null ? GM.Player.CurrentHealth : 100f;
     }
 
     private void OnDestroy()
     {
         if (GM != null)
-        {
-            GM.OnPlayerHealthChanged.RemoveListener(OnHealthChanged);
             GM.OnPlayerDied.RemoveListener(OnPlayerDied);
-        }
+
         PickupBase.OnAnyPickupCollected -= OnPickupCollected;
     }
 
     // =========================================================
-    //  OBSERVATIONS  (72 floats)
+    //  OBSERVATIONS  (72 floats — identical layout to v3)
     // =========================================================
 
     public override void CollectObservations(VectorSensor sensor)
@@ -303,25 +270,41 @@ public class AIPlayerAgent : Agent
             else { for (int j = 0; j < 5; j++) sensor.AddObservation(0f); }
         }
 
-        // ── Doors [60-71] (4 × 3 = 12) ────────────────────────
-        // Sorted by distance so slot 0 is always the nearest door.
-        // Only unlocked doors are returned — locked doors during an
-        // encounter are excluded so the agent doesn't try to leave mid-fight.
-        List<Vector3> doors = GetUnlockedDoorPositions();
+        // Doors [60-71]  (4 × 3 = 12)
+        // =========================================================
+        // Doors [60-71]  (4 doors × 3 floats = 12 floats)
+        // =========================================================
+        // We bypass the sorting helper entirely and use a strict, fixed cardinal order:
+        // Index 0 = North, Index 1 = South, Index 2 = East, Index 3 = West
+        var currentRoom = RoomManager.Instance?.CurrentRoom;
+        Collider[] cardinalDoors = currentRoom != null ? new Collider[] {
+            currentRoom.doorNorthTrigger,
+            currentRoom.doorSouthTrigger,
+            currentRoom.doorEastTrigger,
+            currentRoom.doorWestTrigger
+        } : null;
+
         for (int i = 0; i < 4; i++)
         {
-            if (i < doors.Count)
+            Collider doorTrigger = (cardinalDoors != null && i < cardinalDoors.Length) ? cardinalDoors[i] : null;
+
+            // A door is observable only if it exists and its trigger is enabled (meaning it's unlocked)
+            if (doorTrigger != null && doorTrigger.enabled)
             {
-                Vector3 toDoor = doors[i] - transform.position;
+                Vector3 toDoor = doorTrigger.transform.position - transform.position;
                 toDoor.y = 0f;
-                float dist = toDoor.magnitude;
-                Vector3 dir = dist > 0f ? toDoor / dist : Vector3.zero;
+
+                // Pass presence flag (1f)
                 sensor.AddObservation(1f);
-                sensor.AddObservation(dir.x);
-                sensor.AddObservation(dir.z);
+                
+                // Pass relative position scaled by 30f (matching your player position scaling).
+                // This gives the network both the exact direction and the precise distance!
+                sensor.AddObservation(toDoor.x / 30f);
+                sensor.AddObservation(toDoor.z / 30f);
             }
             else
             {
+                // Door doesn't exist in this layout, or is currently locked mid-encounter
                 sensor.AddObservation(0f);
                 sensor.AddObservation(0f);
                 sensor.AddObservation(0f);
@@ -350,45 +333,10 @@ public class AIPlayerAgent : Agent
         if (wantDash && !_isDashing && _dashCooldownTimer <= 0f) StartDash();
         if (wantAtk  && _attackTimer <= 0f) { _attackTimer = attackCooldown; PerformAttack(); }
 
-        // Survive / time
-        AddReward( rewardSurvivePerSec * Time.fixedDeltaTime);
-        AddReward(-penaltyTimePerSec   * Time.fixedDeltaTime);
+        // ── Time pressure ─────────────────────────────────────
+        AddReward(-penaltyTimePerSec * Time.fixedDeltaTime);
 
-        // ── Idle: velocity-based, not input-based ─────────────
-        float horizSpeed = new Vector3(_rb.linearVelocity.x, 0f, _rb.linearVelocity.z).magnitude;
-        if (horizSpeed < IdleSpeedThreshold)
-        {
-            _idleTimer += Time.fixedDeltaTime;
-            if (_idleTimer > IdleGracePeriod)
-                AddReward(-penaltyIdlePerSec * Time.fixedDeltaTime);
-        }
-        else { _idleTimer = 0f; }
-
-        // ── Stagnation: position ring-buffer ──────────────────
-        _stagnationTimer += Time.fixedDeltaTime;
-        if (_stagnationTimer >= StagnationInterval)
-        {
-            _stagnationTimer = 0f;
-            Vector3 oldest = _posBuffer[_posBufferIdx];
-            _posBuffer[_posBufferIdx] = transform.position;
-            _posBufferIdx = (_posBufferIdx + 1) % StagnationBufferSize;
-            if (_posBufferIdx == 0) _posBufferFull = true;
-
-            if (_posBufferFull && Vector3.Distance(oldest, transform.position) < StagnationMinTravel)
-            {
-                AddReward(-penaltyStagnationPerCheck);
-                Debug.Log($"[AIAgent] STICK  stagnating  penalty:{penaltyStagnationPerCheck:F3}");
-            }
-        }
-
-        // ── World-cell exploration ────────────────────────────
-        Vector2Int cell = WorldToCell(transform.position);
-        if (_visitedCells.Add(cell))
-            AddReward(rewardExploreNewCell);
-        else
-            AddReward(-penaltyRevisitCell);
-
-        // ── Room-level tracking ───────────────────────────────
+        // ── Room tracking ─────────────────────────────────────
         int dungeonCell = RoomManager.Instance?.CurrentCellPublic ?? -1;
 
         if (dungeonCell != _lastDungeonCell)
@@ -403,9 +351,9 @@ public class AIPlayerAgent : Agent
             }
         }
 
-        // Penalise lingering in cleared rooms (start room exempt)
+        // ── Lingering in cleared room ─────────────────────────
         bool roomCleared = dungeonCell >= 0
-                        && dungeonCell != 35
+                        && dungeonCell != 35           // start room exempt
                         && RoomManager.Instance.IsRoomCleared(dungeonCell);
         if (roomCleared)
         {
@@ -416,34 +364,6 @@ public class AIPlayerAgent : Agent
         else
         {
             _clearedRoomTimer = 0f;
-        }
-
-        // ── Door-approach shaping ─────────────────────────────
-        // When a room is cleared, reward every metre closed toward the nearest
-        // unlocked door. This creates a dense gradient the network can follow
-        // rather than waiting for the sparse rewardNewRoom on the far side.
-        if (roomCleared)
-        {
-            List<Vector3> doors = GetUnlockedDoorPositions();
-            if (doors.Count > 0)
-            {
-                float distNow = Vector3.Distance(transform.position, doors[0]);
-                if (_lastDistToDoor >= 0f)
-                {
-                    float delta = _lastDistToDoor - distNow;   // positive = getting closer
-                    if (delta > 0f)
-                        AddReward(delta * rewardApproachDoor);
-                }
-                _lastDistToDoor = distNow;
-            }
-            else
-            {
-                _lastDistToDoor = -1f;
-            }
-        }
-        else
-        {
-            _lastDistToDoor = -1f;
         }
 
         CheckExitProximity();
@@ -457,8 +377,8 @@ public class AIPlayerAgent : Agent
     // =========================================================
     public override void Heuristic(in ActionBuffers actionsOut)
     {
-        var cont = actionsOut.ContinuousActions;
-        var disc = actionsOut.DiscreteActions;
+        var cont  = actionsOut.ContinuousActions;
+        var disc  = actionsOut.DiscreteActions;
         var kb    = UnityEngine.InputSystem.Keyboard.current;
         var mouse = UnityEngine.InputSystem.Mouse.current;
 
@@ -543,18 +463,12 @@ public class AIPlayerAgent : Agent
     //  REWARD CALLBACKS
     // =========================================================
 
-    private void OnHealthChanged(float current, float max)
-    {
-        float delta = _lastHealth - current;
-        if (delta > 0f) AddReward(-delta * penaltyTakeDamage);
-        _lastHealth = current;
-    }
-
     private void OnPlayerDied()
     {
         if (_isDead) return;
         _isDead = true;
         AddReward(-penaltyDie);
+        Debug.Log($"[AIAgent] STICK  player died  penalty:{penaltyDie:F2}");
         EndEpisode();
     }
 
@@ -563,6 +477,7 @@ public class AIPlayerAgent : Agent
         if (_isDead) return;
         _isDead = true;
         AddReward(-penaltyDie);
+        Debug.Log($"[AIAgent] STICK  fall death  penalty:{penaltyDie:F2}");
         EndEpisode();
     }
 
@@ -577,13 +492,20 @@ public class AIPlayerAgent : Agent
         if (pickup == null) return;
         if (Vector3.Distance(transform.position, pickup.transform.position) > 2.5f) return;
 
+        // All pickup types give the same reward — differentiation via observations is enough.
+        // SpeedPickup and RangePickup still update the agent's stats as before.
         switch (pickup)
         {
-            case HealthPickup _:  AddReward(rewardPickupHealth);    break;
-            case SpeedPickup  sp: _currentMoveSpeed   = Mathf.Min(_currentMoveSpeed   + sp.SpeedBonus, maxMoveSpeed);   AddReward(rewardPickupPermanent); break;
-            case ArmorPickup  _:  AddReward(rewardPickupPermanent); break;
-            case RangePickup  rp: _currentAttackRange = Mathf.Min(_currentAttackRange + rp.RangeBonus, maxAttackRange); AddReward(rewardPickupPermanent); break;
+            case SpeedPickup sp:
+                _currentMoveSpeed = Mathf.Min(_currentMoveSpeed + sp.SpeedBonus, maxMoveSpeed);
+                break;
+            case RangePickup rp:
+                _currentAttackRange = Mathf.Min(_currentAttackRange + rp.RangeBonus, maxAttackRange);
+                break;
         }
+
+        AddReward(rewardPickup);
+        Debug.Log($"[AIAgent] CARROT  pickup {pickup.GetType().Name}  reward:{rewardPickup:F2}");
     }
 
     // =========================================================
@@ -595,14 +517,15 @@ public class AIPlayerAgent : Agent
         if (exit == null) return;
 
         float dist = Vector3.Distance(transform.position, exit.position);
+
+        // Discovery is tracked for the observation vector but gives no reward.
         if (!_exitDiscovered && dist <= exitDiscoveryRadius)
-        {
             _exitDiscovered = true;
-            AddReward(rewardDiscoverExit);
-        }
+
         if (dist <= exitCompleteRadius)
         {
             AddReward(rewardReachExit);
+            Debug.Log($"[AIAgent] CARROT  exit reached  reward:{rewardReachExit:F2}");
             EndEpisode();
         }
     }
@@ -643,8 +566,8 @@ public class AIPlayerAgent : Agent
     }
 
     private Vector2Int WorldToCell(Vector3 pos)
-        => new Vector2Int(Mathf.FloorToInt(pos.x / CELL_SIZE),
-                          Mathf.FloorToInt(pos.z / CELL_SIZE));
+        => new Vector2Int(Mathf.FloorToInt(pos.x / 3f),
+                          Mathf.FloorToInt(pos.z / 3f));
 
     // =========================================================
     //  ENEMY PERCEPTION
@@ -718,8 +641,6 @@ public class AIPlayerAgent : Agent
     // =========================================================
     //  DOOR PERCEPTION
     // =========================================================
-    // Fetches unlocked door positions from the current room and sorts them
-    // by distance so slot 0 is always the nearest door.
     private List<Vector3> GetUnlockedDoorPositions()
     {
         var result = new List<Vector3>();
@@ -727,8 +648,6 @@ public class AIPlayerAgent : Agent
         if (room == null) return result;
 
         List<Vector3> raw = room.GetUnlockedDoorPositions();
-
-        // Sort by distance so nearest door is always in slot 0
         raw.Sort((a, b) =>
             Vector3.Distance(transform.position, a)
             .CompareTo(Vector3.Distance(transform.position, b)));
