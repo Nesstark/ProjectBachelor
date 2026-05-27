@@ -282,7 +282,41 @@ public class RoomController : MonoBehaviour
         if (doorWestTrigger  != null && doorWestTrigger.enabled)  positions.Add(doorWestTrigger.transform.position);
         return positions;
     }
+    public bool HasDoor(Direction dir)
+{
+    return dir switch
+    {
+        Direction.North => doorNorth != null,
+        Direction.South => doorSouth != null,
+        Direction.East => doorEast != null,
+        Direction.West => doorWest != null,
+        _ => false
+    };
+}
 
+public bool IsDoorUnlocked(Direction dir)
+{
+    return dir switch
+    {
+        Direction.North => doorNorthTrigger != null && doorNorthTrigger.enabled,
+        Direction.South => doorSouthTrigger != null && doorSouthTrigger.enabled,
+        Direction.East => doorEastTrigger != null && doorEastTrigger.enabled,
+        Direction.West => doorWestTrigger != null && doorWestTrigger.enabled,
+        _ => false
+    };
+}
+
+public Vector3 GetDoorPosition(Direction dir)
+{
+    return dir switch
+    {
+        Direction.North => doorNorthTrigger != null ? doorNorthTrigger.transform.position : (doorNorth != null ? doorNorth.transform.position : transform.position),
+        Direction.South => doorSouthTrigger != null ? doorSouthTrigger.transform.position : (doorSouth != null ? doorSouth.transform.position : transform.position),
+        Direction.East => doorEastTrigger != null ? doorEastTrigger.transform.position : (doorEast != null ? doorEast.transform.position : transform.position),
+        Direction.West => doorWestTrigger != null ? doorWestTrigger.transform.position : (doorWest != null ? doorWest.transform.position : transform.position),
+        _ => transform.position
+    };
+}
     // ─────────────────────────────────────────────────────────
     // TREASURE ROOM
     // ─────────────────────────────────────────────────────────

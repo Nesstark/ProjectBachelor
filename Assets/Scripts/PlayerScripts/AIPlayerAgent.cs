@@ -270,46 +270,39 @@ public class AIPlayerAgent : Agent
             else { for (int j = 0; j < 5; j++) sensor.AddObservation(0f); }
         }
 
-        // Doors [60-71]  (4 × 3 = 12)
-        // =========================================================
-        // Doors [60-71]  (4 doors × 3 floats = 12 floats)
-        // =========================================================
-        // We bypass the sorting helper entirely and use a strict, fixed cardinal order:
-        // Index 0 = North, Index 1 = South, Index 2 = East, Index 3 = West
-        var currentRoom = RoomManager.Instance?.CurrentRoom;
-        Collider[] cardinalDoors = currentRoom != null ? new Collider[] {
-            currentRoom.doorNorthTrigger,
-            currentRoom.doorSouthTrigger,
-            currentRoom.doorEastTrigger,
-            currentRoom.doorWestTrigger
-        } : null;
+        // Doors [60-71] (4 doors × 3 floats = 12 floats)
+// Fixed order: North, South, East, West
+var currentRoom = RoomManager.Instance?.CurrentRoom;
+Direction[] dirs = new[]
+{
+    Direction.North,
+    Direction.South,
+    Direction.East,
+    Direction.West
+};
+for (int i = 0; i < 4; i++)
+{
+    Direction dir = dirs[i];
 
-        for (int i = 0; i < 4; i++)
-        {
-            Collider doorTrigger = (cardinalDoors != null && i < cardinalDoors.Length) ? cardinalDoors[i] : null;
+    if (currentRoom != null && currentRoom.HasDoor(dir))
+    {
+        Vector3 doorPos = currentRoom.GetDoorPosition(dir);
+        Vector3 toDoor = doorPos - transform.position;
+        toDoor.y = 0f;
 
-            // A door is observable only if it exists and its trigger is enabled (meaning it's unlocked)
-            if (doorTrigger != null && doorTrigger.enabled)
-            {
-                Vector3 toDoor = doorTrigger.transform.position - transform.position;
-                toDoor.y = 0f;
-
-                // Pass presence flag (1f)
-                sensor.AddObservation(1f);
-                
-                // Pass relative position scaled by 30f (matching your player position scaling).
-                // This gives the network both the exact direction and the precise distance!
-                sensor.AddObservation(toDoor.x / 30f);
-                sensor.AddObservation(toDoor.z / 30f);
-            }
-            else
-            {
-                // Door doesn't exist in this layout, or is currently locked mid-encounter
-                sensor.AddObservation(0f);
-                sensor.AddObservation(0f);
-                sensor.AddObservation(0f);
-            }
-        }
+        sensor.AddObservation(1f); // has door
+        sensor.AddObservation(currentRoom.IsDoorUnlocked(dir) ? 1f : 0f); // unlocked
+        sensor.AddObservation(toDoor.x / 30f);
+        sensor.AddObservation(toDoor.z / 30f);
+    }
+    else
+    {
+        sensor.AddObservation(0f); // no door
+        sensor.AddObservation(0f); // not unlocked
+        sensor.AddObservation(0f); // x
+        sensor.AddObservation(0f); // z
+    }
+}
     }
 
     // =========================================================
