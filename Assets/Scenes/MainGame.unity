@@ -4210,7 +4210,7 @@ MonoBehaviour:
   agentParameters:
     maxStep: 0
   hasUpgradedFromAgentParameters: 1
-  MaxStep: 70000
+  MaxStep: 35000
   baseMoveSpeed: 10
   maxMoveSpeed: 20
   acceleration: 10
@@ -4234,13 +4234,13 @@ MonoBehaviour:
   exitCompleteRadius: 1
   spriteRenderer: {fileID: 946598691}
   animator: {fileID: 946598690}
-  rewardNewRoom: 1
-  rewardKillEnemy: 1
+  rewardNewRoom: 2
+  rewardKillEnemy: 3
   rewardPickup: 0.5
-  rewardReachExit: 5
-  penaltyTimePerSec: 0.001
-  penaltyClearedRoomPerSec: 0.05
-  penaltyDie: 2
+  rewardReachExit: 10
+  penaltyTimePerSec: 0.01
+  penaltyClearedRoomPerSec: 0.5
+  penaltyDie: 0.5
   fallDeathY: -5
 --- !u!114 &946598695
 MonoBehaviour:
@@ -4950,7 +4950,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 2}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: 0.3, y: -7.200012}
+  m_AnchoredPosition: {x: 0.3, y: -7.199951}
   m_SizeDelta: {x: 200, y: 28}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1162424539

@@ -270,40 +270,44 @@ public class AIPlayerAgent : Agent
             else { for (int j = 0; j < 5; j++) sensor.AddObservation(0f); }
         }
 
-        // Doors [60-71] (4 doors × 3 floats = 12 floats)
-// Fixed order: North, South, East, West
-var currentRoom = RoomManager.Instance?.CurrentRoom;
-Direction[] dirs = new[]
-{
-    Direction.North,
-    Direction.South,
-    Direction.East,
-    Direction.West
-};
-for (int i = 0; i < 4; i++)
-{
-    Direction dir = dirs[i];
-
-    if (currentRoom != null && currentRoom.HasDoor(dir))
-    {
-        Vector3 doorPos = currentRoom.GetDoorPosition(dir);
-        Vector3 toDoor = doorPos - transform.position;
-        toDoor.y = 0f;
-
-        sensor.AddObservation(1f); // has door
-        sensor.AddObservation(currentRoom.IsDoorUnlocked(dir) ? 1f : 0f); // unlocked
-        sensor.AddObservation(toDoor.x / 30f);
-        sensor.AddObservation(toDoor.z / 30f);
+        // Doors [60-71] — always observe all 4 cardinal doors ─────────────────
+        // Each door: [dirX, dirZ, isUnlocked]  →  4 × 3 = 12 floats
+        AddDoorObservations(sensor);
     }
-    else
+
+    private static readonly Direction[] _cardinalDirs =
+        { Direction.North, Direction.South, Direction.East, Direction.West };
+
+private void AddDoorObservations(VectorSensor sensor)
+{
+    var room = RoomManager.Instance?.CurrentRoom;
+
+    foreach (Direction dir in _cardinalDirs)
     {
-        sensor.AddObservation(0f); // no door
-        sensor.AddObservation(0f); // not unlocked
-        sensor.AddObservation(0f); // x
-        sensor.AddObservation(0f); // z
+        if (room != null && room.HasDoor(dir))
+        {
+            Vector3 doorPos = room.GetDoorPosition(dir);
+            Vector3 toDir   = doorPos - transform.position;
+            toDir.y = 0f;
+            float dist = toDir.magnitude;
+
+            float dirX       = dist > 0f ? toDir.x / dist : 0f;
+            float dirZ       = dist > 0f ? toDir.z / dist : 0f;
+            float isUnlocked = room.IsDoorUnlocked(dir) ? 1f : 0f;
+
+            sensor.AddObservation(dirX);
+            sensor.AddObservation(dirZ);
+            sensor.AddObservation(isUnlocked);
+        }
+        else
+        {
+            // No door in this direction — pad with zeros
+            sensor.AddObservation(0f);
+            sensor.AddObservation(0f);
+            sensor.AddObservation(0f);
+        }
     }
 }
-    }
 
     // =========================================================
     //  ACTIONS
