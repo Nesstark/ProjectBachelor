@@ -282,14 +282,14 @@ public class RoomController : MonoBehaviour
         if (doorWestTrigger  != null && doorWestTrigger.enabled)  positions.Add(doorWestTrigger.transform.position);
         return positions;
     }
-    public bool HasDoor(Direction dir)
+public bool HasDoor(Direction dir)
 {
     return dir switch
     {
-        Direction.North => doorNorth != null,
-        Direction.South => doorSouth != null,
-        Direction.East => doorEast != null,
-        Direction.West => doorWest != null,
+        Direction.North => doorNorth != null && doorNorth.activeInHierarchy,
+        Direction.South => doorSouth != null && doorSouth.activeInHierarchy,
+        Direction.East  => doorEast  != null && doorEast.activeInHierarchy,
+        Direction.West  => doorWest  != null && doorWest.activeInHierarchy,
         _ => false
     };
 }

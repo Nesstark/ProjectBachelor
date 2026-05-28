@@ -4211,14 +4211,14 @@ MonoBehaviour:
     maxStep: 0
   hasUpgradedFromAgentParameters: 1
   MaxStep: 35000
-  baseMoveSpeed: 10
-  maxMoveSpeed: 20
-  acceleration: 10
-  deceleration: 20
+  baseMoveSpeed: 30
+  maxMoveSpeed: 50
+  acceleration: 20
+  deceleration: 40
   dashSpeed: 24
   dashDuration: 0.12
-  dashCooldown: 0.5
-  attackCooldown: 0.4
+  dashCooldown: 200
+  attackCooldown: 0.6
   attackAngle: 90
   baseAttackRange: 3
   maxAttackRange: 8
@@ -4227,7 +4227,7 @@ MonoBehaviour:
     m_Bits: 64
   attackOrigin: {fileID: 322880166}
   slashVFXPrefab: {fileID: 5673747554692793758, guid: 2f7ed43e30b4d08058775dbd7086116f, type: 3}
-  visionRadius: 10
+  visionRadius: 7
   maxTrackedEnemies: 5
   maxTrackedPickups: 3
   exitDiscoveryRadius: 5
@@ -4235,14 +4235,13 @@ MonoBehaviour:
   spriteRenderer: {fileID: 946598691}
   animator: {fileID: 946598690}
   rewardNewRoom: 3
-  rewardKillEnemy: 40
-  rewardPickup: 20
-  rewardReachExit: 0
-  penaltyTimePerSec: 0.002
-  penaltyClearedRoomPerSec: 0.1
-  penaltyDie: 3
-  penaltyEnemiesAlivePerSec: 0.05
-  penaltyStagnation: 0.2
+  rewardKillEnemy: 5
+  rewardPickup: 5
+  rewardReachExit: 50
+  rewardDoorApproachPerUnit: 0.05
+  penaltyTimePerSec: 0
+  penaltyClearedRoomPerSec: 0.05
+  penaltyDie: 2
   fallDeathY: -5
 --- !u!114 &946598695
 MonoBehaviour:
@@ -4266,7 +4265,7 @@ MonoBehaviour:
     VectorActionDescriptions: []
     VectorActionSpaceType: 0
     hasUpgradedBrainParametersWithActionSpec: 1
-  m_Model: {fileID: 0}
+  m_Model: {fileID: 5022602860645237092, guid: 92b8877e6f039aa40a82053ba22e5a81, type: 3}
   m_InferenceDevice: 0
   m_BehaviorType: 0
   m_BehaviorName: AIPlayerAgent

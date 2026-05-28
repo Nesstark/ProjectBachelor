@@ -71,7 +71,8 @@ public abstract class BaseEnemy : MonoBehaviour
         UpdateAnimator();
         UpdateSpriteFlip();
     }
-
+    // Add near the top of the class, alongside other fields
+    public static event System.Action<float> OnAnyEnemyKilled;
     protected abstract string EnemyTypeName { get; }
     protected abstract void HandleMovement();
 
@@ -142,6 +143,7 @@ public abstract class BaseEnemy : MonoBehaviour
 
         Debug.Log($"[{name}] Died — awarding {Stats.XpReward:F0} XP");
         GM?.AwardXp(Stats.XpReward);
+        OnAnyEnemyKilled?.Invoke(Stats.XpReward);  
 
         RoomManager.Instance?.CurrentRoom?.OnEnemyDied();
 

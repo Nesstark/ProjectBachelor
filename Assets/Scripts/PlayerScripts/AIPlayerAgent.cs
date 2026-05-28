@@ -5,36 +5,23 @@ using Unity.MLAgents.Actuators;
 using System.Collections.Generic;
 
 // ============================================================
-//  AIPlayerAgent.cs  —  Reinforcement Learning Player Agent  (v4)
+//  AIPlayerAgent.cs  —  Reinforcement Learning Player Agent  (v5)
 //
-//  CHANGES FROM v3:
+//  CHANGES FROM v4:
 //  ─────────────────────────────────────────────────────────
-//  • REWARD SIMPLIFICATION — every overlapping/noisy signal stripped.
-//    The full reward table is now:
+//  • DOOR-APPROACH SHAPING (new)
+//      Every FixedUpdate tick the agent receives a small reward equal to
+//      (prevDistToDoor - currDistToDoor) * rewardDoorApproachPerUnit.
+//      This gives a dense gradient toward the nearest UNLOCKED door trigger
+//      so the agent doesn't just wander after clearing a room.
+//      The potential is reset when the agent enters a new dungeon cell so
+//      the shaping never bleeds across room boundaries.
 //
-//      CARROTS
-//        +1.0   Enter a new room  (first visit only)
-//        +1.0   Kill an enemy
-//        +0.5   Collect any pickup  (all types unified)
-//        +5.0   Reach the exit
+//  • rewardDoorApproachPerUnit = 0.05  (serialised, tune in Inspector)
 //
-//      STICKS
-//        -0.001/s  Time pressure  (gentle; keeps episode from dragging)
-//        -0.05/s   Lingering in a cleared room  (post grace-period)
-//        -2.0      Die
+//  • GetDistToNearestUnlockedDoor() helper added
 //
-//  • REMOVED: rewardSurvivePerSec, rewardDiscoverExit,
-//             rewardExploreNewCell, rewardApproachDoor,
-//             penaltyIdlePerSec, penaltyStagnationPerCheck,
-//             penaltyRevisitCell, penaltyTakeDamage
-//  • REMOVED: all idle detection state (_idleTimer, IdleSpeedThreshold…)
-//  • REMOVED: stagnation ring-buffer (_posBuffer, _posBufferIdx…)
-//  • REMOVED: world-cell hash set (_visitedCells)
-//  • REMOVED: _lastDistToDoor / door-approach shaping block
-//  • rewardPickupHealth / rewardPickupPermanent → single rewardPickup
-//  • OnHealthChanged listener removed (penaltyTakeDamage gone)
-//
-//  OBSERVATION VECTOR = 72 floats  (unchanged from v3 — no re-training needed)
+//  OBSERVATION VECTOR = 72 floats  (unchanged — no re-training needed)
 //  ─────────────────────────────────────────────────────────
 //  Self       [0-6]    health, pos.x, pos.z, dash cd, attack cd,
 //                      room_cleared, room_is_new
@@ -43,7 +30,7 @@ using System.Collections.Generic;
 //  Pickups  3x5=[45-59]
 //  Doors    4x3=[60-71]
 //
-//  BEHAVIOUR PARAMETERS  (same as v3 — no change required):
+//  BEHAVIOUR PARAMETERS  (same as v4 — no change required):
 //    Vector Observation Size : 72
 //    Continuous Actions      : 2
 //    Discrete Branches       : 2  (sizes: 2, 2)
@@ -97,6 +84,11 @@ public class AIPlayerAgent : Agent
     [SerializeField] private float rewardPickup     = 0.5f;
     [SerializeField] private float rewardReachExit  = 5.0f;
 
+    // ── NEW: dense shaping toward door triggers ──────────────
+    [Tooltip("Reward per Unity-unit of progress toward the nearest unlocked door trigger. " +
+             "0.05 is a safe starting value — increase to 0.1 if the agent still ignores doors.")]
+    [SerializeField] private float rewardDoorApproachPerUnit = 0.05f;
+
     [Header("Penalties  (-sticks)")]
     [SerializeField] private float penaltyTimePerSec         = 0.001f;
     [SerializeField] private float penaltyClearedRoomPerSec  = 0.05f;
@@ -125,6 +117,14 @@ public class AIPlayerAgent : Agent
     private int   _lastDungeonCell  = -999;
     private float _clearedRoomTimer = 0f;
     private const float ClearedRoomGrace = 1f;
+    private const float SpawnRoomGrace   = 2f;
+
+    // ── NEW: door-approach potential shaping ─────────────────
+    // Stores the distance to the nearest unlocked door at the END of the
+    // previous FixedUpdate step.  float.MaxValue means "not yet measured"
+    // (set on episode begin and on every room transition so there is no
+    //  spurious reward at the moment of teleportation).
+    private float _prevDistToNearestDoor = float.MaxValue;
 
     private Vector3 _spawnPosition;
     private GameManager GM => GameManager.Instance;
@@ -164,6 +164,8 @@ public class AIPlayerAgent : Agent
             GM.OnPlayerDied.AddListener(OnPlayerDied);
 
         PickupBase.OnAnyPickupCollected += OnPickupCollected;
+        BaseEnemy.OnAnyEnemyKilled     += OnEnemyKilled;
+        RoomManager.OnLevelExitReached += OnExitReached;
     }
 
     public override void OnEpisodeBegin()
@@ -189,8 +191,9 @@ public class AIPlayerAgent : Agent
         _lastMoveDir       = Vector3.forward;
 
         _visitedRooms.Clear();
-        _lastDungeonCell  = -999;
-        _clearedRoomTimer = 0f;
+        _lastDungeonCell          = -999;
+        _clearedRoomTimer         = 0f;
+        _prevDistToNearestDoor    = float.MaxValue;  // ← NEW: reset shaping potential
     }
 
     private void OnDestroy()
@@ -199,10 +202,12 @@ public class AIPlayerAgent : Agent
             GM.OnPlayerDied.RemoveListener(OnPlayerDied);
 
         PickupBase.OnAnyPickupCollected -= OnPickupCollected;
+        BaseEnemy.OnAnyEnemyKilled     -= OnEnemyKilled;
+        RoomManager.OnLevelExitReached -= OnExitReached;
     }
 
     // =========================================================
-    //  OBSERVATIONS  (72 floats — identical layout to v3)
+    //  OBSERVATIONS  (72 floats — identical layout to v4)
     // =========================================================
 
     public override void CollectObservations(VectorSensor sensor)
@@ -270,7 +275,7 @@ public class AIPlayerAgent : Agent
             else { for (int j = 0; j < 5; j++) sensor.AddObservation(0f); }
         }
 
-        // Doors [60-71] — always observe all 4 cardinal doors ─────────────────
+        // Doors [60-71] — always observe all 4 cardinal doors
         // Each door: [dirX, dirZ, isUnlocked]  →  4 × 3 = 12 floats
         AddDoorObservations(sensor);
     }
@@ -278,36 +283,36 @@ public class AIPlayerAgent : Agent
     private static readonly Direction[] _cardinalDirs =
         { Direction.North, Direction.South, Direction.East, Direction.West };
 
-private void AddDoorObservations(VectorSensor sensor)
-{
-    var room = RoomManager.Instance?.CurrentRoom;
-
-    foreach (Direction dir in _cardinalDirs)
+    private void AddDoorObservations(VectorSensor sensor)
     {
-        if (room != null && room.HasDoor(dir))
-        {
-            Vector3 doorPos = room.GetDoorPosition(dir);
-            Vector3 toDir   = doorPos - transform.position;
-            toDir.y = 0f;
-            float dist = toDir.magnitude;
+        var room = RoomManager.Instance?.CurrentRoom;
 
-            float dirX       = dist > 0f ? toDir.x / dist : 0f;
-            float dirZ       = dist > 0f ? toDir.z / dist : 0f;
-            float isUnlocked = room.IsDoorUnlocked(dir) ? 1f : 0f;
-
-            sensor.AddObservation(dirX);
-            sensor.AddObservation(dirZ);
-            sensor.AddObservation(isUnlocked);
-        }
-        else
+        foreach (Direction dir in _cardinalDirs)
         {
-            // No door in this direction — pad with zeros
-            sensor.AddObservation(0f);
-            sensor.AddObservation(0f);
-            sensor.AddObservation(0f);
+            if (room != null && room.HasDoor(dir))
+            {
+                Vector3 doorPos = room.GetDoorPosition(dir);
+                Vector3 toDir   = doorPos - transform.position;
+                toDir.y = 0f;
+                float dist = toDir.magnitude;
+
+                float dirX       = dist > 0f ? toDir.x / dist : 0f;
+                float dirZ       = dist > 0f ? toDir.z / dist : 0f;
+                float isUnlocked = room.IsDoorUnlocked(dir) ? 1f : 0f;
+
+                sensor.AddObservation(dirX);
+                sensor.AddObservation(dirZ);
+                sensor.AddObservation(isUnlocked);
+            }
+            else
+            {
+                // No door in this direction — pad with zeros
+                sensor.AddObservation(0f);
+                sensor.AddObservation(0f);
+                sensor.AddObservation(0f);
+            }
         }
     }
-}
 
     // =========================================================
     //  ACTIONS
@@ -338,8 +343,9 @@ private void AddDoorObservations(VectorSensor sensor)
 
         if (dungeonCell != _lastDungeonCell)
         {
-            _lastDungeonCell  = dungeonCell;
-            _clearedRoomTimer = 0f;
+            _lastDungeonCell       = dungeonCell;
+            _clearedRoomTimer      = 0f;
+            _prevDistToNearestDoor = float.MaxValue;  // ← NEW: reset so we don't reward the teleport
 
             if (dungeonCell >= 0 && _visitedRooms.Add(dungeonCell))
             {
@@ -348,11 +354,10 @@ private void AddDoorObservations(VectorSensor sensor)
             }
         }
 
-        // ── Lingering in cleared room ─────────────────────────
-        bool roomCleared = dungeonCell >= 0
-                        && dungeonCell != 35           // start room exempt
-                        && RoomManager.Instance.IsRoomCleared(dungeonCell);
-        if (roomCleared)
+        bool roomCleared      = dungeonCell >= 0 && RoomManager.Instance.IsRoomCleared(dungeonCell);
+        bool inSpawnRoomGrace = dungeonCell == RoomManager.Instance.SpawnCellId && _episodeTime < SpawnRoomGrace;
+
+        if (roomCleared && !inSpawnRoomGrace)
         {
             _clearedRoomTimer += Time.fixedDeltaTime;
             if (_clearedRoomTimer > ClearedRoomGrace)
@@ -363,7 +368,36 @@ private void AddDoorObservations(VectorSensor sensor)
             _clearedRoomTimer = 0f;
         }
 
-        CheckExitProximity();
+        // ── Door-approach potential shaping ───────────────────
+        // Only active when there is at least one unlocked door to walk toward.
+        // Reward = (prevDist - currDist) * scale  →  positive when moving closer,
+        // negative when moving away, zero when there are no unlocked doors.
+        // The potential resets on room change (above) so it cannot be gamed across rooms.
+        if (rewardDoorApproachPerUnit > 0f)
+        {
+            float currDist = GetDistToNearestUnlockedDoor();
+            if (currDist < float.MaxValue)                          // there is a reachable door
+            {
+                if (_prevDistToNearestDoor < float.MaxValue)        // we have a valid previous sample
+                {
+                    float delta = _prevDistToNearestDoor - currDist;
+                    if (Mathf.Abs(delta) > 0.001f)                  // ignore sub-millimetre noise
+                    {
+                        AddReward(delta * rewardDoorApproachPerUnit);
+                    }
+                }
+                _prevDistToNearestDoor = currDist;
+            }
+        }
+
+        // ── Exit discovery (observation only — reward is event-driven) ──
+        if (!_exitDiscovered)
+        {
+            Transform exit = GetExitDoor();
+            if (exit != null && Vector3.Distance(transform.position, exit.position) <= exitDiscoveryRadius)
+                _exitDiscovered = true;
+        }
+
         UpdateTimers();
         UpdateAnimator();
         UpdateSpriteFlip();
@@ -489,8 +523,6 @@ private void AddDoorObservations(VectorSensor sensor)
         if (pickup == null) return;
         if (Vector3.Distance(transform.position, pickup.transform.position) > 2.5f) return;
 
-        // All pickup types give the same reward — differentiation via observations is enough.
-        // SpeedPickup and RangePickup still update the agent's stats as before.
         switch (pickup)
         {
             case SpeedPickup sp:
@@ -505,26 +537,11 @@ private void AddDoorObservations(VectorSensor sensor)
         Debug.Log($"[AIAgent] CARROT  pickup {pickup.GetType().Name}  reward:{rewardPickup:F2}");
     }
 
-    // =========================================================
-    //  EXIT LOGIC
-    // =========================================================
-    private void CheckExitProximity()
+    private void OnExitReached()
     {
-        Transform exit = GetExitDoor();
-        if (exit == null) return;
-
-        float dist = Vector3.Distance(transform.position, exit.position);
-
-        // Discovery is tracked for the observation vector but gives no reward.
-        if (!_exitDiscovered && dist <= exitDiscoveryRadius)
-            _exitDiscovered = true;
-
-        if (dist <= exitCompleteRadius)
-        {
-            AddReward(rewardReachExit);
-            Debug.Log($"[AIAgent] CARROT  exit reached  reward:{rewardReachExit:F2}");
-            EndEpisode();
-        }
+        AddReward(rewardReachExit);
+        Debug.Log($"[AIAgent] CARROT  exit reached  reward:{rewardReachExit:F2}");
+        EndEpisode();
     }
 
     // =========================================================
@@ -558,13 +575,36 @@ private void AddDoorObservations(VectorSensor sensor)
     private void UpdateSpriteFlip()
     {
         if (spriteRenderer == null) return;
-        if      (_lastMoveDir.x >  0.1f) spriteRenderer.flipX = true;
-        else if (_lastMoveDir.x < -0.1f) spriteRenderer.flipX = false;
+        float velX = _rb.linearVelocity.x;
+        if      (velX >  0.5f) spriteRenderer.flipX = true;
+        else if (velX < -0.5f) spriteRenderer.flipX = false;
     }
 
     private Vector2Int WorldToCell(Vector3 pos)
         => new Vector2Int(Mathf.FloorToInt(pos.x / 3f),
                           Mathf.FloorToInt(pos.z / 3f));
+
+    // ── NEW: returns distance to nearest UNLOCKED door trigger ──────────────
+    // Returns float.MaxValue when there are no unlocked doors (e.g. mid-combat).
+    private float GetDistToNearestUnlockedDoor()
+    {
+        var room = RoomManager.Instance?.CurrentRoom;
+        if (room == null) return float.MaxValue;
+
+        float nearest = float.MaxValue;
+        foreach (Direction dir in _cardinalDirs)
+        {
+            if (!room.HasDoor(dir) || !room.IsDoorUnlocked(dir)) continue;
+
+            Vector3 doorPos = room.GetDoorPosition(dir);
+            float   dist    = Vector3.Distance(
+                new Vector3(transform.position.x, 0f, transform.position.z),
+                new Vector3(doorPos.x,            0f, doorPos.z));
+
+            if (dist < nearest) nearest = dist;
+        }
+        return nearest;
+    }
 
     // =========================================================
     //  ENEMY PERCEPTION
@@ -636,7 +676,7 @@ private void AddDoorObservations(VectorSensor sensor)
     }
 
     // =========================================================
-    //  DOOR PERCEPTION
+    //  DOOR PERCEPTION  (used for reward shaping, not observations)
     // =========================================================
     private List<Vector3> GetUnlockedDoorPositions()
     {

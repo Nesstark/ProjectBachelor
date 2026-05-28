@@ -5,6 +5,7 @@ using UnityEngine;
 public class RoomManager : MonoBehaviour
 {
     public static RoomManager Instance;
+    public static event System.Action OnLevelExitReached;
 
     [Header("References")]
     public DungeonGenerator generator;
@@ -29,23 +30,31 @@ public class RoomManager : MonoBehaviour
 
     public RoomController CurrentRoom    { get; private set; }
 
-    /// <summary>
-    /// The spawned level exit GameObject — null until the boss dies and
-    /// RoomController.UnlockDoors() calls SpawnLevelExit().
-    /// AIPlayerAgent.GetExitDoor() reads this to stay blind to the exit
-    /// until the boss has actually been killed.
-    /// </summary>
     public GameObject CurrentLevelExit => currentLevelExit;
     public int CurrentCellPublic => currentCell;
     public int CurrentLevel { get; set; } = 1;
     public int CurrentSeed => generator.seed;
 
+    // ── FIX: expose spawn cell so AIPlayerAgent doesn't hardcode 35 ──────────
+    public int SpawnCellId { get; private set; } = 35;
+
     int currentCell = 35;
     bool isTransitioning = false;
+    public bool IsTrainingMode { get; private set; }
 
     Dictionary<int, string> cellPrefabMap = new();
-    HashSet<int> visitedCells = new();
-    HashSet<int> clearedCells = new();
+    HashSet<int> visitedCells  = new();
+    HashSet<int> clearedCells  = new();
+
+    // ── FIX: room types that contain no enemies and are cleared on arrival ────
+    private static readonly HashSet<RoomType> NoCombatRooms = new()
+    {
+        RoomType.Start,
+        RoomType.Treasure,
+        RoomType.Shop,
+        RoomType.CorridorNS,
+        RoomType.CorridorEW,
+    };
 
     void Awake()
     {
@@ -95,52 +104,45 @@ public class RoomManager : MonoBehaviour
             generator.Generate(CurrentLevel);
         }
 
-        LoadRoom(35, Direction.South);
+        LoadRoom(SpawnCellId, Direction.South);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
     // AI TRAINING RESET
-    // Called by AIPlayerAgent.OnEpisodeBegin() to get a fresh dungeon
-    // each episode without going through the full scene-load pipeline.
     // ─────────────────────────────────────────────────────────────────────────
     public void ResetForTraining()
     {
-        // Destroy the level exit if one exists
+        IsTrainingMode = true;
+
         if (currentLevelExit != null)
         {
             Destroy(currentLevelExit);
             currentLevelExit = null;
         }
 
-        // Clear all room/cell state
         cellPrefabMap.Clear();
         visitedCells.Clear();
         clearedCells.Clear();
 
-        // Destroy all enemies that were spawned during this episode
         RoomController.CleanupForNextLevel();
 
-        // Destroy any loose pickups remaining in the scene
         foreach (var pickup in FindObjectsByType<PickupBase>(FindObjectsSortMode.None))
             Destroy(pickup.gameObject);
 
-        // Reset PickupTracker so the new episode starts clean
         PickupTracker.Instance?.ClearAll();
 
-        // Regenerate the dungeon with a new random seed
         CurrentLevel = 1;
         generator.Generate(CurrentLevel);
 
-        // Destroy the old room and load the start room
         if (currentRoomInstance != null)
         {
             Destroy(currentRoomInstance);
             currentRoomInstance = null;
         }
 
-        currentCell = 35;
+        currentCell    = SpawnCellId;
         isTransitioning = false;
-        LoadRoom(35, Direction.South);
+        LoadRoom(SpawnCellId, Direction.South);
 
         Debug.Log($"[RoomManager] ResetForTraining complete — Seed:{generator.seed}");
     }
@@ -151,6 +153,8 @@ public class RoomManager : MonoBehaviour
     {
         Debug.Log("LoadNextLevel kaldt, isTransitioning: " + isTransitioning);
         if (isTransitioning) return;
+        OnLevelExitReached?.Invoke();
+        if (IsTrainingMode) return;
         StartCoroutine(DoLevelUpTransition());
     }
 
@@ -171,8 +175,8 @@ public class RoomManager : MonoBehaviour
 
             generator.Generate(CurrentLevel);
             if (currentRoomInstance != null) Destroy(currentRoomInstance);
-            currentCell = 35;
-            LoadRoom(35, Direction.South);
+            currentCell = SpawnCellId;
+            LoadRoom(SpawnCellId, Direction.South);
         }));
 
         isTransitioning = false;
@@ -186,9 +190,9 @@ public class RoomManager : MonoBehaviour
             return;
         }
         if (currentLevelExit != null) return;
-        Vector3 spawnPos = position;
-        spawnPos.y += levelExitHeightOffset;
-        currentLevelExit = Instantiate(levelExitPrefab, spawnPos, Quaternion.identity);
+        Vector3 spawnPos  = position;
+        spawnPos.y       += levelExitHeightOffset;
+        currentLevelExit  = Instantiate(levelExitPrefab, spawnPos, Quaternion.identity);
     }
 
     public void TryMove(Direction dir)
@@ -258,11 +262,20 @@ public class RoomManager : MonoBehaviour
             west:  neighbours.ContainsKey(Direction.West)
         );
 
+        // ── FIX: rooms with no enemies are cleared the moment the player arrives.
+        // Without this, Start/Treasure/Corridor rooms stay "uncleared" forever,
+        // IsDoorUnlocked() never returns true, and the AI gets zero signal to leave.
+        if (NoCombatRooms.Contains(CurrentRoom.roomType))
+        {
+            clearedCells.Add(cell);
+            Debug.Log($"[RoomManager] Cell {cell} ({CurrentRoom.roomType}) auto-cleared on load.");
+        }
+
         bool isFirstVisit = !visitedCells.Contains(cell);
         visitedCells.Add(cell);
 
         Transform spawn;
-        if (isFirstVisit && cell == 35 && CurrentRoom.startSpawn != null)
+        if (isFirstVisit && cell == SpawnCellId && CurrentRoom.startSpawn != null)
             spawn = CurrentRoom.startSpawn;
         else
             spawn = CurrentRoom.GetSpawnPoint(fromDirection);
@@ -289,19 +302,19 @@ public class RoomManager : MonoBehaviour
     }
 
     public void MarkRoomCleared(int cell) => clearedCells.Add(cell);
-    public bool IsRoomCleared(int cell) => clearedCells.Contains(cell);
+    public bool IsRoomCleared(int cell)   => clearedCells.Contains(cell);
 
     string PickPrefab(RoomType type)
     {
         string folder = type switch
         {
-            RoomType.Normal      => normalFolder,
-            RoomType.CorridorNS  => corridorNSFolder,
-            RoomType.CorridorEW  => corridorEWFolder,
-            RoomType.Boss        => bossFolder,
-            RoomType.Treasure    => treasureFolder,
-            RoomType.Shop        => shopFolder,
-            RoomType.Start       => startFolder,
+            RoomType.Normal     => normalFolder,
+            RoomType.CorridorNS => corridorNSFolder,
+            RoomType.CorridorEW => corridorEWFolder,
+            RoomType.Boss       => bossFolder,
+            RoomType.Treasure   => treasureFolder,
+            RoomType.Shop       => shopFolder,
+            RoomType.Start      => startFolder,
             _ => normalFolder
         };
 

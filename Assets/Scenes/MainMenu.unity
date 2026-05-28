@@ -4135,6 +4135,10 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2295244412444417299, guid: 29090d804704d3a42acad6f5f2fb3c1d, type: 3}
+      propertyPath: basePlayerHealth
+      value: 300
+      objectReference: {fileID: 0}
+    - target: {fileID: 2295244412444417299, guid: 29090d804704d3a42acad6f5f2fb3c1d, type: 3}
       propertyPath: enemyTypes.Array.data[4].baseSpeed
       value: 5
       objectReference: {fileID: 0}
