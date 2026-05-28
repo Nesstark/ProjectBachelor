@@ -4140,7 +4140,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2295244412444417299, guid: 29090d804704d3a42acad6f5f2fb3c1d, type: 3}
       propertyPath: enemyTypes.Array.data[0].baseDamage
-      value: 20
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 2295244412444417299, guid: 29090d804704d3a42acad6f5f2fb3c1d, type: 3}
       propertyPath: enemyTypes.Array.data[0].baseHealth
@@ -4148,7 +4148,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2295244412444417299, guid: 29090d804704d3a42acad6f5f2fb3c1d, type: 3}
       propertyPath: enemyTypes.Array.data[1].baseDamage
-      value: 15
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 2295244412444417299, guid: 29090d804704d3a42acad6f5f2fb3c1d, type: 3}
       propertyPath: enemyTypes.Array.data[3].baseHealth
@@ -4156,7 +4156,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2295244412444417299, guid: 29090d804704d3a42acad6f5f2fb3c1d, type: 3}
       propertyPath: enemyTypes.Array.data[4].baseDamage
-      value: 40
+      value: 20
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

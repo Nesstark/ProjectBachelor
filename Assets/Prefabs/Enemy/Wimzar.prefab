@@ -245,15 +245,16 @@ MonoBehaviour:
   attackInterval: 4
   meleeRange: 1.5
   hitVFXPrefab: {fileID: 3042519775331041172, guid: 841004c4c6a39e244abe2257394de913, type: 3}
-  deathVFXPrefab: {fileID: 0}
-  attackOrigin: {fileID: 0}
+  deathVFXPrefab: {fileID: 8782009059513614302, guid: 171dda363e9efd94ca9bc63e38ca9658, type: 3}
+  attackOrigin: {fileID: 7597983045836930786}
   slashVFXPrefab: {fileID: 0}
   animator: {fileID: 7643608384564979831}
   spriteRenderer: {fileID: 3313307016795278824}
-  projectilePrefab: {fileID: 1298275985269948489, guid: 0259acc8bcb03469b99e1ae05c885386, type: 3}
+  projectilePrefab: {fileID: 1298275985269948489, guid: 0046d061dceef634e9ee4cedffa004b7, type: 3}
   firePoint: {fileID: 3535738919132841180}
   preferredRange: 8
   maxShootRange: 12
+  shootCooldown: 1.5
   fleeRange: 4
   fleeSpeed: 6
 --- !u!1001 &8598177521340126051
