@@ -245,7 +245,7 @@ MonoBehaviour:
   attackInterval: 4
   meleeRange: 1.5
   hitVFXPrefab: {fileID: 3042519775331041172, guid: 841004c4c6a39e244abe2257394de913, type: 3}
-  deathVFXPrefab: {fileID: 8782009059513614302, guid: 171dda363e9efd94ca9bc63e38ca9658, type: 3}
+  deathVFXPrefab: {fileID: 0}
   attackOrigin: {fileID: 7597983045836930786}
   slashVFXPrefab: {fileID: 0}
   animator: {fileID: 7643608384564979831}
